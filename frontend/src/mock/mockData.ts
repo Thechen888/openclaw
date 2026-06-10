@@ -63,6 +63,61 @@ const connectors = [
   { id: 'cn-5', name: '北森 HR 系统', system_type: 'hr', provider: 'custom', api_base_url: 'https://hr.company.com/api/v1', status: 'active', description: '人力资源管理系统' },
 ];
 
+// =================== Starlark 适配器 ===================
+const starlarkAdapters = [
+  {
+    id: 'sa-1', name: 'CRM客户同步', description: '从CRM拉取客户信息并同步到本地',
+    version: '1.2.0', last_sync: '2026/5/31 18:00:00', status: 'active', author: '张伟',
+    api_functions: [
+      { name: 'read_contacts', method: 'GET', description: '读取联系人列表', script: 'def read_contacts(ctx):\n  return ctx.http.get("/contacts")' },
+      { name: 'read_deals', method: 'GET', description: '读取交易列表', script: 'def read_deals(ctx):\n  return ctx.http.get("/deals")' },
+      { name: 'write_notes', method: 'POST', description: '写入备注', script: 'def write_notes(ctx, data):\n  return ctx.http.post("/notes", data)' },
+    ],
+    auth_config: { type: 'bearer_token', secret: 'crm-api-key-xxx' },
+    full_script: '# CRM客户同步适配器\ndef read_contacts(ctx):\n  return ctx.http.get("/contacts")\n\ndef read_deals(ctx):\n  return ctx.http.get("/deals")\n\ndef write_notes(ctx, data):\n  return ctx.http.post("/notes", data)',
+  },
+  {
+    id: 'sa-2', name: 'ERP订单查询', description: '查询用友ERP订单状态和库存',
+    version: '1.0.0', last_sync: '2026/5/31 16:00:00', status: 'active', author: '李思',
+    api_functions: [
+      { name: 'read_orders', method: 'GET', description: '读取订单', script: 'def read_orders(ctx):\n  return ctx.http.get("/orders")' },
+      { name: 'read_inventory', method: 'GET', description: '读取库存', script: 'def read_inventory(ctx):\n  return ctx.http.get("/inventory")' },
+    ],
+    auth_config: { type: 'api_key', secret: 'erp-key-xxx' },
+    full_script: '# ERP订单查询适配器\ndef read_orders(ctx):\n  return ctx.http.get("/orders")\n\ndef read_inventory(ctx):\n  return ctx.http.get("/inventory")',
+  },
+  {
+    id: 'sa-3', name: 'Jira工单对接', description: '双向同步Jira工单状态',
+    version: '2.0.1', last_sync: '2026/5/31 20:00:00', status: 'active', author: '王五',
+    api_functions: [
+      { name: 'read_issues', method: 'GET', description: '读取工单', script: 'def read_issues(ctx):\n  return ctx.http.get("/issues")' },
+      { name: 'write_issues', method: 'PUT', description: '更新工单', script: 'def write_issues(ctx, data):\n  return ctx.http.put("/issues", data)' },
+      { name: 'read_projects', method: 'GET', description: '读取项目', script: 'def read_projects(ctx):\n  return ctx.http.get("/projects")' },
+    ],
+    auth_config: { type: 'basic_auth', secret: 'jira-auth-xxx' },
+    full_script: '# Jira工单对接适配器\ndef read_issues(ctx):\n  return ctx.http.get("/issues")\n\ndef write_issues(ctx, data):\n  return ctx.http.put("/issues", data)\n\ndef read_projects(ctx):\n  return ctx.http.get("/projects")',
+  },
+  {
+    id: 'sa-4', name: 'IoT设备状态', description: '读取IoT平台设备状态和告警',
+    version: '1.1.0', last_sync: '2026/5/31 23:00:00', status: 'active', author: '赵六',
+    api_functions: [
+      { name: 'read_devices', method: 'GET', description: '读取设备', script: 'def read_devices(ctx):\n  return ctx.http.get("/devices")' },
+      { name: 'read_alerts', method: 'GET', description: '读取告警', script: 'def read_alerts(ctx):\n  return ctx.http.get("/alerts")' },
+    ],
+    auth_config: { type: 'oauth2', secret: 'iot-oauth-token' },
+    full_script: '# IoT设备状态适配器\ndef read_devices(ctx):\n  return ctx.http.get("/devices")\n\ndef read_alerts(ctx):\n  return ctx.http.get("/alerts")',
+  },
+  {
+    id: 'sa-5', name: '财务对账(停用)', description: '内部财务系统对账接口',
+    version: '0.9.0', last_sync: '-', status: 'disabled', author: '陈七',
+    api_functions: [
+      { name: 'read_invoices', method: 'GET', description: '读取发票', script: 'def read_invoices(ctx):\n  return ctx.http.get("/invoices")' },
+    ],
+    auth_config: { type: 'custom', secret: 'custom-auth-xxx' },
+    full_script: '# 财务对账适配器\ndef read_invoices(ctx):\n  return ctx.http.get("/invoices")',
+  },
+];
+
 // =================== 用户 ===================
 const users = [
   { id: 'u-1', username: 'admin', name: '张伟', email: 'zhangwei@company.com', role: 'admin', status: 'active' },
@@ -348,6 +403,14 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (path === '/connectors/chat-adapters' && method === 'post') return ok(data);
   if (/^\/connectors\/chat-adapters\/[^/]+$/.test(path) && method === 'put') return ok(data);
   if (/^\/connectors\/chat-adapters\/[^/]+$/.test(path) && method === 'delete') return ok(null);
+
+  // Starlark Adapters
+  if (path === '/connectors/starlark' && method === 'get') return paginate(starlarkAdapters, p.page, p.page_size, p.search);
+  if (path === '/connectors/starlark' && method === 'post') return ok(data);
+  if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'get') return ok(starlarkAdapters[0]);
+  if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'put') return ok(data);
+  if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'delete') return ok(null);
+  if (/^\/connectors\/starlark\/[^/]+\/generate-skill$/.test(path)) return ok({ skill_id: 'sk-' + Date.now(), name: 'Auto Skill' });
 
   // Connectors (Third-party Systems)
   if (path === '/connectors' && method === 'get') return paginate(connectors, p.page, p.page_size, p.search);

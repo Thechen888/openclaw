@@ -8,6 +8,7 @@ import CallLogsPage from '../pages/models/CallLogsPage';
 import CostStatsPage from '../pages/models/CostStatsPage';
 import ChatAdaptersPage from '../pages/connectors/ChatAdaptersPage';
 import ThirdPartySystemsPage from '../pages/connectors/ThirdPartySystemsPage';
+import StarlarkAdaptersPage from '../pages/connectors/StarlarkAdaptersPage';
 import UsersPage from '../pages/identity/UsersPage';
 import OrganizationsPage from '../pages/identity/OrganizationsPage';
 import ChatAccountsPage from '../pages/identity/ChatAccountsPage';
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: 'models/logs', element: <CallLogsPage /> },
       { path: 'models/costs', element: <CostStatsPage /> },
       // Connectors
+      { path: 'connectors/starlark', element: <StarlarkAdaptersPage /> },
       { path: 'connectors/chat', element: <ChatAdaptersPage /> },
       { path: 'connectors/systems', element: <ThirdPartySystemsPage /> },
       // Identity
