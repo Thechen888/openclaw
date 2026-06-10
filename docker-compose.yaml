@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: openclaw
+      POSTGRES_PASSWORD: openclaw123
+      POSTGRES_DB: openclaw
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      OC_DATABASE_DRIVER: postgres
+      OC_DATABASE_DSN: "host=db port=5432 user=openclaw password=openclaw123 dbname=openclaw sslmode=disable"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../deployments/Dockerfile.frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

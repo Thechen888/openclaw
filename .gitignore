@@ -1,0 +1,33 @@
+# Go
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+vendor/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/tmp/
+
+# Build artifacts
+*.tmp

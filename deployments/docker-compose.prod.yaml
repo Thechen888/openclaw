@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: openclaw
+      POSTGRES_PASSWORD: openclaw123
+      POSTGRES_DB: openclaw
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - openclaw
+
+  backend:
+    image: ghcr.io/jifanchn/openclaw/backend:latest
+    restart: always
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      OC_DATABASE_DRIVER: postgres
+      OC_DATABASE_DSN: "host=db port=5432 user=openclaw password=openclaw123 dbname=openclaw sslmode=disable"
+      OC_SERVER_HOST: "0.0.0.0"
+      OC_SERVER_PORT: "8000"
+      OC_LOGGING_LEVEL: info
+    depends_on:
+      - db
+    networks:
+      - openclaw
+
+  frontend:
+    image: ghcr.io/jifanchn/openclaw/frontend:latest
+    restart: always
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - backend
+    networks:
+      - openclaw
+
+volumes:
+  pgdata:
+
+networks:
+  openclaw:
+    driver: bridge

@@ -1,0 +1,103 @@
+name: OpenClaw CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  GO_VERSION: '1.24'
+  NODE_VERSION: '22'
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend
+
+jobs:
+  # ---- Build & Test ----
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '${{ env.GO_VERSION }}' }
+      - run: go build ./...
+      - run: go vet ./...
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - working-directory: ./frontend
+        run: npm ci && npm run build
+
+  # ---- Build & Push Docker Images to GHCR ----
+  build-images:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deployments/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: frontend/deployments/Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+  # ---- Deploy to JF-Aliyun ----
+  deploy:
+    needs: build-images
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 101.37.37.87 >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        run: |
+          ssh -i ~/.ssh/deploy_key root@101.37.37.87 << 'DEPLOY_EOF'
+          set -e
+          cd /opt/openclaw
+
+          # Pull latest images from GHCR
+          docker compose -f deployments/docker-compose.prod.yaml pull
+
+          # Restart services
+          docker compose -f deployments/docker-compose.prod.yaml up -d --force-recreate
+
+          # Cleanup dangling images
+          docker image prune -f
+
+          # Reload nginx
+          nginx -t 2>/dev/null && systemctl reload nginx 2>/dev/null || true
+
+          echo "Deploy OK: $(date)"
+          DEPLOY_EOF
