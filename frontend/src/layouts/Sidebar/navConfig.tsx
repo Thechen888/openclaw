@@ -23,6 +23,7 @@ import {
   Speed,
   Gavel,
   Code,
+  LibraryBooks,
 } from '@mui/icons-material';
 
 export interface NavItem {
@@ -56,6 +57,7 @@ export const navConfig: NavSection[] = [
     label: '连接器',
     items: [
       { title: 'Starlark适配器', path: '/connectors/starlark', icon: <Code fontSize="small" /> },
+      { title: '对接模板', path: '/connectors/templates', icon: <LibraryBooks fontSize="small" /> },
       { title: '聊天适配器', path: '/connectors/chat', icon: <Lan fontSize="small" /> },
       { title: '第三方系统', path: '/connectors/systems', icon: <CableIcon fontSize="small" /> },
     ],

@@ -118,6 +118,17 @@ const starlarkAdapters = [
   },
 ];
 
+// =================== 对接模板（云端模板库） ===================
+const integrationTemplates = [
+  { id: 'it-1', name: 'Salesforce CRM', description: '标准Salesforce REST API对接模板', source: 'official', vendor: 'OpenClaw官方', version: 'v2.0.0', downloads: 156, tags: ['crm', 'Salesforce', 'v2.0.0'] },
+  { id: 'it-2', name: '用友U8+', description: '用友U8+ OpenAPI对接模板', source: 'official', vendor: 'OpenClaw官方', version: 'v1.5.0', downloads: 89, tags: ['erp', '用友', 'v1.5.0'] },
+  { id: 'it-3', name: 'Jira Cloud', description: 'Jira Cloud REST API v3对接模板', source: 'official', vendor: 'OpenClaw官方', version: 'v2.1.0', downloads: 134, tags: ['project', 'Atlassian', 'v2.1.0'] },
+  { id: 'it-4', name: '钉钉开放平台', description: '钉钉机器人/通讯录/审批对接', source: 'official', vendor: 'OpenClaw官方', version: 'v1.2.0', downloads: 67, tags: ['im', '阿里', 'v1.2.0'] },
+  { id: 'it-5', name: '企业微信', description: '企微应用消息/通讯录/客户联系对接', source: 'official', vendor: 'OpenClaw官方', version: 'v1.3.0', downloads: 198, tags: ['im', '腾讯', 'v1.3.0'] },
+  { id: 'it-6', name: 'MQTT IoT', description: '通用MQTT协议IoT设备对接模板', source: 'community', vendor: '社区', version: 'v1.0.0', downloads: 23, tags: ['iot', '通用', 'v1.0.0'] },
+  { id: 'it-7', name: '通用REST', description: '通用REST API对接骨架脚本', source: 'official', vendor: 'OpenClaw官方', version: 'v1.0.0', downloads: 312, tags: ['custom', '通用', 'v1.0.0'] },
+];
+
 // =================== 用户 ===================
 const users = [
   { id: 'u-1', username: 'admin', name: '张伟', email: 'zhangwei@company.com', role: 'admin', status: 'active' },
@@ -411,6 +422,11 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'put') return ok(data);
   if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'delete') return ok(null);
   if (/^\/connectors\/starlark\/[^/]+\/generate-skill$/.test(path)) return ok({ skill_id: 'sk-' + Date.now(), name: 'Auto Skill' });
+
+  // Integration Templates (对接模板)
+  if (path === '/connectors/integration-templates' && method === 'get') return paginate(integrationTemplates, p.page, p.page_size, p.search);
+  if (path === '/connectors/integration-templates/sync' && method === 'post') return ok({ synced: integrationTemplates.length });
+  if (/^\/connectors\/integration-templates\/[^/]+\/install$/.test(path)) return ok({ adapter_id: 'sa-' + Date.now() });
 
   // Connectors (Third-party Systems)
   if (path === '/connectors' && method === 'get') return paginate(connectors, p.page, p.page_size, p.search);
