@@ -147,6 +147,7 @@ export default function AgentsPage() {
                     <IconButton size="small" color="primary"><PlayArrow fontSize="small" /></IconButton>
                   </Tooltip>
                   <Tooltip title="编辑">
+                    <IconButton size="small"><Edit fontSize="small" /></IconButton>
                   </Tooltip>
                   <Tooltip title="删除">
                     <IconButton size="small" color="error" onClick={() => { if (confirm('确认删除此智能体？')) deleteMutation.mutate(item.id); }}>

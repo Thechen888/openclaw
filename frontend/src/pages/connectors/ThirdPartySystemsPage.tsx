@@ -114,6 +114,7 @@ export default function ThirdPartySystemsPage() {
                     </Tooltip>
                   )}
                   <Tooltip title="编辑">
+                    <IconButton size="small"><Edit fontSize="small" /></IconButton>
                   </Tooltip>
                   <Tooltip title="删除">
                     <IconButton size="small" color="error" onClick={() => { if (confirm('确认删除此连接器？')) deleteMutation.mutate(item.id); }}>
