@@ -24,6 +24,16 @@ import {
   Gavel,
   Code,
   LibraryBooks,
+  ManageAccounts,
+  VerifiedUser,
+  Schema,
+  Fingerprint,
+  SettingsRemote,
+  Backup,
+  Inventory2,
+  Shield,
+  ViewInAr,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 
 export interface NavItem {
@@ -65,17 +75,20 @@ export const navConfig: NavSection[] = [
   {
     label: '身份与账号',
     items: [
+      { title: '身份源配置', path: '/identity/sources', icon: <ManageAccounts fontSize="small" /> },
       { title: '用户', path: '/identity/users', icon: <PeopleIcon fontSize="small" /> },
       { title: '组织', path: '/identity/orgs', icon: <AccountTree fontSize="small" /> },
       { title: '聊天账号', path: '/identity/chat-accounts', icon: <PersonSearch fontSize="small" /> },
       { title: '第三方账号', path: '/identity/3p-accounts', icon: <PersonSearch fontSize="small" /> },
       { title: '匹配队列', path: '/identity/matching', icon: <PlaylistAddCheckCircle fontSize="small" /> },
+      { title: '权限管理', path: '/identity/permissions', icon: <VerifiedUser fontSize="small" /> },
     ],
   },
   {
     label: '智能体',
     items: [
       { title: '全部智能体', path: '/agents', icon: <SmartToyIcon fontSize="small" /> },
+      { title: '工作流配置', path: '/agents/workflows', icon: <Schema fontSize="small" /> },
       { title: '运行记录', path: '/agents/runs', icon: <BarChartIcon fontSize="small" /> },
     ],
   },
@@ -96,10 +109,17 @@ export const navConfig: NavSection[] = [
   {
     label: '资源与运维',
     items: [
+      { title: '平台SN', path: '/resources/sn', icon: <Fingerprint fontSize="small" /> },
+      { title: '远程管理', path: '/resources/remote', icon: <SettingsRemote fontSize="small" /> },
+      { title: '配置备份', path: '/resources/backup', icon: <Backup fontSize="small" /> },
       { title: '磁盘配额', path: '/resources/quota', icon: <DataUsage fontSize="small" /> },
       { title: 'K8s状态', path: '/resources/k8s', icon: <Cloud fontSize="small" /> },
       { title: '服务重启', path: '/resources/restart', icon: <RestartAlt fontSize="small" /> },
       { title: '任务队列', path: '/resources/queues', icon: <Queue fontSize="small" /> },
+      { title: 'Python依赖', path: '/resources/python', icon: <Inventory2 fontSize="small" /> },
+      { title: '网络白名单', path: '/resources/network-acl', icon: <Shield fontSize="small" /> },
+      { title: '容器组', path: '/resources/pods', icon: <ViewInAr fontSize="small" /> },
+      { title: 'AGENTS.md 管理', path: '/resources/agents-md', icon: <DescriptionIcon fontSize="small" /> },
     ],
   },
   {

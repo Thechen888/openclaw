@@ -129,6 +129,102 @@ const integrationTemplates = [
   { id: 'it-7', name: '通用REST', description: '通用REST API对接骨架脚本', source: 'official', vendor: 'OpenClaw官方', version: 'v1.0.0', downloads: 312, tags: ['custom', '通用', 'v1.0.0'] },
 ];
 
+// =================== 身份源配置 ===================
+const identitySources: any[] = [
+  {
+    id: 'is-1', name: '公司LDAP', type: 'LDAP', priority: 0,
+    sync_cron: '0 */2 * * *', conflict_strategy: 'primary', status: 'active',
+    is_builtin: false,
+    ldap_server: 'ldaps://ldap.company.com', ldap_port: 636,
+    base_dn: 'ou=users,dc=company,dc=com', filter: '(objectClass=person)',
+  },
+  {
+    id: 'is-2', name: 'HR系统同步脚本', type: 'STARLARK', priority: 1,
+    sync_cron: '0 8 * * 1-5', conflict_strategy: 'admin', status: 'active',
+    is_builtin: false,
+    script: 'def sync(ctx):\n  return ctx.http.get("/hr/employees")',
+  },
+  {
+    id: 'is-3', name: '本地账号(内置)', type: 'LOCAL', priority: 99,
+    sync_cron: '', conflict_strategy: 'primary', status: 'active',
+    is_builtin: true,
+  },
+];
+
+// =================== 权限管理（用户组 + Skill 权限） ===================
+const permGroups: any[] = [
+  { id: 'pg-1', name: '技术部', type: 'department', member_count: 12 },
+  { id: 'pg-2', name: '销售部', type: 'department', member_count: 8 },
+  { id: 'pg-3', name: '售后部', type: 'department', member_count: 6 },
+  { id: 'pg-4', name: '运维部', type: 'team', member_count: 4 },
+  { id: 'pg-5', name: '产品部', type: 'department', member_count: 5 },
+  { id: 'pg-6', name: '安全组', type: 'team', member_count: 3 },
+];
+
+const permSkills: any[] = [
+  {
+    id: 'ps-1', name: 'CRM客户查询',
+    functions: [{ name: 'read_contacts' }, { name: 'read_deals' }, { name: 'write_notes' }],
+  },
+  {
+    id: 'ps-2', name: '设备状态摘要',
+    functions: [{ name: 'read_devices' }, { name: 'read_alerts' }],
+  },
+  {
+    id: 'ps-3', name: '工单自动分派',
+    functions: [{ name: 'read_issues' }, { name: 'write_issues' }, { name: 'assign_issues' }],
+  },
+  {
+    id: 'ps-4', name: '图像质量检测',
+    functions: [{ name: 'analyze_image' }, { name: 'get_report' }],
+  },
+  {
+    id: 'ps-5', name: 'ERP数据写入',
+    functions: [{ name: 'read_orders' }, { name: 'write_orders' }, { name: 'update_status' }],
+  },
+  {
+    id: 'ps-6', name: '消息模板生成',
+    functions: [{ name: 'generate_message' }, { name: 'send_message' }],
+  },
+];
+
+// 各用户组的 Skill 权限映射（skillId -> 已启用函数列表）
+const permGroupConfigs: Record<string, Record<string, string[]>> = {
+  'pg-1': {
+    'ps-1': ['read_contacts', 'read_deals', 'write_notes'],
+    'ps-2': ['read_devices', 'read_alerts'],
+    'ps-3': ['read_issues', 'write_issues'],
+    'ps-4': ['analyze_image', 'get_report'],
+  },
+  'pg-2': {
+    'ps-1': ['read_contacts', 'read_deals', 'write_notes'],
+    'ps-5': ['read_orders', 'update_status'],
+    'ps-6': ['generate_message', 'send_message'],
+  },
+  'pg-3': {
+    'ps-1': ['read_contacts'],
+    'ps-3': ['read_issues', 'write_issues', 'assign_issues'],
+    'ps-6': ['generate_message', 'send_message'],
+  },
+  'pg-4': {
+    'ps-2': ['read_devices', 'read_alerts'],
+    'ps-3': ['read_issues', 'write_issues', 'assign_issues'],
+    'ps-4': ['analyze_image'],
+  },
+  'pg-5': {
+    'ps-1': ['read_contacts', 'read_deals'],
+    'ps-6': ['generate_message'],
+  },
+  'pg-6': {
+    'ps-1': ['read_contacts'],
+    'ps-2': ['read_devices', 'read_alerts'],
+    'ps-3': ['assign_issues'],
+    'ps-4': ['get_report'],
+    'ps-5': ['read_orders'],
+    'ps-6': ['send_message'],
+  },
+};
+
 // =================== 用户 ===================
 const users = [
   { id: 'u-1', username: 'admin', name: '张伟', email: 'zhangwei@company.com', role: 'admin', status: 'active' },
@@ -200,6 +296,122 @@ const agents = [
   { id: 'a-5', name: '个人提醒', owner_type: 'personal', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
   { id: 'a-6', name: '知识库问答', owner_type: 'organization', status: 'draft', model_policy_id: '', policy_name: '', triggers_count: 0, last_run_at: '', description: '基于企业知识库的智能问答（开发中）', system_prompt: '你是知识库问答助手。' },
 ];
+
+// =================== Agent 工作流配置 ===================
+const workflows: Record<string, any> = {
+  'a-1': {
+    agent_id: 'a-1',
+    name: 'CRM通知流程',
+    max_iterations: 1,
+    timeout_seconds: 60,
+    on_error: 'stop',
+    nodes: [
+      {
+        id: 'wn-1-1', name: '解析事件', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'event = input["trigger_payload"]\ncustomer_id = event.get("customer_id")\nreturn {"customer_id": customer_id, "event": event}',
+      },
+      {
+        id: 'wn-1-2', name: '查询客户详情', type: 'skill',
+        on_error: 'inherit', enabled: true,
+        skill_id: 'sk-4', skill_name: 'CRM数据同步',
+      },
+      {
+        id: 'wn-1-3', name: '生成通知内容', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是销售助手，根据客户信息和事件生成简短的通知消息，要求语气专业、不超过 80 字。',
+      },
+      {
+        id: 'wn-1-4', name: '发送企微消息', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'msg = input["llm_output"]\nresp = http_post("https://qyapi.weixin.qq.com/send", {"msg": msg})\nlog_info("send_result", resp)',
+      },
+    ],
+  },
+  'a-2': {
+    agent_id: 'a-2',
+    name: '设备巡检流程',
+    max_iterations: 3,
+    timeout_seconds: 120,
+    on_error: 'retry',
+    nodes: [
+      {
+        id: 'wn-2-1', name: '获取设备列表', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'devices = http_get(config["device_endpoint"])\nreturn json_parse(devices)',
+      },
+      {
+        id: 'wn-2-2', name: '遍历设备状态', type: 'loop',
+        on_error: 'skip', enabled: true,
+        max_loop: 50,
+      },
+      {
+        id: 'wn-2-3', name: '生成巡检报告', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是设备巡检专家，根据 input 中的设备状态列表生成简短巡检报告，标注异常项。',
+      },
+    ],
+  },
+  'a-3': {
+    agent_id: 'a-3',
+    name: '摄像头分析流程',
+    max_iterations: 1,
+    timeout_seconds: 30,
+    on_error: 'stop',
+    nodes: [],
+  },
+  'a-4': {
+    agent_id: 'a-4',
+    name: '日报汇总流程',
+    max_iterations: 1,
+    timeout_seconds: 60,
+    on_error: 'skip',
+    nodes: [
+      {
+        id: 'wn-4-1', name: '拉取工作日志', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'logs = http_get(config["log_endpoint"])\nreturn json_parse(logs)',
+      },
+      {
+        id: 'wn-4-2', name: '判断日志数量', type: 'condition',
+        on_error: 'inherit', enabled: true,
+        condition: 'len(input["logs"]) > 0',
+      },
+      {
+        id: 'wn-4-3', name: '生成日报', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是日报生成助手，根据工作日志列表撰写当日工作总结。',
+      },
+    ],
+  },
+  'a-5': {
+    agent_id: 'a-5',
+    name: '提醒推送流程',
+    max_iterations: 1,
+    timeout_seconds: 30,
+    on_error: 'stop',
+    nodes: [
+      {
+        id: 'wn-5-1', name: '查询待办', type: 'skill',
+        on_error: 'inherit', enabled: true,
+        skill_id: 'sk-2', skill_name: '数据库查询',
+      },
+      {
+        id: 'wn-5-2', name: '推送提醒', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'todos = input["rows"]\nfor t in todos:\n  http_post(config["push_url"], t)',
+      },
+    ],
+  },
+  'a-6': {
+    agent_id: 'a-6',
+    name: '问答流程',
+    max_iterations: 1,
+    timeout_seconds: 30,
+    on_error: 'stop',
+    nodes: [],
+  },
+};
 
 // =================== Agent 运行记录 ===================
 const agentRuns = [
@@ -365,6 +577,170 @@ const systemHealth = {
   uptime: '14d 6h 23m',
 };
 
+const platformSn = {
+  serial_no: 'OC-HW-2026-A3F8B1C2D4E6',
+  hardware_fingerprint: 'sha256:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b',
+  machine_id: 'node-cn-hangzhou-prod-01',
+  cpu_signature: 'Intel Xeon E5-2690 v4 @ 2.60GHz',
+  bound_at: '2026-03-15T16:00:00Z',
+  platform_version: 'v1.4.2',
+  license_level: 'ENTERPRISE',
+  max_agents: 100,
+  max_users: 500,
+  expires_at: '2027-03-16T00:00:00Z',
+};
+
+const remoteManagement: any = {
+  enabled: true,
+  last_heartbeat: '2026-06-03T20:58:00',
+  uptime_hours: 720,
+  endpoint: 'remote.openclaw.example.com',
+  port: 8443,
+  protocol: 'WSS',
+  auth_token: 'rmt_8f3b2a1c9d4e6f7a8b1c2d3e4f5a6b7c8d9e0f1a',
+  history: [
+    { id: 'rh-1', event: 'connected', remote_ip: '203.0.113.42', time: '2026-06-03T16:00:00', duration_min: 295, reason: null },
+    { id: 'rh-2', event: 'disconnected', remote_ip: '203.0.113.42', time: '2026-06-03T06:15:00', duration_min: null, reason: 'idle_timeout' },
+    { id: 'rh-3', event: 'connected', remote_ip: '203.0.113.42', time: '2026-06-02T16:00:00', duration_min: 855, reason: null },
+    { id: 'rh-4', event: 'connected', remote_ip: '198.51.100.10', time: '2026-06-01T17:30:00', duration_min: 480, reason: null },
+    { id: 'rh-5', event: 'auth_failed', remote_ip: '192.0.2.99', time: '2026-05-31T22:22:00', duration_min: null, reason: 'invalid_token' },
+  ],
+};
+
+const configBackups: any[] = [
+  {
+    id: 'cb-1',
+    name: '2026-05-31 全量备份',
+    description: '包含所有连接器、Agent、策略配置',
+    storage_type: 'OSS',
+    size_mb: 2.3,
+    status: 'success',
+    creator: '系统定时',
+    created_at: '2026-05-31T11:00:00',
+  },
+  {
+    id: 'cb-2',
+    name: '2026-05-30 全量备份',
+    description: '包含所有连接器、Agent、策略配置',
+    storage_type: 'OSS',
+    size_mb: 2.3,
+    status: 'success',
+    creator: '系统定时',
+    created_at: '2026-05-30T11:00:00',
+  },
+  {
+    id: 'cb-3',
+    name: '手动备份 - 迁移前',
+    description: '迁移前手动创建的备份',
+    storage_type: 'LOCAL',
+    size_mb: 2.3,
+    status: 'success',
+    creator: '张伟',
+    created_at: '2026-05-28T22:00:00',
+  },
+];
+
+const pythonPackages: any[] = [
+  { id: 'pp-1', name: 'requests', description: 'HTTP library for Python', required_version: '2.32.3', installed_version: '2.32.3', status: 'up_to_date', module: 'core', updated_at: '2026-05-20' },
+  { id: 'pp-2', name: 'pydantic', description: 'Data validation using Python type hints', required_version: '2.11.1', installed_version: '2.11.1', status: 'up_to_date', module: 'core', updated_at: '2026-05-18' },
+  { id: 'pp-3', name: 'sqlalchemy', description: 'SQL toolkit and ORM', required_version: '2.0.40', installed_version: '2.0.38', status: 'outdated', module: 'core', updated_at: '2026-05-10' },
+  { id: 'pp-4', name: 'celery', description: 'Distributed task queue', required_version: '5.5.2', installed_version: '5.5.2', status: 'up_to_date', module: 'worker', updated_at: '2026-05-15' },
+  { id: 'pp-5', name: 'redis', description: 'Redis client', required_version: '5.3.0', installed_version: '5.3.0', status: 'up_to_date', module: 'worker', updated_at: '2026-05-12' },
+  { id: 'pp-6', name: 'openai', description: 'OpenAI API client', required_version: '1.82.0', installed_version: '1.78.0', status: 'outdated', module: 'agent-runtime', updated_at: '2026-04-28' },
+  { id: 'pp-7', name: 'anthropic', description: 'Anthropic API client', required_version: '0.52.0', installed_version: '0.52.0', status: 'up_to_date', module: 'agent-runtime', updated_at: '2026-05-22' },
+  { id: 'pp-8', name: 'starlark-go', description: 'Starlark interpreter bindings', required_version: '0.0.0', installed_version: '0.0.0', status: 'up_to_date', module: 'connector-engine', updated_at: '2026-03-01' },
+  { id: 'pp-9', name: 'cryptography', description: 'Cryptographic recipes and primitives', required_version: '44.0.3', installed_version: '44.0.3', status: 'up_to_date', module: 'core', updated_at: '2026-05-05' },
+  { id: 'pp-10', name: 'boto3', description: 'AWS SDK for Python', required_version: '1.38.30', installed_version: '1.38.30', status: 'up_to_date', module: 'backup-service', updated_at: '2026-06-11' },
+  { id: 'pp-11', name: 'numpy', description: 'Fundamental package for scientific computing', required_version: '2.2.6', installed_version: '2.2.6', status: 'up_to_date', module: 'analytics', updated_at: '2026-05-08' },
+  { id: 'pp-12', name: 'pillow', description: 'Python Imaging Library', required_version: '11.2.1', installed_version: null, status: 'missing', module: 'vision-skill', updated_at: null },
+];
+
+const networkAcl: any[] = [
+  { id: 'na-1', target: '10.0.0.0/8', label: '内网段', direction: 'inbound', status: 'active', description: '公司内网全网段', creator: '张伟' },
+  { id: 'na-2', target: '172.16.0.0/12', label: 'K8s Pod网段', direction: 'inbound', status: 'active', description: 'Kubernetes Pod CIDR', creator: '系统' },
+  { id: 'na-3', target: '203.0.113.0/24', label: '远程运维网段', direction: 'inbound', status: 'active', description: '远程运维团队出口IP段', creator: '张伟' },
+  { id: 'na-4', target: 'api.openai.com', label: 'OpenAI API', direction: 'outbound', status: 'active', description: '允许Agent访问OpenAI', creator: '系统' },
+  { id: 'na-5', target: 'api.anthropic.com', label: 'Anthropic API', direction: 'outbound', status: 'active', description: '允许Agent访问Anthropic', creator: '系统' },
+  { id: 'na-6', target: 'dashscope.aliyuncs.com', label: '通义千问', direction: 'outbound', status: 'active', description: '允许Agent访问通义千问', creator: '系统' },
+  { id: 'na-7', target: 'open.bigmodel.cn', label: '智谱GLM', direction: 'outbound', status: 'active', description: '允许Agent访问GLM', creator: '系统' },
+  { id: 'na-8', target: '*.company.com', label: '公司域名', direction: 'outbound', status: 'active', description: '允许访问所有公司域名', creator: '张伟' },
+  { id: 'na-9', target: '192.0.2.0/24', label: '已废弃测试段', direction: 'inbound', status: 'disabled', description: '旧测试环境，已停用', creator: '陈丽' },
+  { id: 'na-10', target: 'crm.salesforce.com', label: 'Salesforce CRM', direction: 'outbound', status: 'active', description: 'CRM系统API', creator: '刘芳' },
+];
+
+// =================== Pods (容器组) ===================
+const podList: any[] = [
+  { id: 'pod-1', name: 'open-api-core-eu-dfc5bdd74-874hv', status: 'running', status_label: '运行中', node_name: 'k8s-109', node_ip: '192.168.130.229', pod_ip: '10.233.127.186', app: 'open-api', updated_at: '2026-06-03 16:49:41' },
+  { id: 'pod-2', name: 'open-api-core-au-84d67555c-ddc2s', status: 'running', status_label: '运行中', node_name: 'k8s-109', node_ip: '192.168.130.229', pod_ip: '10.233.127.176', app: 'open-api', updated_at: '2026-06-03 16:49:41' },
+  { id: 'pod-3', name: 'open-api-core-6ddc67ff96-sbm6b', status: 'running', status_label: '运行中', node_name: 'k8s-109', node_ip: '192.168.130.229', pod_ip: '10.233.127.253', app: 'open-api', updated_at: '2026-06-03 16:49:41' },
+  { id: 'pod-4', name: 'nginx-599b6689d9-wfhs7', status: 'running', status_label: '运行中', node_name: 'k8s-69', node_ip: '192.168.130.69', pod_ip: '10.233.91.46', app: null, updated_at: '2026-05-04 16:08:57' },
+  { id: 'pod-5', name: 'docs-8b8c94f6d-lwgsw', status: 'running', status_label: '运行中', node_name: 'k8s-107', node_ip: '192.168.130.227', pod_ip: '10.233.118.176', app: null, updated_at: '2026-05-04 15:50:57' },
+  { id: 'pod-6', name: 'open-api-core-dev-eu-7f45996f5f-qx5bd', status: 'running', status_label: '运行中', node_name: 'k8s-107', node_ip: '192.168.130.227', pod_ip: '10.233.118.137', app: 'open-api-dev-eu', updated_at: '2026-04-27 20:48:59' },
+  { id: 'pod-7', name: 'redis-74d7bb4cf7-rrjpr', status: 'running', status_label: '运行中', node_name: 'k8s-107', node_ip: '192.168.130.227', pod_ip: '10.233.118.194', app: null, updated_at: '2026-04-27 20:48:35' },
+  { id: 'pod-8', name: 'open-api-core-dev-686689748f-bxbdg', status: 'running', status_label: '运行中', node_name: 'k8s-107', node_ip: '192.168.130.227', pod_ip: '10.233.118.100', app: 'open-api-dev', updated_at: '2026-04-27 20:47:49' },
+];
+
+function genSeries(points: number, base: number, jitter: number, decimals = 0) {
+  const now = new Date();
+  const arr: { time: string; value: number }[] = [];
+  for (let i = points - 1; i >= 0; i--) {
+    const t = new Date(now.getTime() - i * 20 * 60 * 1000);
+    const time = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}`;
+    const v = base + (Math.random() - 0.5) * jitter;
+    arr.push({ time, value: Number(v.toFixed(decimals)) });
+  }
+  return arr;
+}
+
+function buildPodDetail(pod: any) {
+  const containerName = pod.name.split('-').slice(0, 3).join('-') || 'app';
+  const imagePrefix = pod.app || 'app';
+  return {
+    ...pod,
+    cluster: 'dev',
+    project: 'open-api',
+    qos: 'Burstable',
+    restart: 0,
+    created_at: pod.updated_at,
+    containers: [
+      {
+        name: containerName,
+        image: `harbor.weiheng-tech.com/dev/${imagePrefix}/${imagePrefix}:v1.3.0-beta.1-74-g754bad0`,
+        status: 'running',
+        restart: 0,
+        port: '9000/TCP',
+        has_probe: true,
+      },
+    ],
+    volumes: [
+      {
+        name: 'core-config',
+        type: '配置字典',
+        source_name: pod.app || 'config',
+        source_type: '配置字典',
+        mounts: [{ container: containerName, path: '/etc/open-api', mode: '读写' }],
+      },
+      {
+        name: 'kube-api-access-tvddg',
+        type: '-',
+        mounts: [{ container: containerName, path: '/var/run/secrets/kubernetes.io/serviceaccount', mode: '只读' }],
+      },
+    ],
+    metrics: {
+      cpu: genSeries(25, 0.4, 1.2, 2),
+      memory: genSeries(25, 32, 6, 0),
+      egress: genSeries(25, 1.2, 0.9, 2),
+      ingress: genSeries(25, 720, 280, 0),
+    },
+    events: [
+      { id: 'ev-1', type: 'normal', reason: 'Pulling', age: '5 分钟前', source: 'kubelet', message: `Pulling image "harbor.weiheng-tech.com/dev/aging/agave-aging-ultra-hotfix-copy2-test:v2.1.0-fix24"` },
+      { id: 'ev-2', type: 'normal', reason: 'Pulled', age: '5 分钟前', source: 'kubelet', message: `Successfully pulled image "harbor.weiheng-tech.com/dev/aging/agave-aging-ultra-hotfix-copy2-test:v2.1.0-fix24" in 658.566138ms` },
+      { id: 'ev-3', type: 'normal', reason: 'Created', age: '5 分钟前', source: 'kubelet', message: 'Created container agave-aging-america-uyjkm1' },
+      { id: 'ev-4', type: 'normal', reason: 'Started', age: '5 分钟前', source: 'kubelet', message: 'Started container agave-aging-america-uyjkm1' },
+    ],
+  };
+}
+
 // =================== Mock 用户 ===================
 const mockUser = {
   id: 'u-1',
@@ -373,6 +749,143 @@ const mockUser = {
   role: 'admin',
   is_admin: true,
 };
+
+// =================== AGENTS.md 模板文件 ===================
+export interface AgentsMdFile {
+  name: string;
+  description: string;
+  content: string;
+  updatedAt: string;
+}
+
+const agentsMdFiles: AgentsMdFile[] = [
+  {
+    name: 'AGENTS.md.template',
+    description: 'Agent 启动入口：已安装技能、关键词路由、启动必做、认证说明、记忆与行为规范',
+    updatedAt: '2026-06-09 14:32:18',
+    content: `---
+name: agents
+description: Agent 启动入口模板
+---
+
+# AGENTS.md
+
+## 启动时必做
+
+1. 读取 SOUL.md、USER.md、TOOLS.md、HEARTBEAT.md（如果存在）
+2. 读取 memory/ 目录下的记忆文件
+
+## 认证说明
+
+认证 token 统一从 /workspace/.skill-auth.json 读取 token 字段，所有 skills 共用一个 token，禁止硬编码。
+每次调用前必须从 .skill-auth.json 实时读取。
+
+## 已安装技能
+
+| 技能 | 用途 |
+| ---- | ---- |
+| beisen | 北森 HR 人事系统 |
+| crm | 纷享销客 CRM |
+| gitlab | GitLab 代码管理 |
+| mes | MES 生产制造 |
+| cron | 定时任务管理 |
+
+## 核心行为规范
+
+- 文件读写使用 exec：cat / echo / sed，禁止使用 read/write/edit 工具
+- 记忆管理：所有要记住的东西必须写文件，mental notes 不跨会话存活
+- MEMORY.md 仅在私聊加载（群聊不加载，防泄露）
+- 隐私红线：禁止泄露隐私数据、破坏性操作需确认、优先用 trash 而非 rm
+`,
+  },
+  {
+    name: 'MEMORY.md.template',
+    description: '长期记忆文件模板：仅私聊加载，存储从日记中提炼出的重要信息',
+    updatedAt: '2026-06-08 10:15:42',
+    content: `# MEMORY.md
+
+## 说明
+
+- 此文件仅在私聊加载，群聊不加载，防泄露。
+- memory/YYYY-MM-DD.md — 每日原始笔记（短期）
+- MEMORY.md — 精炼的长期记忆（定期从日记中提炼）
+- 心跳期间每隔几天回顾日记，更新 MEMORY.md，删除过时内容
+
+## 重要人物
+
+- 在此记录用户偏好、重要事件
+
+## 项目历史
+
+- 记录重大决策、技术选型
+
+## 待办事项
+
+- 未完成的跟进事项
+`,
+  },
+  {
+    name: 'SOUL.md.template',
+    description: 'Agent 人格与价值观模板：定义语气、原则、边界与表达风格',
+    updatedAt: '2026-06-05 09:48:11',
+    content: `# SOUL.md
+
+## 身份
+
+你是一个严谨、高效、有判断力的工作所 Agent，服务于企业内部运营。
+
+## 原则
+
+1. **先读后写**：任何修改前先了解现状
+2. **少即是多**：输出精准，不堆砌
+3. **明确边界**：不确定时询问，不脑补
+4. **泄露防护**：不泄露隐私数据与凭证
+
+## 表达风格
+
+- 中文优先，需要时使用英文术语
+- 不使用 emoji，除非用户要求
+- 结论先行，详情后附
+
+## 不做什么
+
+- 不会主动重构与任务无关的代码
+- 不会创建不被要求的文档
+- 不会重复提交同样的命令
+`,
+  },
+  {
+    name: 'USER.md.template',
+    description: '用户信息与偏好模板：存储语言偏好、时区、职位、沟通习惯',
+    updatedAt: '2026-06-04 16:20:55',
+    content: `# USER.md
+
+## 基本信息
+
+- **姓名**：
+- **邮箱**：
+- **职位**：
+- **所在部门**：
+
+## 偏好
+
+- **语言**：中文
+- **时区**：Asia/Shanghai
+- **输出风格**：简洁、结论先行
+- **不要**：不要使用 emoji、不要过度问肸
+
+## 常用词汇映射
+
+- “那个表” → 需重点结合上下文识别是 CRM 表还是 MES 报工表
+- “老地方” → share-disk 下的 产品资料 目录
+
+## 快捷指令
+
+- /todo：查看未完成的任务
+- /digest：生成今天的工作摘要
+`,
+  },
+];
 
 // =================== 路由匹配 & 响应 ===================
 export function handleMockRequest(method: string, url: string, params?: any, data?: any) {
@@ -434,6 +947,41 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (/^\/connectors\/[^/]+$/.test(path) && method === 'put') return ok(data);
   if (/^\/connectors\/[^/]+$/.test(path) && method === 'delete') return ok(null);
 
+  // Identity Sources (身份源配置)
+  if (path === '/identity/sources' && method === 'get') return paginate(identitySources, p.page, p.page_size, p.search);
+  if (path === '/identity/sources' && method === 'post') {
+    const newItem = { id: 'is-' + Date.now(), is_builtin: false, ...data };
+    identitySources.push(newItem);
+    return ok(newItem);
+  }
+  if (/^\/identity\/sources\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop();
+    const idx = identitySources.findIndex(s => s.id === id);
+    if (idx >= 0) identitySources[idx] = { ...identitySources[idx], ...data };
+    return ok(data);
+  }
+  if (/^\/identity\/sources\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop();
+    const idx = identitySources.findIndex(s => s.id === id);
+    if (idx >= 0 && !identitySources[idx].is_builtin) identitySources.splice(idx, 1);
+    return ok(null);
+  }
+  if (/^\/identity\/sources\/[^/]+\/test-connection$/.test(path)) return ok({ success: true });
+  if (/^\/identity\/sources\/[^/]+\/sync$/.test(path)) return ok({ triggered: true, run_id: 'isr-' + Date.now() });
+
+  // Permissions (权限管理)
+  if (path === '/identity/permissions/groups' && method === 'get') return ok(permGroups);
+  if (path === '/identity/permissions/skills' && method === 'get') return ok(permSkills);
+  if (/^\/identity\/permissions\/groups\/[^/]+$/.test(path) && method === 'get') {
+    const id = path.split('/').pop() as string;
+    return ok(permGroupConfigs[id] || {});
+  }
+  if (/^\/identity\/permissions\/groups\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop() as string;
+    permGroupConfigs[id] = data || {};
+    return ok(permGroupConfigs[id]);
+  }
+
   // Users
   if (path === '/users' && method === 'get') return paginate(users, p.page, p.page_size, p.search);
   if (path === '/users' && method === 'post') return ok(data);
@@ -463,6 +1011,18 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (path === '/agents' && method === 'get') return paginate(agents, p.page, p.page_size, p.search);
   if (path === '/agents' && method === 'post') return ok(data);
   if (/^\/agents\/runs$/.test(path)) return paginate(agentRuns, p.page, p.page_size, p.search);
+  // Agent 工作流
+  if (/^\/agents\/workflows\/[^/]+$/.test(path) && method === 'get') {
+    const id = path.split('/').pop() as string;
+    return ok(workflows[id] || {
+      agent_id: id, name: '新建流程', max_iterations: 1, timeout_seconds: 60, on_error: 'stop', nodes: [],
+    });
+  }
+  if (/^\/agents\/workflows\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop() as string;
+    workflows[id] = { ...(workflows[id] || {}), ...data, agent_id: id };
+    return ok(workflows[id]);
+  }
   if (/^\/agents\/[^/]+$/.test(path) && method === 'get') return ok(agents[0]);
   if (/^\/agents\/[^/]+$/.test(path) && method === 'put') return ok(data);
   if (/^\/agents\/[^/]+$/.test(path) && method === 'delete') return ok(null);
@@ -513,6 +1073,154 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
   // Health
   if (path === '/system/health') return ok(systemHealth);
+
+  // Platform SN
+  if (path === '/system/platform-sn') return ok(platformSn);
+
+  // Remote Management
+  if (path === '/system/remote-management' && method === 'get') return ok(remoteManagement);
+  if (path === '/system/remote-management' && method === 'put') {
+    Object.assign(remoteManagement, data);
+    return ok(remoteManagement);
+  }
+
+  // Config Backups
+  if (path === '/system/config-backups' && method === 'get') return ok(configBackups);
+  if (path === '/system/config-backups' && method === 'post') {
+    const now = new Date().toISOString().replace('Z', '');
+    const item = {
+      id: 'cb-' + Date.now(),
+      name: data?.name || '手动备份',
+      description: data?.description || '',
+      storage_type: data?.storage_type || 'OSS',
+      size_mb: 2.3,
+      status: 'success',
+      creator: '管理员',
+      created_at: now,
+    };
+    configBackups.unshift(item);
+    return ok(item);
+  }
+  if (/^\/system\/config-backups\/[^/]+\/restore$/.test(path) && method === 'post') {
+    return ok({ task_id: 'rt-' + Date.now() });
+  }
+
+  // Python Packages
+  if (path === '/system/python-packages' && method === 'get') return ok(pythonPackages);
+  if (path === '/system/python-packages' && method === 'post') {
+    const today = new Date();
+    const item = {
+      id: 'pp-' + Date.now(),
+      name: data?.name || 'unknown',
+      description: data?.description || '',
+      required_version: data?.required_version || 'latest',
+      installed_version: data?.required_version || 'latest',
+      status: 'up_to_date',
+      module: data?.module || 'custom',
+      updated_at: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
+    };
+    pythonPackages.push(item);
+    return ok(item);
+  }
+  if (path === '/system/python-packages/sync' && method === 'post') return ok(null);
+  if (/^\/system\/python-packages\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop();
+    const idx = pythonPackages.findIndex((p) => p.id === id);
+    if (idx >= 0) pythonPackages.splice(idx, 1);
+    return ok(null);
+  }
+  if (/^\/system\/python-packages\/[^/]+\/upgrade$/.test(path) && method === 'post') {
+    const id = path.split('/')[3];
+    const item = pythonPackages.find((p) => p.id === id);
+    if (item) {
+      item.installed_version = item.required_version;
+      item.status = 'up_to_date';
+      const t = new Date();
+      item.updated_at = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    }
+    return ok(item);
+  }
+  if (/^\/system\/python-packages\/[^/]+\/install$/.test(path) && method === 'post') {
+    const id = path.split('/')[3];
+    const item = pythonPackages.find((p) => p.id === id);
+    if (item) {
+      item.installed_version = item.required_version;
+      item.status = 'up_to_date';
+      const t = new Date();
+      item.updated_at = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    }
+    return ok(item);
+  }
+
+  // Network ACL
+  if (path === '/system/network-acl' && method === 'get') return ok(networkAcl);
+  if (path === '/system/network-acl' && method === 'post') {
+    const item = {
+      id: 'na-' + Date.now(),
+      target: data?.target || '',
+      label: data?.label || '',
+      direction: data?.direction || 'inbound',
+      status: data?.status || 'active',
+      description: data?.description || '',
+      creator: '管理员',
+    };
+    networkAcl.unshift(item);
+    return ok(item);
+  }
+  if (/^\/system\/network-acl\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop();
+    const idx = networkAcl.findIndex((x) => x.id === id);
+    if (idx >= 0) networkAcl[idx] = { ...networkAcl[idx], ...data, id };
+    return ok(networkAcl[idx]);
+  }
+  if (/^\/system\/network-acl\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop();
+    const idx = networkAcl.findIndex((x) => x.id === id);
+    if (idx >= 0) networkAcl.splice(idx, 1);
+    return ok(null);
+  }
+
+  // Pods
+  if (path === '/system/pods' && method === 'get') return ok(podList);
+  if (/^\/system\/pods\/[^/]+$/.test(path) && method === 'get') {
+    const pid = path.split('/').pop();
+    const pod = podList.find((p) => p.id === pid) || podList[0];
+    return ok(buildPodDetail(pod));
+  }
+
+  // AGENTS.md 模板文件
+  if (path === '/system/agents-md/files' && method === 'get') {
+    return ok(
+      agentsMdFiles.map((f) => ({
+        name: f.name,
+        description: f.description,
+        size: new TextEncoder().encode(f.content).length,
+        updatedAt: f.updatedAt,
+      }))
+    );
+  }
+  if (/^\/system\/agents-md\/files\/[^/]+$/.test(path) && method === 'get') {
+    const name = decodeURIComponent(path.split('/').pop() || '');
+    const f = agentsMdFiles.find((x) => x.name === name);
+    if (!f) return { code: 404, message: 'not found', data: null };
+    return ok({
+      name: f.name,
+      description: f.description,
+      content: f.content,
+      updatedAt: f.updatedAt,
+      size: new TextEncoder().encode(f.content).length,
+    });
+  }
+  if (/^\/system\/agents-md\/files\/[^/]+$/.test(path) && method === 'put') {
+    const name = decodeURIComponent(path.split('/').pop() || '');
+    const idx = agentsMdFiles.findIndex((x) => x.name === name);
+    if (idx < 0) return { code: 404, message: 'not found', data: null };
+    if (typeof data?.content === 'string') agentsMdFiles[idx].content = data.content;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    agentsMdFiles[idx].updatedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    return ok(agentsMdFiles[idx]);
+  }
 
   // Default
   return ok([]);
