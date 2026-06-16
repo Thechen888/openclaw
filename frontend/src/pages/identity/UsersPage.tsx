@@ -1,66 +1,114 @@
 ﻿import { useState } from 'react';
 import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
-  TextField, Button, Tooltip, Grid, MenuItem, Avatar, Typography,
+  TextField, Button, Tooltip, Grid, MenuItem, Avatar, Typography, Chip,
 } from '@mui/material';
-import { Add, Edit, Delete, Refresh, Person } from '@mui/icons-material';
+import { Add, Edit, Delete, Refresh } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSnackbar } from 'notistack';
 import {
   PageHeader, FilterBar, DataTable, StatusBadge, useTableState,
   EmptyState, LoadingState, CrudDialog,
 } from '../../components/shared';
-import { usersApi } from '../../api/client';
+import { usersApi, orgsApi } from '../../api/client';
 
-const ROLES = ['admin', 'manager', 'member', 'viewer'];
+// =================== 常量 ===================
+const ROLE_LABELS: Record<string, string> = {
+  admin:   '管理员',
+  manager: '经理',
+  member:  '成员',
+  viewer:  '观察员',
+};
+const ROLES = Object.entries(ROLE_LABELS);
+
+const ROLE_COLORS: Record<string, 'error' | 'warning' | 'primary' | 'default'> = {
+  admin:   'error',
+  manager: 'warning',
+  member:  'primary',
+  viewer:  'default',
+};
+
+const EMPTY_FORM = {
+  username: '', name: '', email: '', role: 'member', org_id: '', status: 'active', password: '',
+};
+
+/** 提取可提交字段，编辑时剔除服务端字段 */
+function extractUserFields(item: any) {
+  const { id: _id, created_at: _ca, updated_at: _ua, ...payload } = item;
+  return { ...payload, password: '' };
+}
+
+function getInitials(name?: string) {
+  if (!name) return '?';
+  return name.slice(0, 2);
+}
 
 export default function UsersPage() {
   const qc = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
   const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
-  const [form, setForm] = useState<any>({
-    username: '', name: '', email: '', role: 'member', status: 'active', password: '',
-  });
+  const [form, setForm] = useState<any>({ ...EMPTY_FORM });
 
+  // 用户列表
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['users', params],
     queryFn: () => usersApi.list(params),
   });
-  const items = data?.data?.data || [];
-  const total = data?.data?.pagination?.total || 0;
+  const items: any[] = data?.data?.data || [];
+  const total: number = data?.data?.pagination?.total || 0;
+
+  // 所有组织（用于下拉选择，全量加载）
+  const { data: orgsData } = useQuery({
+    queryKey: ['orgs'],
+    queryFn: () => orgsApi.list(),
+  });
+  const allOrgs: any[] = orgsData?.data?.data || orgsData?.data || [];
+
+  const orgMap = Object.fromEntries(allOrgs.map((o: any) => [o.id, o.name]));
 
   const createMutation = useMutation({
     mutationFn: (d: any) => usersApi.create(d),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setDialogOpen(false); resetForm(); },
-  });
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data: d }: any) => usersApi.update(id, d),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setDialogOpen(false); resetForm(); },
-  });
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => usersApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      setDialogOpen(false);
+      resetForm();
+      enqueueSnackbar('用户已创建', { variant: 'success' });
+    },
+    onError: () => enqueueSnackbar('创建失败', { variant: 'error' }),
   });
 
-  const resetForm = () => setForm({ username: '', name: '', email: '', role: 'member', status: 'active', password: '' });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data: d }: any) => usersApi.update(id, d),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      setDialogOpen(false);
+      resetForm();
+      enqueueSnackbar('已保存', { variant: 'success' });
+    },
+    onError: () => enqueueSnackbar('保存失败', { variant: 'error' }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => usersApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      enqueueSnackbar('已删除', { variant: 'success' });
+    },
+  });
+
+  const resetForm = () => { setForm({ ...EMPTY_FORM }); setEditItem(null); };
 
   const handleSave = () => {
     const payload = { ...form };
     if (editItem && !payload.password) delete payload.password;
+    if (!payload.org_id) delete payload.org_id;
     if (editItem) {
       updateMutation.mutate({ id: editItem.id, data: payload });
     } else {
       createMutation.mutate(payload);
     }
-  };
-
-  const getInitials = (name?: string) => {
-    if (!name) return '?';
-    return name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  const roleColors: Record<string, string> = {
-    admin: 'error', manager: 'warning', member: 'primary', viewer: 'default',
   };
 
   return (
@@ -70,8 +118,14 @@ export default function UsersPage() {
         subtitle="管理平台用户账号与角色"
         actions={
           <>
-            <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
-            <Button variant="contained" startIcon={<Add />} onClick={() => { resetForm(); setEditItem(null); setDialogOpen(true); }}>
+            <Tooltip title="刷新">
+              <IconButton onClick={() => refetch()}><Refresh /></IconButton>
+            </Tooltip>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => { resetForm(); setDialogOpen(true); }}
+            >
               添加用户
             </Button>
           </>
@@ -84,18 +138,19 @@ export default function UsersPage() {
         <DataTable pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: setPageSize }}>
           <TableHead>
             <TableRow>
-              <TableCell>User名称</TableCell>
-              <TableCell>名称</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>状态</TableCell>
-              <TableCell>操作</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>账号</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>姓名</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>邮箱</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>角色</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>所属组织</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <EmptyState title="暂无用户" description="创建第一个用户账号" />
                 </TableCell>
               </TableRow>
@@ -110,26 +165,49 @@ export default function UsersPage() {
                   </Box>
                 </TableCell>
                 <TableCell>{item.name || '-'}</TableCell>
-                <TableCell sx={{ fontSize: 12 }}>{item.email || '-'}</TableCell>
+                <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{item.email || '-'}</TableCell>
                 <TableCell>
-                  <Box component="span" sx={{
-                    display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, fontSize: 11, fontWeight: 600,
-                    bgcolor: `${roleColors[item.role] || 'default'}.light`,
-                    color: `${roleColors[item.role] || 'default'}.contrastText`,
-                    textTransform: 'capitalize',
-                  }}>
-                    {item.role}
-                  </Box>
+                  <Chip
+                    label={ROLE_LABELS[item.role] || item.role}
+                    size="small"
+                    color={ROLE_COLORS[item.role] || 'default'}
+                    variant="outlined"
+                    sx={{ fontSize: 11, height: 22 }}
+                  />
+                </TableCell>
+                <TableCell>
+                  {item.org_id ? (
+                    <Typography variant="body2" sx={{ fontSize: 12 }}>
+                      {orgMap[item.org_id] || item.org_id}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" sx={{ fontSize: 12, color: 'text.disabled' }}>—</Typography>
+                  )}
                 </TableCell>
                 <TableCell><StatusBadge status={item.status} /></TableCell>
                 <TableCell>
                   <Tooltip title="编辑">
-                    <IconButton size="small" onClick={() => { setEditItem(item); setForm({ ...item, password: '' }); setDialogOpen(true); }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setEditItem(item);
+                        setForm(extractUserFields(item));
+                        setDialogOpen(true);
+                      }}
+                    >
                       <Edit fontSize="small" />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="删除">
-                    <IconButton size="small" color="error" onClick={() => { if (confirm('确认删除此用户?')) deleteMutation.mutate(item.id); }}>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => {
+                        if (confirm(`确认删除用户「${item.name || item.username}」?`)) {
+                          deleteMutation.mutate(item.id);
+                        }
+                      }}
+                    >
                       <Delete fontSize="small" />
                     </IconButton>
                   </Tooltip>
@@ -142,38 +220,76 @@ export default function UsersPage() {
 
       <CrudDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        title={editItem ? 'Edit User' : '添加用户'}
+        onClose={() => { setDialogOpen(false); resetForm(); }}
+        title={editItem ? `编辑用户 — ${editItem.name || editItem.username}` : '添加用户'}
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
       >
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid size={6}>
-            <TextField fullWidth label="Username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} disabled={!!editItem} />
+            <TextField
+              fullWidth label="账号名" required
+              value={form.username}
+              onChange={e => setForm({ ...form, username: e.target.value })}
+              disabled={!!editItem}
+              helperText={editItem ? '账号名不可修改' : ''}
+            />
           </Grid>
           <Grid size={6}>
-            <TextField fullWidth label="姓名" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-          </Grid>
-          <Grid size={12}>
-            <TextField fullWidth label="邮箱" type="邮箱" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            <TextField
+              fullWidth label="姓名"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+            />
           </Grid>
           <Grid size={12}>
             <TextField
-              fullWidth label={editItem ? '密码（留空则不修改）' : 'Password'}
-              type="password" value={form.password}
+              fullWidth label="邮箱" type="email"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+            />
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              fullWidth
+              label={editItem ? '密码（留空则不修改）' : '密码'}
+              type="password"
+              value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
               required={!editItem}
             />
           </Grid>
           <Grid size={6}>
-            <TextField fullWidth select label="角色" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-              {ROLES.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+            <TextField
+              fullWidth select label="角色"
+              value={form.role}
+              onChange={e => setForm({ ...form, role: e.target.value })}
+            >
+              {ROLES.map(([val, label]) => (
+                <MenuItem key={val} value={val}>{label}</MenuItem>
+              ))}
             </TextField>
           </Grid>
           <Grid size={6}>
-            <TextField fullWidth select label="Status" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+            <TextField
+              fullWidth select label="状态"
+              value={form.status}
+              onChange={e => setForm({ ...form, status: e.target.value })}
+            >
               <MenuItem value="active">启用</MenuItem>
               <MenuItem value="disabled">禁用</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              fullWidth select label="所属组织（可选）"
+              value={form.org_id || ''}
+              onChange={e => setForm({ ...form, org_id: e.target.value || '' })}
+            >
+              <MenuItem value="">— 暂不归属 —</MenuItem>
+              {allOrgs.map((o: any) => (
+                <MenuItem key={o.id} value={o.id}>{o.name}</MenuItem>
+              ))}
             </TextField>
           </Grid>
         </Grid>

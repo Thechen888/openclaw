@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
   TextField, Button, Tooltip, Grid, MenuItem, Tabs, Tab, Chip, Typography,
+  FormControl, InputLabel, Select, OutlinedInput, Checkbox, ListItemText,
 } from '@mui/material';
 import { Add, Edit, Delete, Refresh, PlayArrow, SmartToy } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,7 +10,7 @@ import {
   PageHeader, FilterBar, DataTable, StatusBadge, useTableState,
   EmptyState, LoadingState, CrudDialog,
 } from '../../components/shared';
-import { agentsApi, modelPoliciesApi } from '../../api/client';
+import { agentsApi, modelPoliciesApi, skillsApi } from '../../api/client';
 
 const OWNER_TABS = [
   { label: '全部', value: '' },
@@ -25,6 +26,7 @@ export default function AgentsPage() {
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState<any>({
     name: '', owner_type: 'personal', status: 'active', model_policy_id: '', description: '', system_prompt: '',
+    authorized_skills: [] as string[],
   });
 
   const queryParams = { ...params, owner_type: ownerTab || undefined };
@@ -42,6 +44,12 @@ export default function AgentsPage() {
   });
   const policies = policiesData?.data?.data || [];
 
+  const { data: skillsData } = useQuery({
+    queryKey: ['skills-all'],
+    queryFn: () => skillsApi.list({ page_size: 200 }),
+  });
+  const skillsAll: any[] = skillsData?.data?.data || [];
+
   const createMutation = useMutation({
     mutationFn: (d: any) => agentsApi.create(d),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['agents'] }); setDialogOpen(false); resetForm(); },
@@ -55,7 +63,7 @@ export default function AgentsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agents'] }),
   });
 
-  const resetForm = () => setForm({ name: '', owner_type: 'personal', status: 'active', model_policy_id: '', description: '', system_prompt: '' });
+  const resetForm = () => setForm({ name: '', owner_type: 'personal', status: 'active', model_policy_id: '', description: '', system_prompt: '', authorized_skills: [] });
 
   const handleSave = () => {
     if (editItem) {
@@ -190,6 +198,51 @@ export default function AgentsPage() {
               <MenuItem value="">无</MenuItem>
               {policies.map((p: any) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
             </TextField>
+          </Grid>
+          <Grid size={12}>
+            <FormControl fullWidth>
+              <InputLabel>授权技能</InputLabel>
+              <Select
+                multiple
+                value={form.authorized_skills || []}
+                onChange={e => setForm({ ...form, authorized_skills: typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value })}
+                input={<OutlinedInput label="授权技能" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {(selected as string[]).map(id => {
+                      const sk = skillsAll.find((s: any) => s.id === id);
+                      return <Chip key={id} label={sk?.name || id} size="small" sx={{ height: 22, fontSize: 11 }} />;
+                    })}
+                  </Box>
+                )}
+                MenuProps={{ slotProps: { paper: { sx: { maxHeight: 360 } } } }}
+              >
+                {skillsAll.length === 0 ? (
+                  <MenuItem disabled>暂无可选技能</MenuItem>
+                ) : skillsAll.map((s: any) => (
+                  <MenuItem key={s.id} value={s.id}>
+                    <Checkbox checked={(form.authorized_skills || []).indexOf(s.id) > -1} size="small" />
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>{s.name}</Typography>
+                          {s.risk_level && s.risk_level !== 'low' && (
+                            <Chip
+                              label={s.risk_level}
+                              size="small"
+                              color={s.risk_level === 'critical' || s.risk_level === 'high' ? 'error' : 'warning'}
+                              sx={{ height: 16, fontSize: 10 }}
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={`类型: ${s.type} · 来源: ${s.source_adapter_name || '手动创建'}`}
+                      slotProps={{ secondary: { sx: { fontSize: 11 } } }}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid size={12}>
             <TextField fullWidth label="系统提示词" multiline rows={3} value={form.system_prompt} onChange={e => setForm({ ...form, system_prompt: e.target.value })} />

@@ -132,6 +132,7 @@ export const tokensApi = {
   get: (id: string) => api.get(`/tokens/${id}`),
   create: (data: any) => api.post('/tokens', data),
   update: (id: string, data: any) => api.put(`/tokens/${id}`, data),
+  delete: (id: string) => api.delete(`/tokens/${id}`),
 };
 
 export const chatAccountsApi = {
@@ -200,6 +201,8 @@ export const marketplaceApi = {
 export const k8sApi = {
   pods: () => api.get('/system/k8s/pods'),
   nodes: () => api.get('/system/k8s/nodes'),
+  clusters: () => api.get('/system/k8s/clusters'),
+  cluster: (id: string) => api.get(`/system/k8s/clusters/${id}`),
 };
 
 export const queuesApi = {

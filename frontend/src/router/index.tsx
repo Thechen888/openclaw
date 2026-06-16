@@ -26,6 +26,7 @@ import TokensPage from '../pages/tokens/TokensPage';
 import ApprovalsPage from '../pages/tokens/ApprovalsPage';
 import QuotasPage from '../pages/resources/QuotasPage';
 import K8sStatusPage from '../pages/resources/K8sStatusPage';
+import K8sDetailPage from '../pages/resources/K8sDetailPage';
 import RestartPage from '../pages/resources/RestartPage';
 import QueuesPage from '../pages/resources/QueuesPage';
 import PlatformSnPage from '../pages/resources/PlatformSnPage';
@@ -80,6 +81,7 @@ export const router = createBrowserRouter([
       { path: 'resources/backup', element: <ConfigBackupPage /> },
       { path: 'resources/quota', element: <QuotasPage /> },
       { path: 'resources/k8s', element: <K8sStatusPage /> },
+      { path: 'resources/k8s/:id', element: <K8sDetailPage /> },
       { path: 'resources/restart', element: <RestartPage /> },
       { path: 'resources/queues', element: <QueuesPage /> },
       { path: 'resources/python', element: <PythonPackagesPage /> },

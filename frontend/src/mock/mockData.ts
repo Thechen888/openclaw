@@ -39,19 +39,40 @@ const modelSources = [
 
 // =================== 模型策略 ===================
 const modelPolicies = [
-  { id: 'mp-1', name: '通用对话策略', task_type: 'chat', rotation_method: 'round_robin', status: 'active', upstream_ids: ['ms-1', 'ms-3', 'ms-5'], upstreams_count: 3 },
-  { id: 'mp-2', name: '高性价比对话', task_type: 'chat', rotation_method: 'least_cost', status: 'active', upstream_ids: ['ms-2', 'ms-5'], upstreams_count: 2 },
-  { id: 'mp-3', name: '视觉理解策略', task_type: 'chat', rotation_method: 'priority', status: 'active', upstream_ids: ['ms-1', 'ms-4'], upstreams_count: 2 },
-  { id: 'mp-4', name: '向量嵌入策略', task_type: 'embedding', rotation_method: 'round_robin', status: 'active', upstream_ids: ['ms-6'], upstreams_count: 1 },
-  { id: 'mp-5', name: '低延迟策略', task_type: 'chat', rotation_method: 'least_latency', status: 'disabled', upstream_ids: ['ms-2', 'ms-5'], upstreams_count: 2 },
+  { id: 'mp-1', name: '通用对话策略', rotation_method: 'priority', status: 'active', is_default: true, upstream_ids: ['ms-1', 'ms-3', 'ms-5'], timeout_seconds: 30, retry_count: 2 },
+  { id: 'mp-2', name: '高性价比对话', rotation_method: 'round_robin', status: 'active', is_default: false, upstream_ids: ['ms-2', 'ms-5'], timeout_seconds: 20, retry_count: 1 },
+  { id: 'mp-3', name: '视觉理解策略', rotation_method: 'priority', status: 'active', is_default: false, upstream_ids: ['ms-1', 'ms-4'], timeout_seconds: 60, retry_count: 1 },
+  { id: 'mp-4', name: '向量嵌入策略', rotation_method: 'round_robin', status: 'active', is_default: false, upstream_ids: ['ms-6'], timeout_seconds: 15, retry_count: 0 },
+  { id: 'mp-5', name: '备用国产策略', rotation_method: 'priority', status: 'disabled', is_default: false, upstream_ids: ['ms-5', 'ms-4', 'ms-2'], timeout_seconds: 30, retry_count: 2 },
 ];
 
 // =================== 聊天适配器 ===================
 const chatAdapters = [
-  { id: 'ca-1', name: '企业微信-主应用', chat_type: 'wechat_work', status: 'active', webhook_url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send', corp_id: 'ww1234567890', agent_id: '1000001', last_sync_at: ago(15) },
-  { id: 'ca-2', name: '钉钉-审批通知', chat_type: 'dingtalk', status: 'active', webhook_url: 'https://oapi.dingtalk.com/robot/send', corp_id: '', agent_id: '', last_sync_at: ago(60) },
-  { id: 'ca-3', name: '飞书-客服机器人', chat_type: 'feishu', status: 'active', webhook_url: 'https://open.feishu.cn/open-apis/bot/v2/hook', corp_id: '', agent_id: '', last_sync_at: ago(120) },
-  { id: 'ca-4', name: 'Slack-开发频道', chat_type: 'slack', status: 'disabled', webhook_url: 'https://hooks.slack.com/services/xxx', corp_id: '', agent_id: '', last_sync_at: ago(7200) },
+  {
+    id: 'ca-1', name: '企业微信-主应用', chat_type: 'wechat_work', status: 'active',
+    webhook_url: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx',
+    corp_id: 'ww1234567890', agent_id: '1000001', app_secret: '******',
+    last_sync_at: ago(15),
+  },
+  {
+    id: 'ca-2', name: '钉钉-审批通知', chat_type: 'dingtalk', status: 'active',
+    webhook_url: 'https://oapi.dingtalk.com/robot/send?access_token=xxx',
+    access_token: 'xxxxxxxxxxxxxxxx', sign_secret: '******',
+    last_sync_at: ago(60),
+  },
+  {
+    id: 'ca-3', name: '飞书-客服机器人', chat_type: 'feishu', status: 'active',
+    app_id: 'cli_xxxxxxxxx', app_secret: '******',
+    webhook_url: 'https://open.feishu.cn/open-apis/bot/v2/hook/xxx',
+    last_sync_at: ago(120),
+  },
+  {
+    id: 'ca-4', name: 'Slack-开发频道', chat_type: 'slack', status: 'disabled',
+    bot_token: '******',
+    webhook_url: 'https://hooks.slack.com/services/xxx',
+    channel_id: 'C0XXXXXXXXX', sign_secret: '******',
+    last_sync_at: ago(7200),
+  },
 ];
 
 // =================== 第三方系统 ===================
@@ -73,7 +94,12 @@ const starlarkAdapters = [
       { name: 'read_deals', method: 'GET', description: '读取交易列表', script: 'def read_deals(ctx):\n  return ctx.http.get("/deals")' },
       { name: 'write_notes', method: 'POST', description: '写入备注', script: 'def write_notes(ctx, data):\n  return ctx.http.post("/notes", data)' },
     ],
-    auth_config: { type: 'bearer_token', secret: 'crm-api-key-xxx' },
+    auth_config: { type: 'bearer_token', secret: 'crm-api-key-xxx' }, // 兼容旧数据，前端会自动转换为 config_items
+    config_items: [
+      { key: 'base_url', value: 'https://crm.example.com/api/v1', is_secret: false },
+      { key: 'api_key', value: 'crm-api-key-xxx', is_secret: true },
+      { key: 'tenant_id', value: 'tenant-001', is_secret: false },
+    ],
     full_script: '# CRM客户同步适配器\ndef read_contacts(ctx):\n  return ctx.http.get("/contacts")\n\ndef read_deals(ctx):\n  return ctx.http.get("/deals")\n\ndef write_notes(ctx, data):\n  return ctx.http.post("/notes", data)',
   },
   {
@@ -84,6 +110,11 @@ const starlarkAdapters = [
       { name: 'read_inventory', method: 'GET', description: '读取库存', script: 'def read_inventory(ctx):\n  return ctx.http.get("/inventory")' },
     ],
     auth_config: { type: 'api_key', secret: 'erp-key-xxx' },
+    config_items: [
+      { key: 'base_url', value: 'https://erp.example.com/openapi', is_secret: false },
+      { key: 'app_key', value: 'yonyou-app-key', is_secret: false },
+      { key: 'app_secret', value: 'erp-key-xxx', is_secret: true },
+    ],
     full_script: '# ERP订单查询适配器\ndef read_orders(ctx):\n  return ctx.http.get("/orders")\n\ndef read_inventory(ctx):\n  return ctx.http.get("/inventory")',
   },
   {
@@ -95,6 +126,11 @@ const starlarkAdapters = [
       { name: 'read_projects', method: 'GET', description: '读取项目', script: 'def read_projects(ctx):\n  return ctx.http.get("/projects")' },
     ],
     auth_config: { type: 'basic_auth', secret: 'jira-auth-xxx' },
+    config_items: [
+      { key: 'base_url', value: 'https://company.atlassian.net', is_secret: false },
+      { key: 'username', value: 'bot@company.com', is_secret: false },
+      { key: 'api_token', value: 'jira-auth-xxx', is_secret: true },
+    ],
     full_script: '# Jira工单对接适配器\ndef read_issues(ctx):\n  return ctx.http.get("/issues")\n\ndef write_issues(ctx, data):\n  return ctx.http.put("/issues", data)\n\ndef read_projects(ctx):\n  return ctx.http.get("/projects")',
   },
   {
@@ -105,6 +141,11 @@ const starlarkAdapters = [
       { name: 'read_alerts', method: 'GET', description: '读取告警', script: 'def read_alerts(ctx):\n  return ctx.http.get("/alerts")' },
     ],
     auth_config: { type: 'oauth2', secret: 'iot-oauth-token' },
+    config_items: [
+      { key: 'base_url', value: 'https://iot.example.com/v2', is_secret: false },
+      { key: 'access_token', value: 'iot-oauth-token', is_secret: true },
+      { key: 'project_id', value: 'proj-iot-2026', is_secret: false },
+    ],
     full_script: '# IoT设备状态适配器\ndef read_devices(ctx):\n  return ctx.http.get("/devices")\n\ndef read_alerts(ctx):\n  return ctx.http.get("/alerts")',
   },
   {
@@ -114,6 +155,10 @@ const starlarkAdapters = [
       { name: 'read_invoices', method: 'GET', description: '读取发票', script: 'def read_invoices(ctx):\n  return ctx.http.get("/invoices")' },
     ],
     auth_config: { type: 'custom', secret: 'custom-auth-xxx' },
+    config_items: [
+      { key: 'base_url', value: 'https://finance.internal/api', is_secret: false },
+      { key: 'sign_key', value: 'custom-auth-xxx', is_secret: true },
+    ],
     full_script: '# 财务对账适配器\ndef read_invoices(ctx):\n  return ctx.http.get("/invoices")',
   },
 ];
@@ -136,6 +181,7 @@ const identitySources: any[] = [
     sync_cron: '0 */2 * * *', conflict_strategy: 'primary', status: 'active',
     is_builtin: false,
     ldap_server: 'ldaps://ldap.company.com', ldap_port: 636,
+    bind_dn: 'cn=admin,dc=company,dc=com', bind_password: '******',
     base_dn: 'ou=users,dc=company,dc=com', filter: '(objectClass=person)',
   },
   {
@@ -164,29 +210,60 @@ const permGroups: any[] = [
 const permSkills: any[] = [
   {
     id: 'ps-1', name: 'CRM客户查询',
-    functions: [{ name: 'read_contacts' }, { name: 'read_deals' }, { name: 'write_notes' }],
+    functions: [
+      { name: 'read_contacts', display_name: '查询联系人' },
+      { name: 'read_deals', display_name: '查询商机' },
+      { name: 'write_notes', display_name: '写备注' },
+    ],
   },
   {
     id: 'ps-2', name: '设备状态摘要',
-    functions: [{ name: 'read_devices' }, { name: 'read_alerts' }],
+    functions: [
+      { name: 'read_devices', display_name: '查询设备' },
+      { name: 'read_alerts', display_name: '查询告警' },
+    ],
   },
   {
     id: 'ps-3', name: '工单自动分派',
-    functions: [{ name: 'read_issues' }, { name: 'write_issues' }, { name: 'assign_issues' }],
+    functions: [
+      { name: 'read_issues', display_name: '查询工单' },
+      { name: 'write_issues', display_name: '创建/修改工单' },
+      { name: 'assign_issues', display_name: '分派工单' },
+    ],
   },
   {
     id: 'ps-4', name: '图像质量检测',
-    functions: [{ name: 'analyze_image' }, { name: 'get_report' }],
+    functions: [
+      { name: 'analyze_image', display_name: '图像分析' },
+      { name: 'get_report', display_name: '生成报告' },
+    ],
   },
   {
     id: 'ps-5', name: 'ERP数据写入',
-    functions: [{ name: 'read_orders' }, { name: 'write_orders' }, { name: 'update_status' }],
+    functions: [
+      { name: 'read_orders', display_name: '查询订单' },
+      { name: 'write_orders', display_name: '创建订单' },
+      { name: 'update_status', display_name: '更新状态' },
+    ],
   },
   {
     id: 'ps-6', name: '消息模板生成',
-    functions: [{ name: 'generate_message' }, { name: 'send_message' }],
+    functions: [
+      { name: 'generate_message', display_name: '生成消息' },
+      { name: 'send_message', display_name: '发送消息' },
+    ],
   },
 ];
+
+// 用户个人权限覆盖（userId -> skillId -> 函数名列表）
+// 空字典表示默认全部继承自组权限
+const userPermissions: Record<string, Record<string, string[]>> = {
+  // 示例：u-5 陈七 有自定义权限
+  'u-5': {
+    'ps-1': ['read_contacts'],
+    'ps-6': ['generate_message'],
+  },
+};
 
 // 各用户组的 Skill 权限映射（skillId -> 已启用函数列表）
 const permGroupConfigs: Record<string, Record<string, string[]>> = {
@@ -226,24 +303,35 @@ const permGroupConfigs: Record<string, Record<string, string[]>> = {
 };
 
 // =================== 用户 ===================
-const users = [
-  { id: 'u-1', username: 'admin', name: '张伟', email: 'zhangwei@company.com', role: 'admin', status: 'active' },
-  { id: 'u-2', username: 'lisi', name: '李思', email: 'lisi@company.com', role: 'manager', status: 'active' },
-  { id: 'u-3', username: 'wangwu', name: '王五', email: 'wangwu@company.com', role: 'member', status: 'active' },
-  { id: 'u-4', username: 'zhaoliu', name: '赵六', email: 'zhaoliu@company.com', role: 'member', status: 'active' },
-  { id: 'u-5', username: 'chenqi', name: '陈七', email: 'chenqi@company.com', role: 'viewer', status: 'disabled' },
-  { id: 'u-6', username: 'sunba', name: '孙八', email: 'sunba@company.com', role: 'member', status: 'active' },
-  { id: 'u-7', username: 'zhoujiu', name: '周九', email: 'zhoujiu@company.com', role: 'manager', status: 'active' },
+const users: any[] = [
+  { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active' },
+  { id: 'u-2', username: 'lisi',     name: '李思', email: 'lisi@company.com',     role: 'manager', org_id: 'org-3', status: 'active' },
+  { id: 'u-3', username: 'wangwu',   name: '王五', email: 'wangwu@company.com',   role: 'member',  org_id: 'org-2', status: 'active' },
+  { id: 'u-4', username: 'zhaoliu',  name: '赵六', email: 'zhaoliu@company.com',  role: 'member',  org_id: 'org-2', status: 'active' },
+  { id: 'u-5', username: 'chenqi',   name: '陈七', email: 'chenqi@company.com',   role: 'viewer',  org_id: 'org-4', status: 'disabled' },
+  { id: 'u-6', username: 'sunba',    name: '孙八', email: 'sunba@company.com',    role: 'member',  org_id: 'org-4', status: 'active' },
+  { id: 'u-7', username: 'zhoujiu', name: '周九', email: 'zhoujiu@company.com',  role: 'manager', org_id: 'org-3', status: 'active' },
 ];
 
 // =================== 组织 ===================
-const organizations = [
-  { id: 'org-1', name: '总公司', type: 'company', status: 'active', description: '集团总公司', member_count: 156 },
-  { id: 'org-2', name: '技术研发部', type: 'department', status: 'active', description: '技术研发部门', member_count: 45 },
-  { id: 'org-3', name: '销售部', type: 'department', status: 'active', description: '销售与商务部门', member_count: 32 },
-  { id: 'org-4', name: 'AI平台组', type: 'team', status: 'active', description: 'AI平台研发小组', member_count: 12 },
-  { id: 'org-5', name: '智慧客服项目', type: 'project', status: 'active', description: '智能客服系统项目', member_count: 8 },
+const organizations: any[] = [
+  { id: 'org-1', name: '总公司',      type: 'company',    parent_id: null,    status: 'active',   description: '集团总公司',       member_count: 156 },
+  { id: 'org-2', name: '技术研发部',  type: 'department', parent_id: 'org-1', status: 'active',   description: '技术研发部门',     member_count: 45 },
+  { id: 'org-3', name: '销售部',      type: 'department', parent_id: 'org-1', status: 'active',   description: '销售与商务部门',   member_count: 32 },
+  { id: 'org-4', name: 'AI平台组',    type: 'team',       parent_id: 'org-2', status: 'active',   description: 'AI平台研发小组',   member_count: 12 },
+  { id: 'org-5', name: '智慧客服项目',type: 'project',    parent_id: 'org-2', status: 'active',   description: '智能客服系统项目', member_count: 8 },
+  { id: 'org-6', name: '华东大区',    type: 'team',       parent_id: 'org-3', status: 'active',   description: '华东区域销售团队', member_count: 18 },
 ];
+
+// 组织成员关联（org_id -> userId[]）
+const orgMembers: Record<string, string[]> = {
+  'org-1': ['u-1'],
+  'org-2': ['u-3', 'u-4'],
+  'org-3': ['u-2', 'u-7'],
+  'org-4': ['u-5', 'u-6'],
+  'org-5': [],
+  'org-6': [],
+};
 
 // =================== 聊天账号 ===================
 const chatAccounts = [
@@ -426,15 +514,159 @@ const agentRuns = [
 ];
 
 // =================== 技能 ===================
-const skills = [
-  { id: 'sk-1', name: '邮件发送', type: 'tool', category: 'communication', risk_level: 'low', status: 'active', owner: '张伟', owner_name: '张伟', description: '通过SMTP发送邮件通知' },
-  { id: 'sk-2', name: '数据库查询', type: 'tool', category: 'data', risk_level: 'medium', status: 'active', owner: '技术研发部', owner_name: '技术研发部', description: '查询PostgreSQL数据库并返回结果' },
-  { id: 'sk-3', name: '文档摘要', type: 'knowledge', category: 'analytics', risk_level: 'low', status: 'active', owner: '李思', owner_name: '李思', description: '对长文档进行智能摘要提取' },
-  { id: 'sk-4', name: 'CRM数据同步', type: 'integration', category: 'automation', risk_level: 'high', status: 'active', owner: '销售部', owner_name: '销售部', description: '同步CRM系统中的客户数据' },
-  { id: 'sk-5', name: '审批流程', type: 'workflow', category: 'automation', risk_level: 'medium', status: 'active', owner: '张伟', owner_name: '张伟', description: '处理多级审批流程' },
-  { id: 'sk-6', name: '图像识别', type: 'tool', category: 'analytics', risk_level: 'low', status: 'draft', owner: '王五', owner_name: '王五', description: '基于视觉模型的图像内容识别' },
-  { id: 'sk-7', name: '敏感词过滤', type: 'prompt', category: 'security', risk_level: 'critical', status: 'active', owner: '技术研发部', owner_name: '技术研发部', description: '对生成内容进行敏感词检测和过滤' },
+// source_adapter_id / source_adapter_name 标记 Skill 来源：
+// - 有值：由对应 Starlark 适配器自动登记
+// - null：管理员手动创建
+const skills: any[] = [
+  { id: 'sk-1', name: 'kingdee-erp-query', description: '查询金蝶云星空 ERP 数据时使用，适用于按 formId 查询表单/单据列表、通过 FID 内码查看表单详情、查询销售订单、采购订单、收料通知单、应付单、付款单、库存、生产订单、生产领料、质检单、调拨单、其他入库...', status: 'active', created_at: '2026-04-29 01:06' },
+  { id: 'sk-2', name: 'cron', description: '定时任务', status: 'active', created_at: '2026-03-28 05:03' },
+  { id: 'sk-3', name: 'recloud', description: 'recloud', status: 'active', created_at: '2026-03-12 04:13' },
+  { id: 'sk-4', name: 'mes', description: 'MES Skill 体系：查遍 MES 从工单投产、质量测试、物料追溯、产出交接到供应链报表的 25 个业务域数据', status: 'active', created_at: '2026-03-30 23:39' },
+  { id: 'sk-5', name: 'knows', description: '公司内部知识库：生产及工艺、研发知识、产品知识、售后服务、公司流程、法务财务、工程项目', status: 'active', created_at: '2026-04-16 07:08' },
+  { id: 'sk-6', name: 'minimax-pdf', description: '基于 token 化设计系统生成、填写和重排 PDF 文档。支持三种模式：CREATE（从零生成，15 种封面风格）、FILL（填写现有表单字段）、REFORMAT（将已有文档重排为新设计）。排版与配色由文档类型自动推导，输...', status: 'active', created_at: '2026-04-14 23:50' },
+  { id: 'sk-7', name: 'beisen', description: '北森查用功能', status: 'active', created_at: '2026-03-21 20:06' },
+  { id: 'sk-8', name: 'crm', description: 'crm', status: 'active', created_at: '2026-03-11 04:44' },
+  { id: 'sk-9', name: 'wecom-smartsheet-schema', description: '企业微信智能表格模式', status: 'active', created_at: '2026-04-09 05:14' },
+  { id: 'sk-10', name: 'wecom-send-media', description: '企业微信发送文件 图片等', status: 'active', created_at: '2026-04-09 05:13' },
+  { id: 'sk-11', name: 'gen-image', description: '生成图片', status: 'active', created_at: '2026-04-08 00:59' },
 ];
+
+// =================== Skill 文件系统 ===================
+const skillFiles: Record<string, { path: string; size: number; updatedAt: string }[]> = {
+  'sk-1': [
+    { path: 'SKILL.md', size: 3520, updatedAt: '2026-04-29 01:06' },
+    { path: 'agents/openai.yaml', size: 420, updatedAt: '2026-04-29 01:06' },
+    { path: 'references/endpoint-index.md', size: 1860, updatedAt: '2026-04-29 01:06' },
+    { path: 'references/error-responses.md', size: 890, updatedAt: '2026-04-29 01:06' },
+    { path: 'references/examples.md', size: 2450, updatedAt: '2026-04-29 01:06' },
+    { path: 'references/legacy-full-skill.md', size: 5600, updatedAt: '2026-04-29 01:06' },
+    { path: 'references/query-contracts.md', size: 3200, updatedAt: '2026-04-29 01:06' },
+    { path: 'references/report-contracts.md', size: 2780, updatedAt: '2026-04-29 01:06' },
+    { path: 'references/workflow.md', size: 1540, updatedAt: '2026-04-29 01:06' },
+  ],
+};
+
+const skillFileContents: Record<string, string> = {
+  'sk-1:SKILL.md': `---
+name: kingdee-erp-query
+description: 查询金蝶云星空 ERP 数据时使用：把业务问题路由到本项目封装后的只读 ERP API，并为单据、库存、预算、生产缺料、序列号、BOM、替代方案、流程管理中心等场景生成元数据可验证的请求体。凡涉及金蝶、ERP、K3Cloud、云星空、formId、fieldKeys、AuthHeader、FID、单据编号、销... 统一使用此 skill。
+---
+
+# 金蝶 ERP 查询
+
+这个 skill 负责把用户的业务查询需求转成项目内封装后的金蝶 ERP 只读 API 调用，并把路由、请求、响应摘要和分析沉淀成可复用 artifacts。入口只编排，细节按需加载，模块输出独立保存。
+
+## 设计原则
+
+1. **模块化**：一次查询拆成 \`intake -> route -> request -> execute -> interpret -> respond\`。每个模块只做一件事。
+2. **松耦合**：下游模块只读取上游 artifact，不重新推导上游结论。修改某个模块时，保留前序输出，从该模块继续。
+3. **高内聚**：接口映射、请求体规则、异常话术、示例分别放在 references；不要把新接口细节堆回 \`SKILL.md\`。
+4. **断点继续**：每个模块必须保存输出。调试时优先从最近失败的模块重跑，不要从头重查。
+5. **最小上下文**：先读本入口，再只读需要的 reference。
+
+## Reference 模块
+
+按需读取这些文件：
+
+- \`references/workflow.md\`：模块流水线、artifact 目录、断点继续协议。
+- \`references/endpoint-index.md\`：业务名称、formId、API 路径、可用性与替代路径。
+- \`references/query-contracts.md\`：普通表单、库存分页报表、系统报表、BOM、过滤方案的请求/响应契约。
+- \`references/report-contracts.md\`：库存、预算、生产缺料、序列号等特殊报表的字段与快捷参数。
+- \`references/examples.md\`：curl/request 示例与常用查询模板。
+- \`references/error-responses.md\`：客户端异常回复模板与禁止暴露内容。
+
+## 必须遵守的执行流程
+
+1. 读取 \`references/workflow.md\`，创建本次查询的 run 目录。
+2. 产出 \`00-intake.md\`：用户目标、已知条件、缺失条件、AuthHeader 状态。
+3. 读取 \`references/endpoint-index.md\`，产出 \`01-route.md\`：选中的接口、formId、为什么不用其他接口。
+4. 按接口类型读取 \`query-contracts.md\` 或 \`report-contracts.md\`，产出 \`02-request.json\` 和 \`02-request.md\`。
+5. 执行 API 前确认不保存 AuthHeader；只在 request artifact 中保留 \`<AUTH_HEADER>\` 占位。
+6. 执行后保存 \`03-response-summary.md\`。只有用户明确允许或调试确实需要时，才保存脱敏后的 \`03-response.json\`。
+7. 产出 \`04-analysis.md\`：字段解释、分页状态、空结果/权限/异常判断。
+8. 最终回复前保存 \`05-final-answer.md\`，并给用户简洁结论。
+
+## 调试与断点继续
+
+- 如果用户要求"继续上次查询"，先找最近的 run 目录，读取 \`run-state.json\` 和最新模块输出。
+- 如果只改请求参数，从 \`02-request\` 重新生成并继续，不重做 \`00-intake\` 和 \`01-route\`。
+- 如果只改解析/话术，从 \`03-response-summary.md\` 或脱敏响应继续，不重调接口。
+- 如果接口选错，只重做 \`01-route\` 之后的模块。
+- 每次重跑一个模块，写新版本：\`02-request.v2.json\`、\`04-analysis.v2.md\`，不要覆盖旧输出。`,
+  'sk-1:agents/openai.yaml': `model: gpt-4o
+temperature: 0.2
+system_prompt: |
+  你是一个金蝶 ERP 数据查询专家。请严格按照 SKILL.md 中的执行流程操作。
+  不要暴露 AuthHeader、token、密码等凭证信息。
+  只读操作，禁止修改或删除 ERP 数据。`,
+  'sk-1:references/endpoint-index.md': `# Endpoint Index
+
+| 业务 | formId | 路径 | 说明 |
+|------|--------|------|------|
+| 销售订单 | SAL_SaleOrder | /k3cloud/erp/query | 主单据 |
+| 采购订单 | PUR_PurchaseOrder | /k3cloud/erp/query | 主单据 |
+| 库存 | STK_Inventory | /k3cloud/erp/query | 实时库存 |
+| 生产订单 | PRD_MO | /k3cloud/erp/query | 生产工单 |
+`,
+  'sk-1:references/query-contracts.md': `# Query Contracts
+
+## 普通表单查询
+
+POST /k3cloud/erp/query
+{
+  "formId": "SAL_SaleOrder",
+  "filterString": "FDate >= '2026-01-01'",
+  "fieldKeys": "FBillNo,FDate,FCustId,FMaterialId,FQty"
+}
+`,
+  'sk-1:references/examples.md': `# Examples
+
+### 查询最近 30 天的销售订单
+
+\`\`\`bash
+curl -X POST https://api.company.com/k3cloud/erp/query \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: <AUTH_HEADER>" \\
+  -d '{\n    "formId": "SAL_SaleOrder",\n    "filterString": "FDate >= '\\''2026-05-01'\\''"\n  }'
+\`\`\`
+`,
+  'sk-1:references/workflow.md': `# Workflow
+
+## 模块流水线
+
+1. 00-intake：理解用户意图，提取已知/缺失条件
+2. 01-route：选择最合适的 endpoint 和 formId
+3. 02-request：构建请求体，保留 <AUTH_HEADER> 占位
+4. 03-response：执行 API，保存摘要（不保存原始响应）
+5. 04-analysis：解析结果，处理异常/空结果
+6. 05-final-answer：生成用户友好回复
+
+## 断点继续协议
+
+每个模块输出独立文件。重跑时只需替换当前模块及下游模块的输出。`,
+  'sk-1:references/error-responses.md': `# Error Responses
+
+- 权限不足："当前账号无此模块查询权限，请联系 ERP 管理员开通。"
+- 接口超时："ERP 接口响应超时，请稍后重试或联系管理员检查网络。"
+- 数据不存在："未查询到符合条件的数据，建议放宽筛选条件。"
+`,
+  'sk-1:references/report-contracts.md': `# Report Contracts
+
+## 库存报表
+
+- endpoint: /k3cloud/erp/report/stk
+- 快捷参数: warehouse, materialGroup, dateRange
+
+## 生产缺料分析
+
+- endpoint: /k3cloud/erp/report/prd-shortage
+- 快捷参数: moNumber, workCenter, dateRange
+`,
+  'sk-1:references/legacy-full-skill.md': `# Legacy Full Skill (Deprecated)
+
+旧版全量 skill 已拆分。请使用新版模块化 skill。
+`,
+};
 
 // =================== 技能市场 ===================
 const marketplaceSkills = [
@@ -450,12 +682,12 @@ const marketplaceSkills = [
 ];
 
 // =================== Token ===================
-const tokens = [
-  { id: 'tk-1', name: 'CRM系统接入令牌', owner: '张伟', owner_name: '张伟', target_system: 'Salesforce', credential_type: 'api_key', status: 'active', quota_used: 8500, quota_limit: 10000, expires_at: dayAgo(-30) },
-  { id: 'tk-2', name: 'ERP数据查询', owner: '李思', owner_name: '李思', target_system: 'SAP', credential_type: 'bearer', status: 'active', quota_used: 3200, quota_limit: 5000, expires_at: dayAgo(-60) },
-  { id: 'tk-3', name: '工单系统令牌', owner: '王五', owner_name: '王五', target_system: 'Zendesk', credential_type: 'oauth2', status: 'active', quota_used: 1200, quota_limit: 3000, expires_at: dayAgo(-90) },
-  { id: 'tk-4', name: 'HR系统接入', owner: '赵六', owner_name: '赵六', target_system: '北森HR', credential_type: 'api_key', status: 'disabled', quota_used: 0, quota_limit: 0, expires_at: dayAgo(-5) },
-  { id: 'tk-5', name: '测试环境令牌', owner: '张伟', owner_name: '张伟', target_system: 'Internal API', credential_type: 'jwt', status: 'active', quota_used: 450, quota_limit: 1000, expires_at: dayAgo(2) },
+const tokens: any[] = [
+  { id: 'tk-1', name: 'CRM系统接入令牌', owner: '张伟', owner_name: '张伟', target_system: 'Salesforce', credential_type: 'api_key', status: 'active', quota_used: 8500, quota_limit: 10000, expires_at: dayAgo(-30), token_value: 'oc_tk_crm_a3f8b1c2d4e6' },
+  { id: 'tk-2', name: 'ERP数据查询', owner: '李思', owner_name: '李思', target_system: 'SAP', credential_type: 'bearer', status: 'active', quota_used: 3200, quota_limit: 5000, expires_at: dayAgo(-60), token_value: 'oc_tk_erp_7d9f8b6c4x2k' },
+  { id: 'tk-3', name: '工单系统令牌', owner: '王五', owner_name: '王五', target_system: 'Zendesk', credential_type: 'oauth2', status: 'active', quota_used: 1200, quota_limit: 3000, expires_at: dayAgo(-90), token_value: 'oc_tk_zd_5c8d7e9f2j4h' },
+  { id: 'tk-4', name: 'HR系统接入', owner: '赵六', owner_name: '赵六', target_system: '北森HR', credential_type: 'api_key', status: 'disabled', quota_used: 0, quota_limit: 0, expires_at: dayAgo(-5), token_value: 'oc_tk_hr_6b4e8a1d3n9p' },
+  { id: 'tk-5', name: '测试环境令牌', owner: '张伟', owner_name: '张伟', target_system: 'Internal API', credential_type: 'jwt', status: 'active', quota_used: 450, quota_limit: 1000, expires_at: dayAgo(2), token_value: 'oc_tk_test_8f3b2a1c9d4e' },
 ];
 
 // =================== 审批 ===================
@@ -468,12 +700,12 @@ const approvals = [
 ];
 
 // =================== 配额 ===================
-const quotas = [
-  { id: 'q-1', user_id: 'u-1', user_name: '张伟', username: 'admin', quota_type: 'API调用配额', name: 'API调用配额', quota_limit: 50000, used: 32500 },
-  { id: 'q-2', user_id: 'u-2', user_name: '李思', username: 'lisi', quota_type: 'API调用配额', name: 'API调用配额', quota_limit: 20000, used: 15600 },
-  { id: 'q-3', user_id: 'u-3', user_name: '王五', username: 'wangwu', quota_type: 'API调用配额', name: 'API调用配额', quota_limit: 10000, used: 8900 },
-  { id: 'q-4', user_id: 'u-4', user_name: '赵六', username: 'zhaoliu', quota_type: 'API调用配额', name: 'API调用配额', quota_limit: 10000, used: 2300 },
-  { id: 'q-5', user_id: 'u-6', user_name: '孙八', username: 'sunba', quota_type: 'Token配额', name: 'Token配额', quota_limit: 1000000, used: 856000 },
+const quotas: any[] = [
+  { id: 'q-1', user_id: 'u-1', user_name: '张伟', username: 'admin', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 100, used: 63.5 },
+  { id: 'q-2', user_id: 'u-2', user_name: '李思', username: 'lisi', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 50, used: 41.2 },
+  { id: 'q-3', user_id: 'u-3', user_name: '王五', username: 'wangwu', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 50, used: 47.8 },
+  { id: 'q-4', user_id: 'u-4', user_name: '赵六', username: 'zhaoliu', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 20, used: 5.1 },
+  { id: 'q-5', user_id: 'u-6', user_name: '孙八', username: 'sunba', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 200, used: 183.6 },
 ];
 
 // =================== 调用日志 ===================
@@ -542,6 +774,52 @@ const k8sPods = [
   { name: 'redis-master-0', namespace: 'openclaw', status: 'Running', restarts: 0, age: '14天', cpu: '15m', memory: '96Mi', node: 'node-1' },
   { name: 'postgres-primary-0', namespace: 'openclaw', status: 'Running', restarts: 0, age: '14天', cpu: '80m', memory: '512Mi', node: 'node-2' },
   { name: 'postgres-replica-0', namespace: 'openclaw', status: 'Running', restarts: 0, age: '14天', cpu: '40m', memory: '384Mi', node: 'node-1' },
+];
+
+const k8sClusters: any[] = [
+  {
+    id: 'cl-1', name: 'eu-product', label: '欧洲生产集群', env: '生产环境',
+    provider: 'Aliyun ACK', k8s_version: 'v1.21.5', kubesphere_version: 'v3.2.1',
+    visibility: '对部分企业空间可见', status: 'active',
+    api_rps: 21.4, api_latency_ms: 2.47, schedule_count: 8572, schedule_fail: 0,
+    cpu_used: 18.02, cpu_total: 42, memory_used: 122.46, memory_total: 229.18,
+    pod_used: 199, pod_total: 880, disk_used: 9.46, disk_total: 13.24,
+    components: ['Kubernetes', 'KubeSphere', 'Monitoring'],
+    nodes: [
+      { id: 'n-1', name: 'eu-5', ip: '172.29.245.39', status: 'Ready', cpu_pct: 78, memory_pct: 65, pods: 42, role: 'worker' },
+      { id: 'n-2', name: 'tsdb-245-37', ip: '172.29.245.37', status: 'Ready', cpu_pct: 64, memory_pct: 58, pods: 38, role: 'worker' },
+      { id: 'n-3', name: 'tsdb-245-36', ip: '172.29.245.36', status: 'Ready', cpu_pct: 61, memory_pct: 53, pods: 35, role: 'worker' },
+      { id: 'n-4', name: 'eu-1', ip: '172.29.245.23', status: 'Ready', cpu_pct: 38, memory_pct: 41, pods: 28, role: 'master' },
+      { id: 'n-5', name: 'eu-3', ip: '172.29.245.35', status: 'Ready', cpu_pct: 31, memory_pct: 30, pods: 22, role: 'worker' },
+    ],
+  },
+  {
+    id: 'cl-2', name: 'cn-prod', label: '华东生产集群', env: '生产环境',
+    provider: 'Aliyun ACK', k8s_version: 'v1.24.8', kubesphere_version: 'v3.3.2',
+    visibility: '对所有企业空间可见', status: 'active',
+    api_rps: 35.8, api_latency_ms: 1.85, schedule_count: 14320, schedule_fail: 2,
+    cpu_used: 24.5, cpu_total: 64, memory_used: 187.3, memory_total: 512,
+    pod_used: 320, pod_total: 1200, disk_used: 18.6, disk_total: 30,
+    components: ['Kubernetes', 'KubeSphere'],
+    nodes: [
+      { id: 'n-6', name: 'cn-node-1', ip: '10.0.1.10', status: 'Ready', cpu_pct: 55, memory_pct: 48, pods: 60, role: 'master' },
+      { id: 'n-7', name: 'cn-node-2', ip: '10.0.1.11', status: 'Ready', cpu_pct: 42, memory_pct: 35, pods: 48, role: 'worker' },
+      { id: 'n-8', name: 'cn-node-3', ip: '10.0.1.12', status: 'Ready', cpu_pct: 39, memory_pct: 32, pods: 45, role: 'worker' },
+    ],
+  },
+  {
+    id: 'cl-3', name: 'dev-cluster', label: '开发测试集群', env: '开发环境',
+    provider: 'Self-managed', k8s_version: 'v1.26.3', kubesphere_version: '-',
+    visibility: '仅开发团队可见', status: 'active',
+    api_rps: 5.2, api_latency_ms: 4.1, schedule_count: 2180, schedule_fail: 5,
+    cpu_used: 6.4, cpu_total: 16, memory_used: 28.7, memory_total: 64,
+    pod_used: 88, pod_total: 300, disk_used: 2.1, disk_total: 5,
+    components: ['Kubernetes', 'Monitoring'],
+    nodes: [
+      { id: 'n-9', name: 'dev-node-1', ip: '192.168.1.10', status: 'Ready', cpu_pct: 40, memory_pct: 45, pods: 44, role: 'master' },
+      { id: 'n-10', name: 'dev-node-2', ip: '192.168.1.11', status: 'NotReady', cpu_pct: 0, memory_pct: 0, pods: 0, role: 'worker' },
+    ],
+  },
 ];
 
 const k8sNodes = [
@@ -934,7 +1212,32 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'get') return ok(starlarkAdapters[0]);
   if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'put') return ok(data);
   if (/^\/connectors\/starlark\/[^/]+$/.test(path) && method === 'delete') return ok(null);
-  if (/^\/connectors\/starlark\/[^/]+\/generate-skill$/.test(path)) return ok({ skill_id: 'sk-' + Date.now(), name: 'Auto Skill' });
+  if (/^\/connectors\/starlark\/[^/]+\/generate-skill$/.test(path)) {
+    // 实质化：扫描适配器的 api_functions，每个函数登记为 1 个 Skill 入库（去重 by 来源+名称），返回新增 Skill 列表供前端跳转高亮
+    const adapterId = path.split('/')[3];
+    const adapter: any = (starlarkAdapters as any[]).find(a => a.id === adapterId);
+    if (!adapter) return ok({ skills: [] });
+    const baseTs = Date.now();
+    const newSkills = ((adapter.api_functions as any[]) || []).map((fn: any, i: number) => ({
+      id: 'sk-' + (baseTs + i),
+      name: fn.name,
+      type: 'tool',
+      category: 'integration',
+      risk_level: 'medium',
+      status: 'active',
+      owner: adapter.author || '系统',
+      owner_name: adapter.author || '系统',
+      description: fn.description || `从 ${adapter.name} 适配器自动生成`,
+      source_adapter_id: adapter.id,
+      source_adapter_name: adapter.name,
+    }));
+    const added: any[] = [];
+    newSkills.forEach((s: any) => {
+      const dup = skills.find((x: any) => x.source_adapter_id === s.source_adapter_id && x.name === s.name);
+      if (!dup) { skills.unshift(s); added.push(s); }
+    });
+    return ok({ skills: added, total_added: added.length, total_existed: newSkills.length - added.length });
+  }
 
   // Integration Templates (对接模板)
   if (path === '/connectors/integration-templates' && method === 'get') return paginate(integrationTemplates, p.page, p.page_size, p.search);
@@ -981,19 +1284,97 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     permGroupConfigs[id] = data || {};
     return ok(permGroupConfigs[id]);
   }
+  // 用户个人权限覆盖
+  if (/^\/identity\/permissions\/users\/[^/]+$/.test(path) && method === 'get') {
+    const uid = path.split('/').pop() as string;
+    const override = userPermissions[uid] || null;
+    return ok({ override, fallback_group: users.find(u => u.id === uid)?.org_id || null });
+  }
+  if (/^\/identity\/permissions\/users\/[^/]+$/.test(path) && method === 'put') {
+    const uid = path.split('/').pop() as string;
+    if (data && Object.keys(data).length > 0) {
+      userPermissions[uid] = data;
+    } else {
+      delete userPermissions[uid];
+    }
+    return ok(data);
+  }
 
   // Users
   if (path === '/users' && method === 'get') return paginate(users, p.page, p.page_size, p.search);
-  if (path === '/users' && method === 'post') return ok(data);
-  if (/^\/users\/[^/]+$/.test(path) && method === 'put') return ok(data);
-  if (/^\/users\/[^/]+$/.test(path) && method === 'delete') return ok(null);
+  if (path === '/users' && method === 'post') {
+    const newUser = { id: 'u-' + Date.now(), ...data };
+    users.push(newUser);
+    return ok(newUser);
+  }
+  if (/^\/users\/[^/]+$/.test(path) && method === 'put') {
+    const uid = path.split('/').pop();
+    const idx = users.findIndex(u => u.id === uid);
+    if (idx >= 0) users[idx] = { ...users[idx], ...data };
+    return ok(users[idx < 0 ? 0 : idx]);
+  }
+  if (/^\/users\/[^/]+$/.test(path) && method === 'delete') {
+    const uid = path.split('/').pop();
+    const idx = users.findIndex(u => u.id === uid);
+    if (idx >= 0) users.splice(idx, 1);
+    return ok(null);
+  }
 
   // Organizations
-  if (path === '/organizations' && method === 'get') return paginate(organizations, p.page, p.page_size, p.search);
-  if (path === '/organizations' && method === 'post') return ok(data);
-  if (/^\/organizations\/[^/]+$/.test(path) && method === 'put') return ok(data);
-  if (/^\/organizations\/[^/]+$/.test(path) && method === 'delete') return ok(null);
-  if (/^\/organizations\/[^/]+\/members$/.test(path)) return ok([]);
+  if (path === '/organizations' && method === 'get') {
+    // 返回全量，前端做树形展示
+    const filtered = p.search
+      ? organizations.filter((o: any) => JSON.stringify(o).toLowerCase().includes(p.search.toLowerCase()))
+      : organizations;
+    return ok(filtered);
+  }
+  if (path === '/organizations' && method === 'post') {
+    const newOrg = { id: 'org-' + Date.now(), member_count: 0, ...data };
+    organizations.push(newOrg);
+    orgMembers[newOrg.id] = [];
+    return ok(newOrg);
+  }
+  if (/^\/organizations\/[^/]+$/.test(path) && method === 'put') {
+    const oid = path.split('/').pop();
+    const idx = organizations.findIndex(o => o.id === oid);
+    if (idx >= 0) organizations[idx] = { ...organizations[idx], ...data };
+    return ok(organizations[idx < 0 ? 0 : idx]);
+  }
+  if (/^\/organizations\/[^/]+$/.test(path) && method === 'delete') {
+    const oid = path.split('/').pop();
+    const idx = organizations.findIndex(o => o.id === oid);
+    if (idx >= 0) organizations.splice(idx, 1);
+    return ok(null);
+  }
+  // 获取组织成员列表
+  if (/^\/organizations\/[^/]+\/members$/.test(path) && method === 'get') {
+    const oid = path.split('/')[2];
+    const memberIds = orgMembers[oid] || [];
+    const memberList = users.filter(u => memberIds.includes(u.id));
+    return ok(memberList);
+  }
+  // 添加成员
+  if (/^\/organizations\/[^/]+\/members$/.test(path) && method === 'post') {
+    const oid = path.split('/')[2];
+    if (!orgMembers[oid]) orgMembers[oid] = [];
+    const uid = data?.user_id;
+    if (uid && !orgMembers[oid].includes(uid)) orgMembers[oid].push(uid);
+    // 更新 user 的 org_id
+    const uIdx = users.findIndex(u => u.id === uid);
+    if (uIdx >= 0) users[uIdx].org_id = oid;
+    return ok(null);
+  }
+  // 移除成员
+  if (/^\/organizations\/[^/]+\/members\/[^/]+$/.test(path) && method === 'delete') {
+    const parts = path.split('/');
+    const oid = parts[2];
+    const uid = parts[4];
+    if (orgMembers[oid]) {
+      const mi = orgMembers[oid].indexOf(uid);
+      if (mi >= 0) orgMembers[oid].splice(mi, 1);
+    }
+    return ok(null);
+  }
 
   // Chat Accounts
   if (path === '/accounts/chat') return paginate(chatAccounts, p.page, p.page_size, p.search);
@@ -1031,9 +1412,47 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
   // Skills
   if (path === '/skills' && method === 'get') return paginate(skills, p.page, p.page_size, p.search);
-  if (path === '/skills' && method === 'post') return ok(data);
-  if (/^\/skills\/[^/]+$/.test(path) && method === 'put') return ok(data);
-  if (/^\/skills\/[^/]+$/.test(path) && method === 'delete') return ok(null);
+  if (path === '/skills' && method === 'post') {
+    const newSkill = { id: 'sk-' + Date.now(), status: 'active', created_at: new Date().toISOString().slice(0, 16).replace('T', ' '), ...data };
+    skills.push(newSkill);
+    skillFiles[newSkill.id] = [];
+    return ok(newSkill);
+  }
+  if (/^\/skills\/[^/]+$/.test(path) && method === 'put') {
+    const sid = path.split('/').pop();
+    const idx = skills.findIndex(s => s.id === sid);
+    if (idx >= 0) skills[idx] = { ...skills[idx], ...data };
+    return ok(skills[idx < 0 ? 0 : idx]);
+  }
+  if (/^\/skills\/[^/]+$/.test(path) && method === 'delete') {
+    const sid = path.split('/').pop();
+    const idx = skills.findIndex(s => s.id === sid);
+    if (idx >= 0) skills.splice(idx, 1);
+    delete skillFiles[sid!];
+    return ok(null);
+  }
+  // Skill 文件列表
+  if (/^\/skills\/[^/]+\/files$/.test(path) && method === 'get') {
+    const sid = path.split('/')[2];
+    return ok(skillFiles[sid] || []);
+  }
+  // Skill 文件内容（GET /skills/:id/files/:path）
+  if (/^\/skills\/[^/]+\/files\//.test(path) && method === 'get') {
+    const parts = path.split('/');
+    const sid = parts[2];
+    const filePath = parts.slice(4).join('/');
+    const key = `${sid}:${filePath}`;
+    const content = skillFileContents[key] || '';
+    return ok({ content });
+  }
+  if (/^\/skills\/[^/]+\/files\//.test(path) && method === 'put') {
+    const parts = path.split('/');
+    const sid = parts[2];
+    const filePath = parts.slice(4).join('/');
+    const key = `${sid}:${filePath}`;
+    skillFileContents[key] = data?.content || '';
+    return ok(null);
+  }
 
   // Marketplace
   if (path === '/skills/marketplace') return paginate(marketplaceSkills, p.page, p.page_size, p.search);
@@ -1041,9 +1460,32 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
   // Tokens
   if (path === '/tokens' && method === 'get') return paginate(tokens, p.page, p.page_size, p.search);
-  if (path === '/tokens' && method === 'post') return ok(data);
-  if (/^\/tokens\/[^/]+$/.test(path) && method === 'get') return ok(tokens[0]);
-  if (/^\/tokens\/[^/]+$/.test(path) && method === 'put') return ok(data);
+  if (path === '/tokens' && method === 'post') {
+    const newToken = {
+      id: 'tk-' + Date.now(),
+      token_value: 'oc_tk_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36).slice(-6),
+      ...data,
+    };
+    tokens.push(newToken);
+    return ok(newToken);
+  }
+  if (/^\/tokens\/[^/]+$/.test(path) && method === 'get') {
+    const tid = path.split('/').pop();
+    const token = tokens.find(t => t.id === tid);
+    return ok(token || null);
+  }
+  if (/^\/tokens\/[^/]+$/.test(path) && method === 'put') {
+    const tid = path.split('/').pop();
+    const idx = tokens.findIndex(t => t.id === tid);
+    if (idx >= 0) tokens[idx] = { ...tokens[idx], ...data };
+    return ok(tokens[idx < 0 ? 0 : idx]);
+  }
+  if (/^\/tokens\/[^/]+$/.test(path) && method === 'delete') {
+    const tid = path.split('/').pop();
+    const idx = tokens.findIndex(t => t.id === tid);
+    if (idx >= 0) tokens.splice(idx, 1);
+    return ok(null);
+  }
 
   // Approvals
   if (path === '/approvals' && method === 'get') return paginate(approvals, p.page, p.page_size, p.search);
@@ -1062,6 +1504,11 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // K8s
   if (path === '/system/k8s/pods') return ok(k8sPods);
   if (path === '/system/k8s/nodes') return ok(k8sNodes);
+  if (path === '/system/k8s/clusters') return ok(k8sClusters);
+  if (/^\/system\/k8s\/clusters\/[^/]+$/.test(path) && method === 'get') {
+    const cid = path.split('/').pop();
+    return ok(k8sClusters.find(c => c.id === cid) || null);
+  }
 
   // Queues
   if (path === '/system/queues') return ok(queueStats);

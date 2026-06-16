@@ -3,31 +3,31 @@ import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
   TextField, Button, Tooltip, Grid, MenuItem, Chip, Typography,
   Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab,
-  Alert, Paper, Divider,
+  Alert, Paper, Divider, Switch, FormControlLabel,
 } from '@mui/material';
 import { Add, Edit, Delete, Refresh, Code, Extension, ArrowBack } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import {
   PageHeader, FilterBar, DataTable, StatusBadge, useTableState,
   EmptyState, LoadingState,
 } from '../../components/shared';
 import api from '../../api/client';
 
-const AUTH_TYPES = [
-  { value: 'bearer_token', label: 'Bearer Token' },
-  { value: 'api_key', label: 'API Key' },
-  { value: 'basic_auth', label: 'Basic Auth' },
-  { value: 'oauth2', label: 'OAuth2' },
-  { value: 'custom', label: '自定义(脚本)' },
-];
-
-const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE'];
+const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
 interface ApiFunction {
   name: string;
   method: string;
   description: string;
   script: string;
+}
+
+interface ConfigItem {
+  key: string;
+  value: string;
+  is_secret: boolean;
 }
 
 interface StarlarkAdapter {
@@ -39,8 +39,28 @@ interface StarlarkAdapter {
   status: string;
   author: string;
   api_functions: ApiFunction[];
-  auth_config: { type: string; secret: string };
+  config_items: ConfigItem[];
   full_script: string;
+}
+
+// 兼容旧 auth_config 结构 → 自动转换为 config_items 数组
+function normalizeConfigItems(item: any): ConfigItem[] {
+  if (Array.isArray(item?.config_items) && item.config_items.length > 0) {
+    return item.config_items.map((c: any) => ({
+      key: String(c.key ?? ''),
+      value: String(c.value ?? ''),
+      is_secret: Boolean(c.is_secret),
+    }));
+  }
+  // 旧数据兜底
+  if (item?.auth_config) {
+    const ac = item.auth_config;
+    const arr: ConfigItem[] = [];
+    if (ac.type) arr.push({ key: 'auth_type', value: String(ac.type), is_secret: false });
+    if (ac.secret) arr.push({ key: 'secret', value: String(ac.secret), is_secret: true });
+    return arr;
+  }
+  return [];
 }
 
 function buildFullScript(name: string, apiFunctions: ApiFunction[]) {
@@ -50,6 +70,8 @@ function buildFullScript(name: string, apiFunctions: ApiFunction[]) {
 
 export default function StarlarkAdaptersPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
   const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<StarlarkAdapter | null>(null);
@@ -58,7 +80,7 @@ export default function StarlarkAdaptersPage() {
   const [form, setForm] = useState<StarlarkAdapter>({
     id: '', name: '', description: '', version: '1.0.0', last_sync: '-',
     status: 'active', author: '', api_functions: [],
-    auth_config: { type: 'bearer_token', secret: '' },
+    config_items: [],
     full_script: '',
   });
 
@@ -87,14 +109,35 @@ export default function StarlarkAdaptersPage() {
   });
   const generateSkillMutation = useMutation({
     mutationFn: (id: string) => api.post(`/connectors/starlark/${id}/generate-skill`),
-    onSuccess: () => alert('Skill 生成成功'),
+    onSuccess: (res: any) => {
+      // 后端返回 { skills: [新增], total_added, total_existed }
+      const payload = res?.data?.data || res?.data || {};
+      const added: any[] = payload.skills || [];
+      const existed: number = payload.total_existed || 0;
+      if (added.length === 0 && existed === 0) {
+        enqueueSnackbar('未找到可生成的 API 功能，请先在适配器中添加函数', { variant: 'warning' });
+        return;
+      }
+      if (added.length === 0 && existed > 0) {
+        enqueueSnackbar(`该适配器的 ${existed} 个技能均已在技能库中`, { variant: 'info' });
+        return;
+      }
+      enqueueSnackbar(
+        `成功登记 ${added.length} 个技能${existed ? `（${existed} 个已存在）` : ''}，即将跳转技能列表`,
+        { variant: 'success' }
+      );
+      const ids = added.map((s: any) => s.id).join(',');
+      // 延迟跳转，让 Snackbar 能看到
+      setTimeout(() => navigate(`/skills?highlight=${ids}`), 600);
+    },
+    onError: () => enqueueSnackbar('生成技能失败', { variant: 'error' }),
   });
 
   const resetForm = () => {
     setForm({
       id: '', name: '', description: '', version: '1.0.0', last_sync: '-',
       status: 'active', author: '', api_functions: [],
-      auth_config: { type: 'bearer_token', secret: '' },
+      config_items: [],
       full_script: '',
     });
     setNewFunc({ name: '', method: 'GET', description: '', script: '' });
@@ -109,7 +152,7 @@ export default function StarlarkAdaptersPage() {
 
   const handleOpenEdit = (item: StarlarkAdapter) => {
     setEditItem(item);
-    setForm({ ...item });
+    setForm({ ...item, config_items: normalizeConfigItems(item) });
     setActiveTab(0);
     setDialogOpen(true);
   };
@@ -121,6 +164,27 @@ export default function StarlarkAdaptersPage() {
     } else {
       createMutation.mutate(payload);
     }
+  };
+
+  const handleAddConfig = () => {
+    setForm(prev => ({
+      ...prev,
+      config_items: [...(prev.config_items || []), { key: '', value: '', is_secret: false }],
+    }));
+  };
+
+  const handleRemoveConfig = (idx: number) => {
+    setForm(prev => ({
+      ...prev,
+      config_items: prev.config_items.filter((_, i) => i !== idx),
+    }));
+  };
+
+  const handleConfigChange = (idx: number, field: keyof ConfigItem, value: string | boolean) => {
+    setForm(prev => ({
+      ...prev,
+      config_items: prev.config_items.map((c, i) => i === idx ? { ...c, [field]: value } : c),
+    }));
   };
 
   const handleAddFunction = () => {
@@ -301,28 +365,82 @@ export default function StarlarkAdaptersPage() {
             </Box>
           )}
 
-          {/* Tab 3: 登录/认证配置 */}
+          {/* Tab 3: 登录/认证配置 - 配置字典项 */}
           {activeTab === 2 && (
             <Box>
-              <Alert severity="success" sx={{ mb: 2 }}>
-                认证Token继承自主账号。用户登录后系统自动分配Platform Token，Starlark脚本通过此Token进行关联账号登录和数据获取，无需单独配置凭据。
-              </Alert>
               <Alert severity="info" sx={{ mb: 2 }}>
-                配置此适配器连接三方系统时的认证方式。Token会加密存储，在脚本中通过 config[&quot;token&quot;] 访问。
+                以「键-值」形式配置任意参数（如 base_url、api_key、tenant_id），脚本中通过 <code>ctx.config["键名"]</code> 读取。
+                标记为「敏感」的项将以密码形式显示，加密存储。
               </Alert>
-              <Grid container spacing={2}>
-                <Grid size={6}>
-                  <TextField fullWidth select label="认证方式" value={form.auth_config.type} onChange={e => setForm({ ...form, auth_config: { ...form.auth_config, type: e.target.value } })}>
-                    {AUTH_TYPES.map(t => <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>)}
-                  </TextField>
-                </Grid>
-                <Grid size={6}>
-                  <TextField fullWidth label="Token / Secret" value={form.auth_config.secret} onChange={e => setForm({ ...form, auth_config: { ...form.auth_config, secret: e.target.value } })} type="password" />
-                </Grid>
-              </Grid>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                脚本中通过 config[&quot;token&quot;]、config[&quot;api_key&quot;] 等访问认证凭据。Token自动随请求注入或在脚本中手动使用。
-              </Typography>
+
+              {form.config_items.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>暂无配置项</Typography>
+                  <Typography variant="caption">点击下方按钮开始添加</Typography>
+                </Box>
+              ) : (
+                form.config_items.map((item, idx) => (
+                  <Paper key={idx} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
+                    <Grid container spacing={1.5} alignItems="center">
+                      <Grid size={4}>
+                        <TextField
+                          fullWidth size="small" label="键 (Key)" placeholder="api_key"
+                          value={item.key}
+                          onChange={e => handleConfigChange(idx, 'key', e.target.value)}
+                          slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: 13 } } }}
+                        />
+                      </Grid>
+                      <Grid size={5}>
+                        <TextField
+                          fullWidth size="small" label="值 (Value)"
+                          type={item.is_secret ? 'password' : 'text'}
+                          value={item.value}
+                          onChange={e => handleConfigChange(idx, 'value', e.target.value)}
+                        />
+                      </Grid>
+                      <Grid size={2}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              size="small"
+                              checked={item.is_secret}
+                              onChange={e => handleConfigChange(idx, 'is_secret', e.target.checked)}
+                            />
+                          }
+                          label={<Typography variant="caption">敏感</Typography>}
+                        />
+                      </Grid>
+                      <Grid size={1} sx={{ textAlign: 'right' }}>
+                        <Tooltip title="删除此项">
+                          <IconButton size="small" color="error" onClick={() => handleRemoveConfig(idx)}>
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                ))
+              )}
+
+              <Button
+                variant="outlined" size="small" startIcon={<Add />} sx={{ mt: 1 }}
+                onClick={handleAddConfig}
+              >
+                添加配置项
+              </Button>
+
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ bgcolor: 'action.hover', p: 1.5, borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  脚本调用示例：
+                </Typography>
+                <Box component="pre" sx={{ fontFamily: 'monospace', fontSize: 12, m: 0, whiteSpace: 'pre-wrap' }}>
+{`def read_contacts(ctx):
+  url = ctx.config["base_url"] + "/contacts"
+  token = ctx.config["api_key"]
+  return ctx.http.get(url, headers={"Authorization": "Bearer " + token})`}
+                </Box>
+              </Box>
             </Box>
           )}
 
