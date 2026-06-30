@@ -24,6 +24,7 @@ import SkillsPage from '../pages/skills/SkillsPage';
 import MarketplacePage from '../pages/skills/MarketplacePage';
 import TokensPage from '../pages/tokens/TokensPage';
 import ApprovalsPage from '../pages/tokens/ApprovalsPage';
+import TokenResalePage from '../pages/tokens/TokenResalePage';
 import QuotasPage from '../pages/resources/QuotasPage';
 import K8sStatusPage from '../pages/resources/K8sStatusPage';
 import K8sDetailPage from '../pages/resources/K8sDetailPage';
@@ -39,6 +40,12 @@ import PodDetailPage from '../pages/resources/PodDetailPage';
 import AgentsMdPage from '../pages/resources/AgentsMdPage';
 import UsageStatsPage from '../pages/stats/UsageStatsPage';
 import AuditLogsPage from '../pages/stats/AuditLogsPage';
+import WeeklyReportsPage from '../pages/weekly/WeeklyReportsPage';
+import KnowledgeBasesPage from '../pages/rag/KnowledgeBasesPage';
+import DocumentsPage from '../pages/rag/DocumentsPage';
+import RetrievalTestPage from '../pages/rag/RetrievalTestPage';
+import ChatPage from '../pages/chat/ChatPage';
+import CloudForwardPage from '../pages/resources/CloudForwardPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -75,6 +82,7 @@ export const router = createBrowserRouter([
       // Tokens
       { path: 'tokens', element: <TokensPage /> },
       { path: 'tokens/approvals', element: <ApprovalsPage /> },
+      { path: 'tokens/resale', element: <TokenResalePage /> },
       // Resources
       { path: 'resources/sn', element: <PlatformSnPage /> },
       { path: 'resources/remote', element: <RemoteManagementPage /> },
@@ -92,6 +100,16 @@ export const router = createBrowserRouter([
       // Stats
       { path: 'stats/usage', element: <UsageStatsPage /> },
       { path: 'stats/audit', element: <AuditLogsPage /> },
+      // Weekly Reports
+      { path: 'weekly-reports', element: <WeeklyReportsPage /> },
+      // RAG
+      { path: 'rag/knowledge-bases', element: <KnowledgeBasesPage /> },
+      { path: 'rag/documents', element: <DocumentsPage /> },
+      { path: 'rag/retrieval-test', element: <RetrievalTestPage /> },
+      // Chat
+      { path: 'chat', element: <ChatPage /> },
+      // Cloud Forward (placeholder)
+      { path: 'resources/cloud-forward', element: <CloudForwardPage /> },
       // Catch all
       { path: '*', element: <Navigate to="/" /> },
     ],

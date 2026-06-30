@@ -19,7 +19,21 @@ export default function Sidebar() {
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    // 精确匹配
+    if (location.pathname === path) return true;
+    // 前缀匹配：仅用于动态子路由（如 /resources/k8s/:id）
+    if (location.pathname.startsWith(path + '/')) {
+      // 若存在更精确的菜单项匹配当前路径，则当前项不应高亮
+      const hasMoreSpecificMatch = navConfig.some(section =>
+        section.items.some(item =>
+          item.path !== path &&
+          item.path.length > path.length &&
+          (location.pathname === item.path || location.pathname.startsWith(item.path + '/'))
+        )
+      );
+      return !hasMoreSpecificMatch;
+    }
+    return false;
   };
 
   const drawerContent = (

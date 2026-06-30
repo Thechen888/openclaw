@@ -3,9 +3,13 @@ import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
   TextField, Button, Tooltip, Grid, MenuItem, Chip, Typography,
   Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab,
-  Alert, Paper, Divider, Switch, FormControlLabel,
+  Alert, Paper, Divider, Switch, FormControlLabel, Card, CardActionArea, CardContent,
+  CircularProgress,
 } from '@mui/material';
-import { Add, Edit, Delete, Refresh, Code, Extension, ArrowBack } from '@mui/icons-material';
+import {
+  Add, Edit, Delete, Refresh, Code, Extension, ArrowBack,
+  Key, CheckCircle, RadioButtonUnchecked,
+} from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
@@ -13,7 +17,7 @@ import {
   PageHeader, FilterBar, DataTable, StatusBadge, useTableState,
   EmptyState, LoadingState,
 } from '../../components/shared';
-import api from '../../api/client';
+import api, { tokensApi } from '../../api/client';
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -30,6 +34,12 @@ interface ConfigItem {
   is_secret: boolean;
 }
 
+interface VarItem {
+  key: string;
+  value: string;
+  description: string;
+}
+
 interface StarlarkAdapter {
   id: string;
   name: string;
@@ -40,28 +50,27 @@ interface StarlarkAdapter {
   author: string;
   api_functions: ApiFunction[];
   config_items: ConfigItem[];
+  var_items: VarItem[];
   full_script: string;
+  token_id: string;
 }
 
-// 兼容旧 auth_config 结构 → 自动转换为 config_items 数组
 function normalizeConfigItems(item: any): ConfigItem[] {
   if (Array.isArray(item?.config_items) && item.config_items.length > 0) {
-    return item.config_items.map((c: any) => ({
-      key: String(c.key ?? ''),
-      value: String(c.value ?? ''),
-      is_secret: Boolean(c.is_secret),
-    }));
-  }
-  // 旧数据兜底
-  if (item?.auth_config) {
-    const ac = item.auth_config;
-    const arr: ConfigItem[] = [];
-    if (ac.type) arr.push({ key: 'auth_type', value: String(ac.type), is_secret: false });
-    if (ac.secret) arr.push({ key: 'secret', value: String(ac.secret), is_secret: true });
-    return arr;
+    return item.config_items
+      .filter((c: any) => !c.is_secret) // 敏感项已改由令牌模块管理，不在表单中展示
+      .map((c: any) => ({
+        key: String(c.key ?? ''),
+        value: String(c.value ?? ''),
+        is_secret: false,
+      }));
   }
   return [];
 }
+
+const CRED_TYPE_LABEL: Record<string, string> = {
+  api_key: 'API密钥', oauth2: 'OAuth2', bearer: 'Bearer', basic: 'Basic', jwt: 'JWT',
+};
 
 function buildFullScript(name: string, apiFunctions: ApiFunction[]) {
   const funcs = apiFunctions.map(f => `def ${f.name}(ctx):\n  ${f.script.replace(/\n/g, '\n  ')}`).join('\n\n');
@@ -81,8 +90,18 @@ export default function StarlarkAdaptersPage() {
     id: '', name: '', description: '', version: '1.0.0', last_sync: '-',
     status: 'active', author: '', api_functions: [],
     config_items: [],
+    var_items: [],
     full_script: '',
+    token_id: '',
   });
+
+  // 加载可用令牌列表（仅 active 状态）
+  const { data: tokensData, isLoading: tokensLoading } = useQuery({
+    queryKey: ['tokens-active'],
+    queryFn: () => tokensApi.list({ status: 'active', page_size: 100 }),
+    enabled: dialogOpen && activeTab === 2,
+  });
+  const availableTokens: any[] = tokensData?.data?.data || [];
 
   const [newFunc, setNewFunc] = useState<ApiFunction>({
     name: '', method: 'GET', description: '', script: '',
@@ -138,7 +157,9 @@ export default function StarlarkAdaptersPage() {
       id: '', name: '', description: '', version: '1.0.0', last_sync: '-',
       status: 'active', author: '', api_functions: [],
       config_items: [],
+      var_items: [],
       full_script: '',
+      token_id: '',
     });
     setNewFunc({ name: '', method: 'GET', description: '', script: '' });
     setActiveTab(0);
@@ -152,9 +173,35 @@ export default function StarlarkAdaptersPage() {
 
   const handleOpenEdit = (item: StarlarkAdapter) => {
     setEditItem(item);
-    setForm({ ...item, config_items: normalizeConfigItems(item) });
+    setForm({
+      ...item,
+      config_items: normalizeConfigItems(item),
+      var_items: Array.isArray(item.var_items) ? item.var_items : [],
+      token_id: item.token_id || '',
+    });
     setActiveTab(0);
     setDialogOpen(true);
+  };
+
+  const handleAddVar = () => {
+    setForm(prev => ({
+      ...prev,
+      var_items: [...(prev.var_items || []), { key: '', value: '', description: '' }],
+    }));
+  };
+
+  const handleRemoveVar = (idx: number) => {
+    setForm(prev => ({
+      ...prev,
+      var_items: prev.var_items.filter((_, i) => i !== idx),
+    }));
+  };
+
+  const handleVarChange = (idx: number, field: keyof VarItem, value: string) => {
+    setForm(prev => ({
+      ...prev,
+      var_items: prev.var_items.map((v, i) => i === idx ? { ...v, [field]: value } : v),
+    }));
   };
 
   const handleSave = () => {
@@ -287,6 +334,7 @@ export default function StarlarkAdaptersPage() {
             <Tab label="基本信息" />
             <Tab label="API功能编辑" icon={<Code sx={{ fontSize: 14 }} />} iconPosition="start" />
             <Tab label="登录/认证配置" />
+            <Tab label="变量配置" />
             <Tab label="完整脚本" icon={<Code sx={{ fontSize: 14 }} />} iconPosition="start" />
           </Tabs>
 
@@ -365,54 +413,137 @@ export default function StarlarkAdaptersPage() {
             </Box>
           )}
 
-          {/* Tab 3: 登录/认证配置 - 配置字典项 */}
+          {/* Tab 3: 登录/认证配置 - 从令牌模块选择凭证 */}
           {activeTab === 2 && (
             <Box>
-              <Alert severity="info" sx={{ mb: 2 }}>
-                以「键-值」形式配置任意参数（如 base_url、api_key、tenant_id），脚本中通过 <code>ctx.config["键名"]</code> 读取。
-                标记为「敏感」的项将以密码形式显示，加密存储。
+              {/* ① 选择令牌 */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>关联令牌凭证</Typography>
+              <Alert severity="info" sx={{ mb: 2, fontSize: 12 }}>
+                从「API令牌」模块中选择已配置好的凭证。运行时脚本通过
+                <code style={{ margin: '0 4px' }}>ctx.token</code>
+                读取令牌值，无需在此处明文填写。
               </Alert>
 
-              {form.config_items.length === 0 ? (
+              {tokensLoading ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}><CircularProgress size={24} /></Box>
+              ) : availableTokens.length === 0 ? (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  暂无可用令牌，请先前往「令牌管理」创建 API 令牌。
+                </Alert>
+              ) : (
+                <Grid container spacing={1.5} sx={{ mb: 2 }}>
+                  {availableTokens.map((tk: any) => {
+                    const selected = form.token_id === tk.id;
+                    const isExpired = tk.expires_at && new Date(tk.expires_at) < new Date();
+                    return (
+                      <Grid key={tk.id} size={{ xs: 12, sm: 6 }}>
+                        <Card
+                          variant="outlined"
+                          sx={{
+                            cursor: isExpired ? 'not-allowed' : 'pointer',
+                            opacity: isExpired ? 0.5 : 1,
+                            borderColor: selected ? 'primary.main' : 'divider',
+                            borderWidth: selected ? 2 : 1,
+                            transition: 'border-color 0.15s',
+                          }}
+                        >
+                          <CardActionArea
+                            onClick={() => !isExpired && setForm(prev => ({ ...prev, token_id: selected ? '' : tk.id }))}
+                            disabled={isExpired}
+                          >
+                            <CardContent sx={{ py: 1.5, px: 2 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                {selected
+                                  ? <CheckCircle fontSize="small" color="primary" />
+                                  : <RadioButtonUnchecked fontSize="small" sx={{ color: 'text.disabled' }} />}
+                                <Key sx={{ fontSize: 15, color: 'text.secondary' }} />
+                                <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>{tk.name}</Typography>
+                                {isExpired && <Chip label="已过期" size="small" color="error" sx={{ height: 18, fontSize: 10 }} />}
+                              </Box>
+                              <Box sx={{ pl: 3.5, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                <Typography variant="caption" color="text.secondary">
+                                  目标：{tk.target_system || '-'}
+                                </Typography>
+                                <Chip
+                                  label={CRED_TYPE_LABEL[tk.credential_type] || tk.credential_type}
+                                  size="small" variant="outlined"
+                                  sx={{ height: 18, fontSize: 10 }}
+                                />
+                              </Box>
+                            </CardContent>
+                          </CardActionArea>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              )}
+
+              {form.token_id && (
+                <Box sx={{ mb: 2 }}>
+                  <Alert severity="success" sx={{ fontSize: 12 }}>
+                    已选择令牌：<strong>{availableTokens.find(t => t.id === form.token_id)?.name}</strong>，
+                    脚本中使用 <code>ctx.token</code> 读取凭证值。
+                  </Alert>
+                </Box>
+              )}
+
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ bgcolor: 'action.hover', p: 1.5, borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  脚本调用示例：
+                </Typography>
+                <Box component="pre" sx={{ fontFamily: 'monospace', fontSize: 12, m: 0, whiteSpace: 'pre-wrap' }}>
+{`def read_contacts(ctx):
+  return ctx.http.get("/contacts", headers={"Authorization": "Bearer " + ctx.token})`}
+                </Box>
+              </Box>
+            </Box>
+          )}
+
+          {/* Tab 4: 变量配置 */}
+          {activeTab === 3 && (
+            <Box>
+              <Alert severity="info" sx={{ mb: 2, fontSize: 12 }}>
+                定义适配器运行时使用的环境变量（如 base_url、timeout、env 等）。
+                脚本中通过 <code style={{ margin: '0 4px' }}>ctx.vars["键名"]</code> 读取，所有 API 功能共享。
+              </Alert>
+
+              {(form.var_items || []).length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
-                  <Typography variant="body2" sx={{ mb: 1 }}>暂无配置项</Typography>
-                  <Typography variant="caption">点击下方按钮开始添加</Typography>
+                  <Typography variant="body2" sx={{ mb: 0.5 }}>暂无变量配置</Typography>
+                  <Typography variant="caption">点击下方按钮添加运行时变量</Typography>
                 </Box>
               ) : (
-                form.config_items.map((item, idx) => (
+                (form.var_items || []).map((v, idx) => (
                   <Paper key={idx} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
-                    <Grid container spacing={1.5} alignItems="center">
-                      <Grid size={4}>
+                    <Grid container spacing={1.5} sx={{ alignItems: 'center' }}>
+                      <Grid size={3}>
                         <TextField
-                          fullWidth size="small" label="键 (Key)" placeholder="api_key"
-                          value={item.key}
-                          onChange={e => handleConfigChange(idx, 'key', e.target.value)}
+                          fullWidth size="small" label="变量名" placeholder="base_url"
+                          value={v.key}
+                          onChange={e => handleVarChange(idx, 'key', e.target.value)}
                           slotProps={{ input: { sx: { fontFamily: 'monospace', fontSize: 13 } } }}
                         />
                       </Grid>
-                      <Grid size={5}>
+                      <Grid size={4}>
                         <TextField
-                          fullWidth size="small" label="值 (Value)"
-                          type={item.is_secret ? 'password' : 'text'}
-                          value={item.value}
-                          onChange={e => handleConfigChange(idx, 'value', e.target.value)}
+                          fullWidth size="small" label="默认值"
+                          value={v.value}
+                          onChange={e => handleVarChange(idx, 'value', e.target.value)}
                         />
                       </Grid>
-                      <Grid size={2}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              size="small"
-                              checked={item.is_secret}
-                              onChange={e => handleConfigChange(idx, 'is_secret', e.target.checked)}
-                            />
-                          }
-                          label={<Typography variant="caption">敏感</Typography>}
+                      <Grid size={4}>
+                        <TextField
+                          fullWidth size="small" label="备注说明"
+                          value={v.description}
+                          onChange={e => handleVarChange(idx, 'description', e.target.value)}
+                          placeholder="用途说明（可选）"
                         />
                       </Grid>
                       <Grid size={1} sx={{ textAlign: 'right' }}>
-                        <Tooltip title="删除此项">
-                          <IconButton size="small" color="error" onClick={() => handleRemoveConfig(idx)}>
+                        <Tooltip title="删除此变量">
+                          <IconButton size="small" color="error" onClick={() => handleRemoveVar(idx)}>
                             <Delete fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -424,9 +555,9 @@ export default function StarlarkAdaptersPage() {
 
               <Button
                 variant="outlined" size="small" startIcon={<Add />} sx={{ mt: 1 }}
-                onClick={handleAddConfig}
+                onClick={handleAddVar}
               >
-                添加配置项
+                添加变量
               </Button>
 
               <Divider sx={{ my: 2 }} />
@@ -436,16 +567,15 @@ export default function StarlarkAdaptersPage() {
                 </Typography>
                 <Box component="pre" sx={{ fontFamily: 'monospace', fontSize: 12, m: 0, whiteSpace: 'pre-wrap' }}>
 {`def read_contacts(ctx):
-  url = ctx.config["base_url"] + "/contacts"
-  token = ctx.config["api_key"]
-  return ctx.http.get(url, headers={"Authorization": "Bearer " + token})`}
+  base = ctx.vars["base_url"]
+  return ctx.http.get(base + "/contacts", headers={"Authorization": "Bearer " + ctx.token})`}
                 </Box>
               </Box>
             </Box>
           )}
 
-          {/* Tab 4: 完整脚本 */}
-          {activeTab === 3 && (
+          {/* Tab 5: 完整脚本 */}
+          {activeTab === 4 && (
             <Box>
               <TextField
                 fullWidth multiline rows={16}

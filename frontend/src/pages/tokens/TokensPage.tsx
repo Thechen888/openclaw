@@ -23,6 +23,52 @@ const CRED_TYPES = [
   { value: 'jwt', label: 'JWT' },
 ];
 
+// 不同凭证类型需要填写的字段定义
+interface CredFieldDef {
+  key: string;
+  label: string;
+  type?: string;
+  helper?: string;
+  multiline?: boolean;
+}
+
+const CRED_FIELDS: Record<string, CredFieldDef[]> = {
+  api_key: [
+    { key: 'api_key', label: 'API Key' },
+    { key: 'api_secret', label: 'API Secret（可选）' },
+  ],
+  oauth2: [
+    { key: 'client_id', label: 'Client ID' },
+    { key: 'client_secret', label: 'Client Secret', type: 'password' },
+    { key: 'auth_url', label: '授权地址 (Auth URL)' },
+    { key: 'token_url', label: '令牌地址 (Token URL)' },
+    { key: 'redirect_uri', label: '回调地址 (Redirect URI)' },
+    { key: 'scope', label: '权限范围 (Scope)', helper: '多个 scope 用空格分隔' },
+  ],
+  bearer: [
+    { key: 'bearer_token', label: 'Bearer Token' },
+    { key: 'issuer', label: '签发方（可选）' },
+  ],
+  basic: [
+    { key: 'username', label: '用户名' },
+    { key: 'password', label: '密码', type: 'password' },
+  ],
+  jwt: [
+    { key: 'private_key', label: '私钥 (Private Key)', type: 'password', multiline: true },
+    { key: 'algorithm', label: '算法', helper: '如 RS256' },
+    { key: 'issuer', label: '签发方 (Issuer)' },
+    { key: 'audience', label: '接收方 (Audience)' },
+    { key: 'subject', label: '主题 (Subject，可选）' },
+  ],
+};
+
+function defaultCredentialConfig(type: string) {
+  const fields = CRED_FIELDS[type] || [];
+  const obj: Record<string, string> = {};
+  fields.forEach(f => { obj[f.key] = ''; });
+  return obj;
+}
+
 const STATUS_OPTIONS = [
   { value: '', label: '全部' },
   { value: 'active', label: '启用' },
@@ -57,6 +103,7 @@ export default function TokensPage() {
   const [newTokenValue, setNewTokenValue] = useState<string>('');
   const [form, setForm] = useState<any>({
     name: '', owner: '', target_system: '', credential_type: 'api_key', status: 'active', quota_limit: '', expires_at: '',
+    credential_config: defaultCredentialConfig('api_key'),
   });
 
   const { data, isLoading, refetch } = useQuery({
@@ -97,6 +144,7 @@ export default function TokensPage() {
 
   const resetForm = () => setForm({
     name: '', owner: '', target_system: '', credential_type: 'api_key', status: 'active', quota_limit: '', expires_at: '',
+    credential_config: defaultCredentialConfig('api_key'),
   });
 
   const handleSave = () => {
@@ -108,6 +156,7 @@ export default function TokensPage() {
       status: form.status,
       quota_limit: form.quota_limit ? Number(form.quota_limit) : null,
       expires_at: form.expires_at,
+      credential_config: form.credential_config,
     };
     if (editItem) {
       updateMutation.mutate({ id: editItem.id, data: payload });
@@ -129,14 +178,18 @@ export default function TokensPage() {
 
   const handleOpenEdit = (item: any) => {
     setEditItem(item);
+    const ctype = item.credential_type || 'api_key';
     setForm({
       name: item.name || '',
       owner: item.owner || '',
       target_system: item.target_system || '',
-      credential_type: item.credential_type || 'api_key',
+      credential_type: ctype,
       status: item.status || 'active',
       quota_limit: item.quota_limit ?? '',
       expires_at: item.expires_at || '',
+      credential_config: item.credential_config
+        ? { ...defaultCredentialConfig(ctype), ...item.credential_config }
+        : defaultCredentialConfig(ctype),
     });
     setDialogOpen(true);
   };
@@ -302,7 +355,18 @@ export default function TokensPage() {
             <TextField fullWidth label="目标系统" value={form.target_system} onChange={e => setForm({ ...form, target_system: e.target.value })} />
           </Grid>
           <Grid size={6}>
-            <TextField fullWidth select label="凭证类型" value={form.credential_type} onChange={e => setForm({ ...form, credential_type: e.target.value })}>
+            <TextField
+              fullWidth select label="凭证类型"
+              value={form.credential_type}
+              onChange={e => {
+                const ct = e.target.value;
+                setForm({
+                  ...form,
+                  credential_type: ct,
+                  credential_config: { ...defaultCredentialConfig(ct) },
+                });
+              }}
+            >
               {CRED_TYPES.map(c => <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>)}
             </TextField>
           </Grid>
@@ -317,6 +381,32 @@ export default function TokensPage() {
           <Grid size={6}>
             <TextField fullWidth label="到期时间" type="datetime-local" value={form.expires_at} onChange={e => setForm({ ...form, expires_at: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
           </Grid>
+
+          {/* 凭证类型特有字段 */}
+          <Grid size={12}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 1, mb: 0.5 }}>
+              凭证参数（{CRED_TYPES.find(c => c.value === form.credential_type)?.label}）
+            </Typography>
+          </Grid>
+          {(CRED_FIELDS[form.credential_type] || []).map(field => (
+            <Grid key={field.key} size={field.multiline ? 12 : 6}>
+              <TextField
+                fullWidth
+                label={field.label}
+                type={field.type || 'text'}
+                multiline={field.multiline}
+                rows={field.multiline ? 3 : undefined}
+                value={form.credential_config?.[field.key] || ''}
+                helperText={field.helper}
+                onChange={e => {
+                  setForm((prev: any) => ({
+                    ...prev,
+                    credential_config: { ...prev.credential_config, [field.key]: e.target.value },
+                  }));
+                }}
+              />
+            </Grid>
+          ))}
         </Grid>
       </CrudDialog>
 

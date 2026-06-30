@@ -218,3 +218,62 @@ export const systemRestartApi = {
 export const systemApi = {
   health: () => api.get('/system/health'),
 };
+
+export const weeklyReportsApi = {
+  departments: () => api.get('/weekly/departments'),
+  dataSources: () => api.get('/weekly/data-sources'),
+  list: (params?: ListParams) => api.get('/weekly/reports', { params }),
+  get: (id: string) => api.get(`/weekly/reports/${id}`),
+  create: (data: any) => api.post('/weekly/reports', data),
+  generate: (id: string) => api.post(`/weekly/reports/${id}/generate`),
+  export: (id: string) => api.get(`/weekly/reports/${id}/export`),
+};
+
+export const weeklyConfigApi = {
+  list: (params?: ListParams) => api.get('/weekly/configs', { params }),
+  create: (data: any) => api.post('/weekly/configs', data),
+  update: (id: string, data: any) => api.put(`/weekly/configs/${id}`, data),
+  delete: (id: string) => api.delete(`/weekly/configs/${id}`),
+  toggle: (id: string) => api.post(`/weekly/configs/${id}/toggle`),
+  trigger: (id: string) => api.post(`/weekly/configs/${id}/trigger`),
+};
+
+// RAG 知识库
+export const ragApi = {
+  knowledgeBases: {
+    list: (params?: ListParams) => api.get('/rag/knowledge-bases', { params }),
+    create: (data: any) => api.post('/rag/knowledge-bases', data),
+    update: (id: string, data: any) => api.put(`/rag/knowledge-bases/${id}`, data),
+    delete: (id: string) => api.delete(`/rag/knowledge-bases/${id}`),
+  },
+  documents: {
+    list: (params?: ListParams) => api.get('/rag/documents', { params }),
+    upload: (data: any) => api.post('/rag/documents', data),
+    delete: (id: string) => api.delete(`/rag/documents/${id}`),
+    chunks: (id: string) => api.get(`/rag/documents/${id}/chunks`),
+  },
+  retrieve: (data: { query: string; kb_id: string; top_k?: number }) =>
+    api.post('/rag/retrieve', data),
+};
+
+// AI 对话
+export const chatApi = {
+  sessions: {
+    list: (params?: ListParams) => api.get('/chat/sessions', { params }),
+    create: (data: any) => api.post('/chat/sessions', data),
+    update: (id: string, data: any) => api.put(`/chat/sessions/${id}`, data),
+    delete: (id: string) => api.delete(`/chat/sessions/${id}`),
+  },
+  messages: {
+    list: (sessionId: string) => api.get(`/chat/sessions/${sessionId}/messages`),
+    send: (sessionId: string, content: string) =>
+      api.post(`/chat/sessions/${sessionId}/messages`, { content }),
+  },
+};
+
+export const tokenResaleApi = {
+  overview: () => api.get('/token-resale/overview'),
+  packages: () => api.get('/token-resale/packages'),
+  transactions: (params?: ListParams) => api.get('/token-resale/transactions', { params }),
+  purchase: (data: any) => api.post('/token-resale/purchase', data),
+};

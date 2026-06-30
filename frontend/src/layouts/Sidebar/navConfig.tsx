@@ -28,12 +28,18 @@ import {
   VerifiedUser,
   Schema,
   Fingerprint,
+  AutoStories,
   SettingsRemote,
   Backup,
   Inventory2,
   Shield,
   ViewInAr,
   Description as DescriptionIcon,
+  MenuBook,
+  Chat,
+  FindInPage,
+  CloudSync,
+  Storefront,
 } from '@mui/icons-material';
 
 export interface NavItem {
@@ -93,6 +99,26 @@ export const navConfig: NavSection[] = [
     ],
   },
   {
+    label: '智能周报',
+    items: [
+      { title: '周报中心', path: '/weekly-reports', icon: <AutoStories fontSize="small" /> },
+    ],
+  },
+  {
+    label: '知识库 (RAG)',
+    items: [
+      { title: '知识库管理', path: '/rag/knowledge-bases', icon: <MenuBook fontSize="small" /> },
+      { title: '文档管理', path: '/rag/documents', icon: <DescriptionIcon fontSize="small" /> },
+      { title: '检索测试', path: '/rag/retrieval-test', icon: <FindInPage fontSize="small" /> },
+    ],
+  },
+  {
+    label: 'AI 对话',
+    items: [
+      { title: '对话中心', path: '/chat', icon: <Chat fontSize="small" /> },
+    ],
+  },
+  {
     label: '技能',
     items: [
       { title: '技能列表', path: '/skills', icon: <ExtensionIcon fontSize="small" /> },
@@ -104,6 +130,7 @@ export const navConfig: NavSection[] = [
     items: [
       { title: '令牌', path: '/tokens', icon: <KeyIcon fontSize="small" /> },
       { title: '审批', path: '/tokens/approvals', icon: <Security fontSize="small" /> },
+      { title: 'Token 转售', path: '/tokens/resale', icon: <Storefront fontSize="small" /> },
     ],
   },
   {
@@ -119,6 +146,7 @@ export const navConfig: NavSection[] = [
       { title: 'Python依赖', path: '/resources/python', icon: <Inventory2 fontSize="small" /> },
       { title: '网络白名单', path: '/resources/network-acl', icon: <Shield fontSize="small" /> },
       { title: '容器组', path: '/resources/pods', icon: <ViewInAr fontSize="small" /> },
+      { title: '云版转发', path: '/resources/cloud-forward', icon: <CloudSync fontSize="small" /> },
       { title: 'AGENTS.md 管理', path: '/resources/agents-md', icon: <DescriptionIcon fontSize="small" /> },
     ],
   },

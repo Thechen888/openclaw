@@ -5,6 +5,27 @@ const now = new Date();
 const ago = (minutes: number) => new Date(now.getTime() - minutes * 60000).toISOString();
 const dayAgo = (days: number) => new Date(now.getTime() - days * 86400000).toISOString();
 
+function getWeekInfo(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  const firstDay = new Date(monday.getFullYear(), 0, 1);
+  const pastDays = (monday.getTime() - firstDay.getTime()) / 86400000;
+  const week = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+  return {
+    year: monday.getFullYear(),
+    week,
+    week_start: monday.toISOString(),
+    week_end: sunday.toISOString(),
+  };
+}
+
 function paginate(data: any[], page = 1, page_size = 20, search = '') {
   let filtered = data;
   if (search) {
@@ -25,6 +46,114 @@ function paginate(data: any[], page = 1, page_size = 20, search = '') {
 
 function ok(data: any) {
   return { code: 0, message: 'ok', data };
+}
+
+function toMarkdown(report: any) {
+  const lines = [
+    `# ${report.title}`,
+    '',
+    `- 类型：${report.type === 'operation' ? '运营周报' : '部门周报'}`,
+    `- 周期：${report.year}年第${report.week}周`,
+    `- 部门：${report.department_name || '运营汇总'}`,
+    `- 创建人：${report.creator}`,
+    `- 创建时间：${new Date(report.created_at).toLocaleString()}`,
+    '',
+    '## 核心指标',
+    '',
+    ...(report.metrics?.map((m: any) => `- **${m.name}**：${m.value}${m.unit}（环比 ${m.week_over_week >= 0 ? '+' : ''}${m.week_over_week}${m.unit}）`) || []),
+    '',
+    '## AI 总结',
+    '',
+    report.summary || '',
+    '',
+    '## 本周亮点',
+    '',
+    ...(report.highlights?.map((h: string) => `- ${h}`) || []),
+    '',
+    '## 风险与问题',
+    '',
+    ...(report.risks?.map((r: string) => `- ${r}`) || []),
+    '',
+    '## 下周计划',
+    '',
+    ...(report.next_week_plan?.map((p: string) => `- ${p}`) || []),
+  ];
+  return lines.join('\n');
+}
+
+function generateMetrics(sources: any[], departmentId: string) {
+  const relevant = sources.filter((s: any) =>
+    !departmentId || (s.department_ids || []).includes(departmentId)
+  );
+  const picked = relevant.length > 0 ? relevant : sources;
+  const shuffled = [...picked].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 4).map((s: any) => ({
+    source_id: s.id,
+    name: s.name,
+    value: Number((Math.random() * 100).toFixed(1)),
+    unit: s.unit,
+    week_over_week: Number((Math.random() * 20 - 10).toFixed(1)),
+    trend_direction: s.trend_direction || 'neutral',
+  }));
+}
+
+function buildOperationSummary(reports: any[], week: number) {
+  const deptReports = reports.filter((r: any) => r.type === 'department');
+  const highlights: string[] = [];
+  const risks: string[] = [];
+  const plans: string[] = [];
+  deptReports.forEach((r: any) => {
+    if (r.highlights?.[0]) highlights.push(`${r.department_name}：${r.highlights[0]}`);
+    if (r.risks?.[0]) risks.push(`${r.department_name}：${r.risks[0]}`);
+    if (r.next_week_plan?.[0]) plans.push(`${r.department_name}：${r.next_week_plan[0]}`);
+  });
+  return {
+    summary: `第${week}周整体运营平稳。${deptReports.map((r: any) => r.department_name).join('、')}等部门已完成周报提交，核心指标表现符合预期。`,
+    highlights: highlights.slice(0, 3).length ? highlights.slice(0, 3) : ['各部门完成本周核心目标'],
+    risks: risks.slice(0, 2).length ? risks.slice(0, 2) : ['需持续关注跨部门协同风险'],
+    next_week_plan: plans.slice(0, 3).length ? plans.slice(0, 3) : ['推进下周重点工作', '完成数据复盘'],
+  };
+}
+
+function aggregateOperationMetrics(reports: any[], sources: any[]) {
+  const metricMap = new Map<string, any>();
+  reports.filter((r: any) => r.type === 'department').forEach((r: any) => {
+    r.metrics?.forEach((m: any) => {
+      const def = sources.find((s: any) => s.id === m.source_id);
+      const prev = metricMap.get(m.source_id);
+      if (!prev) {
+        metricMap.set(m.source_id, { ...m, count: 1, sourceDef: def });
+      } else {
+        prev.value += m.value;
+        prev.week_over_week += m.week_over_week;
+        prev.count += 1;
+      }
+    });
+  });
+
+  const aggregated = Array.from(metricMap.values())
+    .filter((m: any) => m.count >= 2)
+    .map((m: any) => ({
+      source_id: m.source_id,
+      name: m.name,
+      value: Number((m.value / m.count).toFixed(1)),
+      unit: m.unit,
+      week_over_week: Number((m.week_over_week / m.count).toFixed(1)),
+      trend_direction: m.sourceDef?.trend_direction || 'neutral',
+    }))
+    .slice(0, 4);
+
+  if (aggregated.length === 0) {
+    const allMetrics: any[] = [];
+    reports.filter((r: any) => r.type === 'department').forEach((r: any) => {
+      r.metrics?.forEach((m: any) => {
+        const def = sources.find((s: any) => s.id === m.source_id);
+        allMetrics.push({ ...m, trend_direction: def?.trend_direction || 'neutral' });
+      });
+    });
+    return allMetrics.slice(0, 4);
+  }
+  return aggregated;
 }
 
 // =================== 模型源 ===================
@@ -85,51 +214,62 @@ const connectors = [
 ];
 
 // =================== Starlark 适配器 ===================
-const starlarkAdapters = [
+const starlarkAdapters: any[] = [
   {
     id: 'sa-1', name: 'CRM客户同步', description: '从CRM拉取客户信息并同步到本地',
     version: '1.2.0', last_sync: '2026/5/31 18:00:00', status: 'active', author: '张伟',
+    token_id: 'tk-1',
     api_functions: [
       { name: 'read_contacts', method: 'GET', description: '读取联系人列表', script: 'def read_contacts(ctx):\n  return ctx.http.get("/contacts")' },
       { name: 'read_deals', method: 'GET', description: '读取交易列表', script: 'def read_deals(ctx):\n  return ctx.http.get("/deals")' },
       { name: 'write_notes', method: 'POST', description: '写入备注', script: 'def write_notes(ctx, data):\n  return ctx.http.post("/notes", data)' },
     ],
-    auth_config: { type: 'bearer_token', secret: 'crm-api-key-xxx' }, // 兼容旧数据，前端会自动转换为 config_items
     config_items: [
       { key: 'base_url', value: 'https://crm.example.com/api/v1', is_secret: false },
-      { key: 'api_key', value: 'crm-api-key-xxx', is_secret: true },
       { key: 'tenant_id', value: 'tenant-001', is_secret: false },
+    ],
+    var_items: [
+      { key: 'base_url', value: 'https://crm.example.com/api/v1', description: 'CRM API基础地址' },
+      { key: 'timeout', value: '30', description: '请求超时时间（秒）' },
+      { key: 'env', value: 'production', description: '运行环境：production / staging' },
     ],
     full_script: '# CRM客户同步适配器\ndef read_contacts(ctx):\n  return ctx.http.get("/contacts")\n\ndef read_deals(ctx):\n  return ctx.http.get("/deals")\n\ndef write_notes(ctx, data):\n  return ctx.http.post("/notes", data)',
   },
   {
     id: 'sa-2', name: 'ERP订单查询', description: '查询用友ERP订单状态和库存',
     version: '1.0.0', last_sync: '2026/5/31 16:00:00', status: 'active', author: '李思',
+    token_id: 'tk-2',
     api_functions: [
       { name: 'read_orders', method: 'GET', description: '读取订单', script: 'def read_orders(ctx):\n  return ctx.http.get("/orders")' },
       { name: 'read_inventory', method: 'GET', description: '读取库存', script: 'def read_inventory(ctx):\n  return ctx.http.get("/inventory")' },
     ],
-    auth_config: { type: 'api_key', secret: 'erp-key-xxx' },
     config_items: [
       { key: 'base_url', value: 'https://erp.example.com/openapi', is_secret: false },
       { key: 'app_key', value: 'yonyou-app-key', is_secret: false },
-      { key: 'app_secret', value: 'erp-key-xxx', is_secret: true },
+    ],
+    var_items: [
+      { key: 'base_url', value: 'https://erp.example.com/openapi', description: 'ERP API基础地址' },
+      { key: 'page_size', value: '50', description: '分页查询每页数量' },
     ],
     full_script: '# ERP订单查询适配器\ndef read_orders(ctx):\n  return ctx.http.get("/orders")\n\ndef read_inventory(ctx):\n  return ctx.http.get("/inventory")',
   },
   {
     id: 'sa-3', name: 'Jira工单对接', description: '双向同步Jira工单状态',
     version: '2.0.1', last_sync: '2026/5/31 20:00:00', status: 'active', author: '王五',
+    token_id: 'tk-3',
     api_functions: [
       { name: 'read_issues', method: 'GET', description: '读取工单', script: 'def read_issues(ctx):\n  return ctx.http.get("/issues")' },
       { name: 'write_issues', method: 'PUT', description: '更新工单', script: 'def write_issues(ctx, data):\n  return ctx.http.put("/issues", data)' },
       { name: 'read_projects', method: 'GET', description: '读取项目', script: 'def read_projects(ctx):\n  return ctx.http.get("/projects")' },
     ],
-    auth_config: { type: 'basic_auth', secret: 'jira-auth-xxx' },
     config_items: [
       { key: 'base_url', value: 'https://company.atlassian.net', is_secret: false },
       { key: 'username', value: 'bot@company.com', is_secret: false },
-      { key: 'api_token', value: 'jira-auth-xxx', is_secret: true },
+    ],
+    var_items: [
+      { key: 'base_url', value: 'https://company.atlassian.net', description: 'Jira实例域名' },
+      { key: 'project_key', value: 'OC', description: '默认项目Key' },
+      { key: 'max_results', value: '100', description: '单次查询最大返回数' },
     ],
     full_script: '# Jira工单对接适配器\ndef read_issues(ctx):\n  return ctx.http.get("/issues")\n\ndef write_issues(ctx, data):\n  return ctx.http.put("/issues", data)\n\ndef read_projects(ctx):\n  return ctx.http.get("/projects")',
   },
@@ -375,6 +515,285 @@ const matchingRuns = [
   { id: 'run-3', status: 'completed', created_at: ago(2880), matched_count: 142, total_count: 195 },
 ];
 
+// =================== 运营数据源（用于智能周报）====================
+// trend_direction: higher_better（越高越好）/ lower_better（越低越好）/ neutral（中性）
+const weeklyDataSources: any[] = [
+  { id: 'wds-1', name: '算力使用率',     unit: '%',   description: 'GPU/CPU平均利用率', trend_direction: 'neutral', department_ids: ['org-2', 'org-4'] },
+  { id: 'wds-2', name: '存储使用量',     unit: 'TB',  description: '对象存储与块存储总量', trend_direction: 'neutral', department_ids: ['org-2', 'org-4'] },
+  { id: 'wds-3', name: '任务完成数',     unit: '个',  description: '本周成功完成的任务数', trend_direction: 'higher_better', department_ids: ['org-2', 'org-4', 'org-5'] },
+  { id: 'wds-4', name: '任务排队时长',   unit: 'min', description: '平均排队等待时间', trend_direction: 'lower_better', department_ids: ['org-2', 'org-4'] },
+  { id: 'wds-5', name: '接口调用量',     unit: '次',  description: 'API调用总次数', trend_direction: 'higher_better', department_ids: ['org-4', 'org-5'] },
+  { id: 'wds-6', name: '接口错误率',     unit: '%',   description: 'API错误占比', trend_direction: 'lower_better', department_ids: ['org-4', 'org-5'] },
+  { id: 'wds-7', name: '新增客户数',     unit: '家',  description: '本周新增签约客户', trend_direction: 'higher_better', department_ids: ['org-3', 'org-6'] },
+  { id: 'wds-8', name: '销售额',         unit: '万元',description: '本周签约金额', trend_direction: 'higher_better', department_ids: ['org-3', 'org-6'] },
+  { id: 'wds-9', name: '客服会话量',     unit: '次',  description: '客服机器人会话次数', trend_direction: 'higher_better', department_ids: ['org-5'] },
+  { id: 'wds-10', name: '问题解决率',    unit: '%',   description: '机器人独立解决率', trend_direction: 'higher_better', department_ids: ['org-5'] },
+];
+
+// =================== 周报生成配置（用于智能周报）====================
+// 每条配置绑定一个 Agent，由 Agent 的 Workflow 负责数据拉取、AI 分析和周报生成
+const weeklyReportConfigs: any[] = [
+  {
+    id: 'wrc-1',
+    name: '技术研发部周报自动生成',
+    department_id: 'org-2',
+    department_name: '技术研发部',
+    agent_id: 'a-7',
+    agent_name: '技术研发部周报Agent',
+    type: 'department',
+    schedule_day: 5,
+    schedule_time: '18:00',
+    enabled: true,
+    last_generated_at: dayAgo(2),
+    next_generate_at: dayAgo(-5),
+    creator: '管理员',
+    created_at: dayAgo(14),
+  },
+  {
+    id: 'wrc-2',
+    name: 'AI平台组周报自动生成',
+    department_id: 'org-4',
+    department_name: 'AI平台组',
+    agent_id: 'a-8',
+    agent_name: 'AI平台组周报Agent',
+    type: 'department',
+    schedule_day: 5,
+    schedule_time: '18:00',
+    enabled: true,
+    last_generated_at: dayAgo(2),
+    next_generate_at: dayAgo(-5),
+    creator: '管理员',
+    created_at: dayAgo(14),
+  },
+  {
+    id: 'wrc-3',
+    name: '销售部周报自动生成',
+    department_id: 'org-3',
+    department_name: '销售部',
+    agent_id: 'a-9',
+    agent_name: '销售部周报Agent',
+    type: 'department',
+    schedule_day: 5,
+    schedule_time: '18:00',
+    enabled: true,
+    last_generated_at: dayAgo(2),
+    next_generate_at: dayAgo(-5),
+    creator: '管理员',
+    created_at: dayAgo(14),
+  },
+  {
+    id: 'wrc-4',
+    name: '智慧客服项目周报自动生成',
+    department_id: 'org-5',
+    department_name: '智慧客服项目',
+    agent_id: 'a-10',
+    agent_name: '智慧客服项目周报Agent',
+    type: 'department',
+    schedule_day: 5,
+    schedule_time: '18:00',
+    enabled: true,
+    last_generated_at: dayAgo(2),
+    next_generate_at: dayAgo(-5),
+    creator: '管理员',
+    created_at: dayAgo(14),
+  },
+  {
+    id: 'wrc-5',
+    name: '运营汇总周报自动生成',
+    department_id: '',
+    department_name: '运营汇总',
+    agent_id: 'a-11',
+    agent_name: '运营汇总周报Agent',
+    type: 'operation',
+    schedule_day: 5,
+    schedule_time: '20:00',
+    enabled: true,
+    last_generated_at: dayAgo(2),
+    next_generate_at: dayAgo(-5),
+    creator: '管理员',
+    created_at: dayAgo(14),
+  },
+];
+
+// =================== 周报（用于智能周报）====================
+const currentWeek = getWeekInfo();
+const weeklyReports: any[] = [
+  {
+    id: 'wr-1',
+    year: currentWeek.year,
+    week: currentWeek.week,
+    week_start: currentWeek.week_start,
+    week_end: currentWeek.week_end,
+    title: '技术研发部第' + currentWeek.week + '周周报',
+    department_id: 'org-2',
+    department_name: '技术研发部',
+    agent_id: 'a-7',
+    agent_name: '技术研发部周报Agent',
+    type: 'department',
+    status: 'published',
+    creator: '王五',
+    created_at: dayAgo(1),
+    metrics: [
+      { source_id: 'wds-1', name: '算力使用率', value: 78.5, unit: '%', week_over_week: 3.2, trend_direction: 'neutral' },
+      { source_id: 'wds-2', name: '存储使用量', value: 342.6, unit: 'TB', week_over_week: 12.8, trend_direction: 'neutral' },
+      { source_id: 'wds-3', name: '任务完成数', value: 15234, unit: '个', week_over_week: -2.1, trend_direction: 'higher_better' },
+      { source_id: 'wds-4', name: '任务排队时长', value: 4.3, unit: 'min', week_over_week: -0.8, trend_direction: 'lower_better' },
+    ],
+    summary: '本周算力使用率稳定在78.5%，存储用量环比增长12.8TB，主要受新上模型训练任务影响。任务排队时长下降至4.3分钟，整体运行平稳。',
+    highlights: [
+      '完成集群扩容，新增32张A100 GPU卡',
+      '优化任务调度算法，排队时长下降15%',
+      '处理存储冷数据归档策略异常1起',
+    ],
+    risks: [
+      '下周预计有大模型训练高峰，需提前预留算力缓冲',
+      '某节点磁盘故障率略有上升，已安排巡检',
+    ],
+    next_week_plan: [
+      '完成第二批GPU节点上线',
+      '推进存储分层方案落地',
+      '输出资源成本分摊报表',
+    ],
+  },
+  {
+    id: 'wr-2',
+    year: currentWeek.year,
+    week: currentWeek.week,
+    week_start: currentWeek.week_start,
+    week_end: currentWeek.week_end,
+    title: 'AI平台组第' + currentWeek.week + '周周报',
+    department_id: 'org-4',
+    department_name: 'AI平台组',
+    agent_id: 'a-8',
+    agent_name: 'AI平台组周报Agent',
+    type: 'department',
+    status: 'published',
+    creator: '孙八',
+    created_at: dayAgo(1),
+    metrics: [
+      { source_id: 'wds-1', name: '算力使用率', value: 76.2, unit: '%', week_over_week: 1.5, trend_direction: 'neutral' },
+      { source_id: 'wds-5', name: '接口调用量', value: 892100, unit: '次', week_over_week: 8.4, trend_direction: 'higher_better' },
+      { source_id: 'wds-6', name: '接口错误率', value: 0.32, unit: '%', week_over_week: -0.15, trend_direction: 'lower_better' },
+      { source_id: 'wds-3', name: '任务完成数', value: 4521, unit: '个', week_over_week: 5.2, trend_direction: 'higher_better' },
+    ],
+    summary: '本周AI平台接口调用量突破89万次，错误率保持在0.32%低位。模型部署效率提升，平均启动时间缩短至45秒。',
+    highlights: [
+      '新版模型策略上线，响应延迟降低20%',
+      '完成3个大模型的灰度发布',
+    ],
+    risks: [
+      '高并发场景下偶现限流，需评估扩容',
+    ],
+    next_week_plan: [
+      '上线模型版本回滚能力',
+      '完善调用链路监控',
+    ],
+  },
+  {
+    id: 'wr-3',
+    year: currentWeek.year,
+    week: currentWeek.week,
+    week_start: currentWeek.week_start,
+    week_end: currentWeek.week_end,
+    title: '销售部第' + currentWeek.week + '周周报',
+    department_id: 'org-3',
+    department_name: '销售部',
+    agent_id: 'a-9',
+    agent_name: '销售部周报Agent',
+    type: 'department',
+    status: 'published',
+    creator: '李思',
+    created_at: dayAgo(1),
+    metrics: [
+      { source_id: 'wds-7', name: '新增客户数', value: 7, unit: '家', week_over_week: 2, trend_direction: 'higher_better' },
+      { source_id: 'wds-8', name: '销售额', value: 286.5, unit: '万元', week_over_week: 15.3, trend_direction: 'higher_better' },
+    ],
+    summary: '本周销售签约金额286.5万元，环比增长15.3%，新增7家客户。重点客户续约推进顺利。',
+    highlights: [
+      '与某制造业龙头达成年度框架合作',
+      '完成华东大区客户拜访计划',
+    ],
+    risks: [
+      'Q3部分客户预算收紧，需加强回款跟进',
+    ],
+    next_week_plan: [
+      '跟进3个POC项目验收',
+      '准备半年度客户成功复盘会',
+    ],
+  },
+  {
+    id: 'wr-5',
+    year: currentWeek.year,
+    week: currentWeek.week,
+    week_start: currentWeek.week_start,
+    week_end: currentWeek.week_end,
+    title: '智慧客服项目第' + currentWeek.week + '周周报',
+    department_id: 'org-5',
+    department_name: '智慧客服项目',
+    agent_id: 'a-10',
+    agent_name: '智慧客服项目周报Agent',
+    type: 'department',
+    status: 'published',
+    creator: '赵六',
+    created_at: dayAgo(1),
+    metrics: [
+      { source_id: 'wds-5', name: '接口调用量', value: 45200, unit: '次', week_over_week: 3.1, trend_direction: 'higher_better' },
+      { source_id: 'wds-6', name: '接口错误率', value: 0.18, unit: '%', week_over_week: -0.08, trend_direction: 'lower_better' },
+      { source_id: 'wds-9', name: '客服会话量', value: 12340, unit: '次', week_over_week: -1.2, trend_direction: 'higher_better' },
+      { source_id: 'wds-10', name: '问题解决率', value: 92.5, unit: '%', week_over_week: 1.8, trend_direction: 'higher_better' },
+    ],
+    summary: '本周智慧客服项目会话量小幅回落，但问题解决率提升至92.5%，接口错误率继续下降。',
+    highlights: [
+      '客服机器人多轮对话准确率提升5%',
+      '完成2个重点客户POC交付',
+    ],
+    risks: [
+      '高峰时段客服排队有所增加',
+    ],
+    next_week_plan: [
+      '优化高峰时段分流策略',
+      '收集客户反馈迭代知识库',
+    ],
+  },
+  {
+    id: 'wr-4',
+    year: currentWeek.year,
+    week: currentWeek.week,
+    week_start: currentWeek.week_start,
+    week_end: currentWeek.week_end,
+    title: '运营周报（第' + currentWeek.week + '周）',
+    department_id: '',
+    department_name: '运营汇总',
+    agent_id: 'a-11',
+    agent_name: '运营汇总周报Agent',
+    type: 'operation',
+    status: 'published',
+    creator: '运营助手',
+    created_at: dayAgo(1),
+    metrics: [
+      { source_id: 'wds-1', name: '算力使用率', value: 78.5, unit: '%', week_over_week: 3.2, trend_direction: 'neutral' },
+      { source_id: 'wds-5', name: '接口调用量', value: 892100, unit: '次', week_over_week: 8.4, trend_direction: 'higher_better' },
+      { source_id: 'wds-8', name: '销售额', value: 286.5, unit: '万元', week_over_week: 15.3, trend_direction: 'higher_better' },
+      { source_id: 'wds-9', name: '客服会话量', value: 12340, unit: '次', week_over_week: -1.2, trend_direction: 'higher_better' },
+    ],
+    summary: '第' + currentWeek.week + '周整体运营平稳。算力与AI平台调用量均有增长，销售签约表现亮眼，客服会话量小幅回落。需关注下周大模型训练高峰对资源的冲击。',
+    highlights: [
+      '技术研发部完成32卡GPU扩容',
+      'AI平台接口调用量创新高',
+      '销售签约金额环比增长15.3%',
+    ],
+    risks: [
+      '下周算力需求预计激增',
+      '高并发限流风险需提前评估',
+    ],
+    next_week_plan: [
+      '各部门提交下周资源需求预测',
+      '运营侧发布成本分摊报表',
+      '组织跨部门资源协调会',
+    ],
+  },
+];
+
 // =================== Agent ===================
 const agents = [
   { id: 'a-1', name: 'CRM销售通知', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。' },
@@ -383,6 +802,11 @@ const agents = [
   { id: 'a-4', name: '每日总结', owner_type: 'personal', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
   { id: 'a-5', name: '个人提醒', owner_type: 'personal', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
   { id: 'a-6', name: '知识库问答', owner_type: 'organization', status: 'draft', model_policy_id: '', policy_name: '', triggers_count: 0, last_run_at: '', description: '基于企业知识库的智能问答（开发中）', system_prompt: '你是知识库问答助手。' },
+  { id: 'a-7', name: '技术研发部周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
+  { id: 'a-8', name: 'AI平台组周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
+  { id: 'a-9', name: '销售部周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
+  { id: 'a-10', name: '智慧客服项目周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
+  { id: 'a-11', name: '运营汇总周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
 ];
 
 // =================== Agent 工作流配置 ===================
@@ -499,6 +923,126 @@ const workflows: Record<string, any> = {
     on_error: 'stop',
     nodes: [],
   },
+  'a-7': {
+    agent_id: 'a-7',
+    name: '技术研发部周报生成流程',
+    max_iterations: 1,
+    timeout_seconds: 120,
+    on_error: 'retry',
+    nodes: [
+      {
+        id: 'wn-7-1', name: '拉取运营数据', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: '# 拉取技术研发部本周运营数据\ndata = http_get(config["data_endpoint"])\nreturn json_parse(data)',
+      },
+      {
+        id: 'wn-7-2', name: 'AI分析生成周报', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是周报生成助手，根据技术研发部本周运营数据生成结构化周报，包含核心指标、本周亮点、风险与问题、下周计划。',
+      },
+      {
+        id: 'wn-7-3', name: '保存周报', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'report = input["llm_output"]\nresult = http_post(config["report_endpoint"], report)\nlog_info("weekly_report_saved", result)',
+      },
+    ],
+  },
+  'a-8': {
+    agent_id: 'a-8',
+    name: 'AI平台组周报生成流程',
+    max_iterations: 1,
+    timeout_seconds: 120,
+    on_error: 'retry',
+    nodes: [
+      {
+        id: 'wn-8-1', name: '拉取运营数据', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: '# 拉取AI平台组本周运营数据\ndata = http_get(config["data_endpoint"])\nreturn json_parse(data)',
+      },
+      {
+        id: 'wn-8-2', name: 'AI分析生成周报', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是周报生成助手，根据AI平台组本周运营数据生成结构化周报。',
+      },
+      {
+        id: 'wn-8-3', name: '保存周报', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'report = input["llm_output"]\nresult = http_post(config["report_endpoint"], report)\nlog_info("weekly_report_saved", result)',
+      },
+    ],
+  },
+  'a-9': {
+    agent_id: 'a-9',
+    name: '销售部周报生成流程',
+    max_iterations: 1,
+    timeout_seconds: 120,
+    on_error: 'retry',
+    nodes: [
+      {
+        id: 'wn-9-1', name: '拉取运营数据', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: '# 拉取销售部本周运营数据\ndata = http_get(config["data_endpoint"])\nreturn json_parse(data)',
+      },
+      {
+        id: 'wn-9-2', name: 'AI分析生成周报', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是周报生成助手，根据销售部本周运营数据生成结构化周报。',
+      },
+      {
+        id: 'wn-9-3', name: '保存周报', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'report = input["llm_output"]\nresult = http_post(config["report_endpoint"], report)\nlog_info("weekly_report_saved", result)',
+      },
+    ],
+  },
+  'a-10': {
+    agent_id: 'a-10',
+    name: '智慧客服项目周报生成流程',
+    max_iterations: 1,
+    timeout_seconds: 120,
+    on_error: 'retry',
+    nodes: [
+      {
+        id: 'wn-10-1', name: '拉取运营数据', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: '# 拉取智慧客服项目本周运营数据\ndata = http_get(config["data_endpoint"])\nreturn json_parse(data)',
+      },
+      {
+        id: 'wn-10-2', name: 'AI分析生成周报', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是周报生成助手，根据智慧客服项目本周运营数据生成结构化周报。',
+      },
+      {
+        id: 'wn-10-3', name: '保存周报', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'report = input["llm_output"]\nresult = http_post(config["report_endpoint"], report)\nlog_info("weekly_report_saved", result)',
+      },
+    ],
+  },
+  'a-11': {
+    agent_id: 'a-11',
+    name: '运营汇总周报生成流程',
+    max_iterations: 1,
+    timeout_seconds: 180,
+    on_error: 'retry',
+    nodes: [
+      {
+        id: 'wn-11-1', name: '拉取各部门周报', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: '# 拉取所有部门本周周报\nreports = http_get(config["reports_endpoint"])\nreturn json_parse(reports)',
+      },
+      {
+        id: 'wn-11-2', name: 'AI汇总生成运营周报', type: 'model',
+        on_error: 'inherit', enabled: true,
+        prompt: '你是运营周报生成助手，汇总各部门周报数据，生成跨部门运营汇总周报，包含整体指标、亮点、风险和下周计划。',
+      },
+      {
+        id: 'wn-11-3', name: '保存运营周报', type: 'starlark',
+        on_error: 'inherit', enabled: true,
+        script: 'report = input["llm_output"]\nresult = http_post(config["report_endpoint"], report)\nlog_info("operation_report_saved", result)',
+      },
+    ],
+  },
 };
 
 // =================== Agent 运行记录 ===================
@@ -511,6 +1055,11 @@ const agentRuns = [
   { id: 'ar-6', agent_id: 'a-1', agent_name: 'CRM销售通知', trigger_type: 'event', status: 'completed', duration_ms: 1800, model_tokens: 960, input_tokens: 620, output_tokens: 340, cost: 0.0178, created_at: ago(180) },
   { id: 'ar-7', agent_id: 'a-2', agent_name: '设备巡检', trigger_type: 'manual', status: 'completed', duration_ms: 6200, model_tokens: 2800, input_tokens: 1600, output_tokens: 1200, cost: 0.0543, created_at: ago(240) },
   { id: 'ar-8', agent_id: 'a-5', agent_name: '个人提醒', trigger_type: 'webhook', status: 'running', duration_ms: 0, model_tokens: 0, input_tokens: 0, output_tokens: 0, cost: 0, created_at: ago(1) },
+  { id: 'ar-9', agent_id: 'a-7', agent_name: '技术研发部周报Agent', trigger_type: 'schedule', status: 'completed', duration_ms: 8200, model_tokens: 3180, input_tokens: 1900, output_tokens: 1280, cost: 0.0612, created_at: ago(2880) },
+  { id: 'ar-10', agent_id: 'a-8', agent_name: 'AI平台组周报Agent', trigger_type: 'schedule', status: 'completed', duration_ms: 7500, model_tokens: 2940, input_tokens: 1700, output_tokens: 1240, cost: 0.0578, created_at: ago(2880) },
+  { id: 'ar-11', agent_id: 'a-9', agent_name: '销售部周报Agent', trigger_type: 'schedule', status: 'completed', duration_ms: 5200, model_tokens: 1860, input_tokens: 980, output_tokens: 880, cost: 0.0367, created_at: ago(2880) },
+  { id: 'ar-12', agent_id: 'a-10', agent_name: '智慧客服项目周报Agent', trigger_type: 'schedule', status: 'completed', duration_ms: 6800, model_tokens: 2540, input_tokens: 1400, output_tokens: 1140, cost: 0.0491, created_at: ago(2880) },
+  { id: 'ar-13', agent_id: 'a-11', agent_name: '运营汇总周报Agent', trigger_type: 'schedule', status: 'completed', duration_ms: 12500, model_tokens: 5200, input_tokens: 3200, output_tokens: 2000, cost: 0.1024, created_at: ago(2820) },
 ];
 
 // =================== 技能 ===================
@@ -683,11 +1232,11 @@ const marketplaceSkills = [
 
 // =================== Token ===================
 const tokens: any[] = [
-  { id: 'tk-1', name: 'CRM系统接入令牌', owner: '张伟', owner_name: '张伟', target_system: 'Salesforce', credential_type: 'api_key', status: 'active', quota_used: 8500, quota_limit: 10000, expires_at: dayAgo(-30), token_value: 'oc_tk_crm_a3f8b1c2d4e6' },
-  { id: 'tk-2', name: 'ERP数据查询', owner: '李思', owner_name: '李思', target_system: 'SAP', credential_type: 'bearer', status: 'active', quota_used: 3200, quota_limit: 5000, expires_at: dayAgo(-60), token_value: 'oc_tk_erp_7d9f8b6c4x2k' },
-  { id: 'tk-3', name: '工单系统令牌', owner: '王五', owner_name: '王五', target_system: 'Zendesk', credential_type: 'oauth2', status: 'active', quota_used: 1200, quota_limit: 3000, expires_at: dayAgo(-90), token_value: 'oc_tk_zd_5c8d7e9f2j4h' },
-  { id: 'tk-4', name: 'HR系统接入', owner: '赵六', owner_name: '赵六', target_system: '北森HR', credential_type: 'api_key', status: 'disabled', quota_used: 0, quota_limit: 0, expires_at: dayAgo(-5), token_value: 'oc_tk_hr_6b4e8a1d3n9p' },
-  { id: 'tk-5', name: '测试环境令牌', owner: '张伟', owner_name: '张伟', target_system: 'Internal API', credential_type: 'jwt', status: 'active', quota_used: 450, quota_limit: 1000, expires_at: dayAgo(2), token_value: 'oc_tk_test_8f3b2a1c9d4e' },
+  { id: 'tk-1', name: 'CRM系统接入令牌', owner: '张伟', owner_name: '张伟', target_system: 'Salesforce', credential_type: 'api_key', status: 'active', quota_used: 8500, quota_limit: 10000, expires_at: dayAgo(-30), token_value: 'oc_tk_crm_a3f8b1c2d4e6', credential_config: { api_key: 'crm_api_key_sample_xxx', api_secret: '' } },
+  { id: 'tk-2', name: 'ERP数据查询', owner: '李思', owner_name: '李思', target_system: 'SAP', credential_type: 'bearer', status: 'active', quota_used: 3200, quota_limit: 5000, expires_at: dayAgo(-60), token_value: 'oc_tk_erp_7d9f8b6c4x2k', credential_config: { bearer_token: 'erp_bearer_token_sample_yyy', issuer: 'erp.openclaw.local' } },
+  { id: 'tk-3', name: '工单系统令牌', owner: '王五', owner_name: '王五', target_system: 'Zendesk', credential_type: 'oauth2', status: 'active', quota_used: 1200, quota_limit: 3000, expires_at: dayAgo(-90), token_value: 'oc_tk_zd_5c8d7e9f2j4h', credential_config: { client_id: 'zendesk_client_001', client_secret: 'zendesk_secret_masked', auth_url: 'https://zendesk.com/oauth/authorize', token_url: 'https://zendesk.com/oauth/tokens', redirect_uri: 'https://openclaw.local/oauth/callback', scope: 'read write' } },
+  { id: 'tk-4', name: 'HR系统接入', owner: '赵六', owner_name: '赵六', target_system: '北森HR', credential_type: 'basic', status: 'disabled', quota_used: 0, quota_limit: 0, expires_at: dayAgo(-5), token_value: 'oc_tk_hr_6b4e8a1d3n9p', credential_config: { username: 'hr_bot', password: 'hr_basic_password_masked' } },
+  { id: 'tk-5', name: '测试环境令牌', owner: '张伟', owner_name: '张伟', target_system: 'Internal API', credential_type: 'jwt', status: 'active', quota_used: 450, quota_limit: 1000, expires_at: dayAgo(2), token_value: 'oc_tk_test_8f3b2a1c9d4e', credential_config: { private_key: '-----BEGIN RSA PRIVATE KEY-----\n...sample...\n-----END RSA PRIVATE KEY-----', algorithm: 'RS256', issuer: 'openclaw.local', audience: 'test-api.openclaw.local', subject: 'test-client' } },
 ];
 
 // =================== 审批 ===================
@@ -706,6 +1255,46 @@ const quotas: any[] = [
   { id: 'q-3', user_id: 'u-3', user_name: '王五', username: 'wangwu', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 50, used: 47.8 },
   { id: 'q-4', user_id: 'u-4', user_name: '赵六', username: 'zhaoliu', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 20, used: 5.1 },
   { id: 'q-5', user_id: 'u-6', user_name: '孙八', username: 'sunba', quota_type: '磁盘配额', name: '磁盘配额', quota_limit: 200, used: 183.6 },
+];
+
+// =================== Token 转售 ===================
+const tokenResaleOverview = {
+  total_tokens: 5000000,
+  allocated_tokens: 3150000,
+  available_tokens: 1850000,
+  total_transactions: 12,
+  total_revenue: 89600,
+};
+
+const tokenResalePackages = [
+  {
+    id: 'pkg-1', name: '入门体验包', tier: 'starter', description: '适合小型团队试用 AI 能力',
+    token_amount: 50000, price: 2980, total_quota: 500000, sold: 200000, popular: false,
+    features: ['50,000 次 API 调用', '支持所有基础模型', '7×12 技术支持', '30天有效期'],
+  },
+  {
+    id: 'pkg-2', name: '标准业务包', tier: 'standard', description: '满足中型企业日常 AI 需求',
+    token_amount: 200000, price: 9800, total_quota: 800000, sold: 400000, popular: true,
+    features: ['200,000 次 API 调用', '支持所有模型（含高级）', '7×24 技术支持', '90天有效期', '调用分析报表'],
+  },
+  {
+    id: 'pkg-3', name: '专业版套餐', tier: 'pro', description: '面向高频调用的专业团队',
+    token_amount: 500000, price: 19800, total_quota: 1000000, sold: 350000, popular: false,
+    features: ['500,000 次 API 调用', '全模型无限制', '专属技术顾问', '180天有效期', '优先队列', 'SLA 99.9%'],
+  },
+  {
+    id: 'pkg-4', name: '企业定制包', tier: 'enterprise', description: '大型企业深度定制方案',
+    token_amount: 2000000, price: 59800, total_quota: 2000000, sold: 0, popular: false,
+    features: ['2,000,000 次 API 调用', '私有化部署支持', '一对一架构咨询', '365天有效期', '专属API网关', '定制模型微调'],
+  },
+];
+
+const tokenResaleTransactions: any[] = [
+  { id: 'tx-001', buyer_name: '深圳星辰科技', buyer_contact: 'tech@starchen.com', package_id: 'pkg-2', package_name: '标准业务包', token_amount: 200000, price: 9800, status: 'completed', created_at: dayAgo(2) },
+  { id: 'tx-002', buyer_name: '杭州数据智联', buyer_contact: 'ai@datazl.cn', package_id: 'pkg-3', package_name: '专业版套餐', token_amount: 500000, price: 19800, status: 'completed', created_at: dayAgo(5) },
+  { id: 'tx-003', buyer_name: '北京云途信息', buyer_contact: 'dev@yuntu.io', package_id: 'pkg-1', package_name: '入门体验包', token_amount: 50000, price: 2980, status: 'completed', created_at: dayAgo(8) },
+  { id: 'tx-004', buyer_name: '上海微创网络', buyer_contact: 'api@weichuang.com', package_id: 'pkg-2', package_name: '标准业务包', token_amount: 200000, price: 9800, status: 'completed', created_at: dayAgo(12) },
+  { id: 'tx-005', buyer_name: '广州智行科技', buyer_contact: 'biz@zhixing.tech', package_id: 'pkg-1', package_name: '入门体验包', token_amount: 50000, price: 2980, status: 'pending', created_at: dayAgo(1) },
 ];
 
 // =================== 调用日志 ===================
@@ -1165,6 +1754,158 @@ description: Agent 启动入口模板
   },
 ];
 
+// =================== RAG 知识库 ===================
+const knowledgeBases: any[] = [
+  {
+    id: 'kb-1', name: '技术研发知识库', description: '技术规范、API文档、架构设计文档',
+    embedding_model: 'text-embedding-3-large', chunk_strategy: 'fixed', chunk_size: 500, chunk_overlap: 50,
+    doc_count: 6, vector_count: 142, status: 'active', creator: '管理员', created_at: dayAgo(30),
+  },
+  {
+    id: 'kb-2', name: '产品文档库', description: 'PRD、需求文档、产品规划文档',
+    embedding_model: 'text-embedding-3-large', chunk_strategy: 'paragraph', chunk_size: 800, chunk_overlap: 100,
+    doc_count: 4, vector_count: 89, status: 'active', creator: '管理员', created_at: dayAgo(25),
+  },
+  {
+    id: 'kb-3', name: '运维手册库', description: '部署文档、故障处理SOP、监控告警手册',
+    embedding_model: 'bge-large-zh', chunk_strategy: 'sentence', chunk_size: 300, chunk_overlap: 30,
+    doc_count: 3, vector_count: 56, status: 'active', creator: '运维管理员', created_at: dayAgo(20),
+  },
+  {
+    id: 'kb-4', name: '客服FAQ库', description: '常见问题、标准话术、产品FAQ',
+    embedding_model: 'bge-large-zh', chunk_strategy: 'fixed', chunk_size: 400, chunk_overlap: 40,
+    doc_count: 5, vector_count: 178, status: 'active', creator: '客服主管', created_at: dayAgo(15),
+  },
+];
+
+// =================== RAG 文档 ===================
+const ragDocuments: any[] = [
+  { id: 'doc-1', kb_id: 'kb-1', name: 'API设计规范v2.pdf', type: 'pdf', size: '2.3MB', chunk_count: 45, vector_count: 45, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(28) },
+  { id: 'doc-2', kb_id: 'kb-1', name: '微服务架构白皮书.docx', type: 'docx', size: '1.8MB', chunk_count: 38, vector_count: 38, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(27) },
+  { id: 'doc-3', kb_id: 'kb-1', name: '代码规范指南.md', type: 'markdown', size: '45KB', chunk_count: 12, vector_count: 12, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(26) },
+  { id: 'doc-4', kb_id: 'kb-1', name: '数据库设计文档.pdf', type: 'pdf', size: '3.1MB', chunk_count: 0, vector_count: 0, status: 'processing', uploaded_by: '管理员', uploaded_at: ago(30) },
+  { id: 'doc-5', kb_id: 'kb-1', name: '系统架构图说明.txt', type: 'text', size: '12KB', chunk_count: 8, vector_count: 8, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(20) },
+  { id: 'doc-6', kb_id: 'kb-1', name: '安全规范v3.pdf', type: 'pdf', size: '1.5MB', chunk_count: 39, vector_count: 39, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(18) },
+  { id: 'doc-7', kb_id: 'kb-2', name: 'OpenClaw平台PRD.docx', type: 'docx', size: '5.2MB', chunk_count: 67, vector_count: 67, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(24) },
+  { id: 'doc-8', kb_id: 'kb-2', name: '智能周报需求文档.docx', type: 'docx', size: '890KB', chunk_count: 15, vector_count: 15, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(22) },
+  { id: 'doc-9', kb_id: 'kb-2', name: 'RAG功能设计稿.md', type: 'markdown', size: '67KB', chunk_count: 7, vector_count: 7, status: 'completed', uploaded_by: '管理员', uploaded_at: dayAgo(10) },
+  { id: 'doc-10', kb_id: 'kb-3', name: 'K8s部署手册.pdf', type: 'pdf', size: '4.2MB', chunk_count: 28, vector_count: 28, status: 'completed', uploaded_by: '运维管理员', uploaded_at: dayAgo(19) },
+  { id: 'doc-11', kb_id: 'kb-3', name: '故障处理SOP.md', type: 'markdown', size: '89KB', chunk_count: 18, vector_count: 18, status: 'completed', uploaded_by: '运维管理员', uploaded_at: dayAgo(17) },
+  { id: 'doc-12', kb_id: 'kb-3', name: '监控告警配置.txt', type: 'text', size: '23KB', chunk_count: 10, vector_count: 10, status: 'completed', uploaded_by: '运维管理员', uploaded_at: dayAgo(15) },
+  { id: 'doc-13', kb_id: 'kb-4', name: '产品常见FAQ.pdf', type: 'pdf', size: '1.1MB', chunk_count: 52, vector_count: 52, status: 'completed', uploaded_by: '客服主管', uploaded_at: dayAgo(14) },
+  { id: 'doc-14', kb_id: 'kb-4', name: '标准话术手册.docx', type: 'docx', size: '780KB', chunk_count: 63, vector_count: 63, status: 'completed', uploaded_by: '客服主管', uploaded_at: dayAgo(12) },
+  { id: 'doc-15', kb_id: 'kb-4', name: '退换货政策.md', type: 'markdown', size: '34KB', chunk_count: 22, vector_count: 22, status: 'completed', uploaded_by: '客服主管', uploaded_at: dayAgo(8) },
+  { id: 'doc-16', kb_id: 'kb-4', name: '投诉处理流程.pdf', type: 'pdf', size: '920KB', chunk_count: 41, vector_count: 0, status: 'failed', uploaded_by: '客服主管', uploaded_at: dayAgo(3) },
+];
+
+// 文档分块样例
+const docChunks: any[] = [
+  { id: 'chk-1', doc_id: 'doc-1', kb_id: 'kb-1', chunk_index: 0, content: '## API设计原则\n\n1. RESTful风格：所有API遵循REST架构风格，使用HTTP动词语义化操作资源。\n2. 统一响应格式：所有接口返回统一JSON结构，包含code、message、data三个字段。\n3. 版本管理：API路径以/v1/开头，重大变更时升级版本号。\n4. 分页规范：列表接口统一使用page和page_size参数，返回total和total_pages。', token_count: 128, score: 0 },
+  { id: 'chk-2', doc_id: 'doc-1', kb_id: 'kb-1', chunk_index: 1, content: '## 认证与授权\n\n所有API需携带Bearer Token进行认证。Token通过登录接口获取，有效期2小时。权限校验基于RBAC模型，用户通过角色关联权限点。管理接口需admin角色，普通接口需user角色。', token_count: 96, score: 0 },
+  { id: 'chk-3', doc_id: 'doc-1', kb_id: 'kb-1', chunk_index: 2, content: '## 错误码定义\n\n- 200: 成功\n- 400: 请求参数错误\n- 401: 未认证或Token过期\n- 403: 无权限访问\n- 404: 资源不存在\n- 409: 资源冲突\n- 429: 请求频率超限\n- 500: 服务器内部错误', token_count: 72, score: 0 },
+  { id: 'chk-4', doc_id: 'doc-2', kb_id: 'kb-1', chunk_index: 0, content: '## 微服务拆分原则\n\n1. 单一职责：每个服务只负责一个业务领域。\n2. 独立部署：服务可独立构建、部署、扩展。\n3. 数据隔离：每个服务拥有独立数据库，通过API通信。\n4. 容错设计：使用熔断器模式，避免级联故障。\n5. 服务发现：通过注册中心实现服务自动发现和负载均衡。', token_count: 115, score: 0 },
+  { id: 'chk-5', doc_id: 'doc-3', kb_id: 'kb-1', chunk_index: 0, content: '## 代码规范\n\n- 命名：变量用驼峰，常量用大写下划线，类型用帕斯卡\n- 注释：公开API必须有文档注释，复杂逻辑需行内注释\n- 错误处理：不可忽略error返回值，必须显式处理\n- 测试：核心逻辑单元测试覆盖率不低于80%', token_count: 98, score: 0 },
+];
+
+// =================== AI 对话 ===================
+const chatSessions: any[] = [
+  { id: 'cs-1', title: '关于API设计规范的讨论', mode: 'rag', model_policy_id: 'mp-1', model_policy: '通用对话策略', kb_id: 'kb-1', kb_name: '技术研发知识库', agent_id: '', agent_name: '', message_count: 6, last_message_at: ago(60), created_at: dayAgo(1) },
+  { id: 'cs-2', title: '微服务架构选型咨询', mode: 'rag', model_policy_id: 'mp-1', model_policy: '通用对话策略', kb_id: 'kb-1', kb_name: '技术研发知识库', agent_id: '', agent_name: '', message_count: 4, last_message_at: ago(180), created_at: dayAgo(1) },
+  { id: 'cs-3', title: 'K8s部署问题排查', mode: 'rag', model_policy_id: 'mp-1', model_policy: '通用对话策略', kb_id: 'kb-3', kb_name: '运维手册库', agent_id: '', agent_name: '', message_count: 8, last_message_at: ago(300), created_at: dayAgo(2) },
+  { id: 'cs-4', title: '客服话术优化建议', mode: 'rag', model_policy_id: 'mp-1', model_policy: '通用对话策略', kb_id: 'kb-4', kb_name: '客服FAQ库', agent_id: '', agent_name: '', message_count: 3, last_message_at: ago(720), created_at: dayAgo(3) },
+  { id: 'cs-5', title: '产品需求讨论', mode: 'rag', model_policy_id: 'mp-2', model_policy: '高性价比对话', kb_id: 'kb-2', kb_name: '产品文档库', agent_id: '', agent_name: '', message_count: 5, last_message_at: ago(1440), created_at: dayAgo(4) },
+  { id: 'cs-6', title: '闲聊', mode: 'chat', model_policy_id: 'mp-1', model_policy: '通用对话策略', kb_id: '', kb_name: '', agent_id: '', agent_name: '', message_count: 2, last_message_at: ago(2880), created_at: dayAgo(5) },
+  { id: 'cs-7', title: 'CRM销售助手对话', mode: 'agent', model_policy_id: 'mp-1', model_policy: '通用对话策略', kb_id: '', kb_name: '', agent_id: 'a-1', agent_name: 'CRM销售通知', message_count: 4, last_message_at: ago(45), created_at: dayAgo(1) },
+];
+
+const chatMessages: Record<string, any[]> = {
+  'cs-1': [
+    { id: 'msg-1', role: 'user', content: 'API设计中如何处理分页？', created_at: ago(120) },
+    { id: 'msg-2', role: 'assistant', content: '根据知识库中的API设计规范，分页应统一使用 `page` 和 `page_size` 参数，返回结果包含 `total` 和 `total_pages` 字段。\n\n**示例请求：**\n```\nGET /api/v1/users?page=1&page_size=20\n```\n\n**响应格式：**\n```json\n{\n  "code": 200,\n  "data": [...],\n  "pagination": {\n    "page": 1,\n    "page_size": 20,\n    "total": 156,\n    "total_pages": 8\n  }\n}\n```\n\n默认 `page_size` 建议设为20，最大不超过100。', created_at: ago(119), sources: [
+      { doc_name: 'API设计规范v2.pdf', chunk_index: 0, score: 0.94, content: '## API设计原则\n\n1. RESTful风格：所有API遵循REST架构风格...\n4. 分页规范：列表接口统一使用page和page_size参数，返回total和total_pages。' },
+      { doc_name: 'API设计规范v2.pdf', chunk_index: 2, score: 0.72, content: '## 错误码定义\n\n- 200: 成功\n- 400: 请求参数错误...' },
+    ] },
+    { id: 'msg-3', role: 'user', content: '错误码有哪些规范？', created_at: ago(90) },
+    { id: 'msg-4', role: 'assistant', content: '根据API设计规范，错误码定义如下：\n\n| 状态码 | 含义 |\n|--------|------|\n| 200 | 成功 |\n| 400 | 请求参数错误 |\n| 401 | 未认证或Token过期 |\n| 403 | 无权限访问 |\n| 404 | 资源不存在 |\n| 409 | 资源冲突 |\n| 429 | 请求频率超限 |\n| 500 | 服务器内部错误 |\n\n所有错误响应应附带 `message` 字段描述具体错误原因，便于前端处理和用户理解。', created_at: ago(89), sources: [
+      { doc_name: 'API设计规范v2.pdf', chunk_index: 2, score: 0.97, content: '## 错误码定义\n\n- 200: 成功\n- 400: 请求参数错误\n- 401: 未认证或Token过期\n- 403: 无权限访问\n- 404: 资源不存在...' },
+    ] },
+    { id: 'msg-5', role: 'user', content: '认证机制是怎样的？', created_at: ago(62) },
+    { id: 'msg-6', role: 'assistant', content: '根据API设计规范文档：\n\n1. **认证方式**：Bearer Token，所有API需在Header中携带 `Authorization: Bearer <token>`\n2. **Token获取**：通过登录接口 `/auth/login` 获取\n3. **有效期**：Token有效期2小时，可通过刷新接口续期\n4. **权限模型**：基于RBAC，用户通过角色关联权限点\n5. **角色要求**：管理接口需 `admin` 角色，普通接口需 `user` 角色', created_at: ago(61), sources: [
+      { doc_name: 'API设计规范v2.pdf', chunk_index: 1, score: 0.96, content: '## 认证与授权\n\n所有API需携带Bearer Token进行认证。Token通过登录接口获取，有效期2小时。权限校验基于RBAC模型...' },
+    ] },
+  ],
+  'cs-2': [
+    { id: 'msg-7', role: 'user', content: '微服务拆分有哪些原则？', created_at: ago(240) },
+    { id: 'msg-8', role: 'assistant', content: '根据微服务架构白皮书，拆分原则包括：\n\n1. **单一职责**：每个服务只负责一个业务领域\n2. **独立部署**：服务可独立构建、部署、扩展\n3. **数据隔离**：每个服务拥有独立数据库，通过API通信\n4. **容错设计**：使用熔断器模式，避免级联故障\n5. **服务发现**：通过注册中心实现自动发现和负载均衡', created_at: ago(239), sources: [
+      { doc_name: '微服务架构白皮书.pdf', chunk_index: 0, score: 0.95, content: '## 微服务拆分原则\n\n1. 单一职责：每个服务只负责一个业务领域。\n2. 独立部署：服务可独立构建、部署、扩展...' },
+    ] },
+    { id: 'msg-9', role: 'user', content: '服务间通信用什么方式？', created_at: ago(200) },
+    { id: 'msg-10', role: 'assistant', content: '服务间通信主要有两种方式：\n\n**同步通信**：\n- REST API（适合简单查询）\n- gRPC（适合高性能场景，支持流式）\n\n**异步通信**：\n- 消息队列（Kafka/RabbitMQ，适合解耦和削峰）\n- 事件总线（适合领域事件驱动）\n\n建议根据场景选择：查询类用同步，通知/审计类用异步。', created_at: ago(199), sources: [
+      { doc_name: '微服务架构白皮书.pdf', chunk_index: 3, score: 0.91, content: '## 服务间通信\n\n同步方式：REST API、gRPC\n异步方式：消息队列（Kafka/RabbitMQ）、事件总线' },
+    ] },
+  ],
+  'cs-3': [
+    { id: 'msg-11', role: 'user', content: 'Pod一直CrashLoopBackOff怎么办？', created_at: ago(360) },
+    { id: 'msg-12', role: 'assistant', content: '根据运维手册，排查CrashLoopBackOff的步骤：\n\n1. **查看Pod日志**：\n```bash\nkubectl logs <pod-name> --previous\n```\n\n2. **检查事件**：\n```bash\nkubectl describe pod <pod-name>\n```\n\n3. **常见原因**：\n- 容器启动命令错误\n- 配置文件或环境变量缺失\n- 资源限制不足（OOMKilled）\n- 健康检查配置不当\n- 镜像拉取失败\n\n4. **处理建议**：\n- 修正启动命令和参数\n- 确认ConfigMap/Secret已正确挂载\n- 调整resources.requests/limits\n- 检查livenessProbe配置', created_at: ago(359), sources: [
+      { doc_name: 'K8s运维排障指南.md', chunk_index: 5, score: 0.93, content: '## CrashLoopBackOff排查\n\n常见原因：容器启动命令错误、配置文件缺失、OOMKilled、健康检查不当...' },
+    ] },
+    { id: 'msg-13', role: 'user', content: '如何查看资源使用情况？', created_at: ago(330) },
+    { id: 'msg-14', role: 'assistant', content: '可以使用以下命令查看资源使用：\n\n```bash\n# 节点资源\nkubectl top nodes\n\n# Pod资源\nkubectl top pods --all-namespaces\n\n# 详细描述\nkubectl describe node <node-name>\n```\n\n也可以通过 `kubectl get pods -o wide` 查看Pod分布，结合监控面板（如Prometheus + Grafana）进行长期资源分析。', created_at: ago(329), sources: [
+      { doc_name: 'K8s运维排障指南.md', chunk_index: 2, score: 0.88, content: '## 资源监控\n\nkubectl top nodes / kubectl top pods --all-namespaces...' },
+    ] },
+  ],
+  'cs-4': [
+    { id: 'msg-15', role: 'user', content: '客户投诉产品不好用怎么回复？', created_at: ago(780) },
+    { id: 'msg-16', role: 'assistant', content: '根据客服FAQ库的标准话术：\n\n**回复模板：**\n非常抱歉给您带来了不好的体验，感谢您的反馈。我们非常重视您的意见，已经记录并反馈给产品团队。请问具体是哪个功能使用不便呢？我们可以为您提供详细的操作指导，或者帮您反馈给技术团队优化。\n\n**注意事项：**\n1. 先表达歉意和理解\n2. 引导客户描述具体问题\n3. 提供即时解决方案\n4. 承诺反馈和跟进', created_at: ago(779), sources: [
+      { doc_name: '客服标准话术集.docx', chunk_index: 8, score: 0.92, content: '## 投诉处理话术\n\n模板：非常抱歉给您带来了不好的体验...' },
+    ] },
+  ],
+  'cs-5': [
+    { id: 'msg-17', role: 'user', content: '周报中心的需求是什么？', created_at: ago(1500) },
+    { id: 'msg-18', role: 'assistant', content: '根据智能周报需求文档：\n\n**核心需求：**\n1. 各部门有自己的Agent负责生成周报\n2. 周报数据有存放位置\n3. 周报分权限，按部门隔离\n4. AI自动生成周报内容\n5. 每周有运营汇总周报（跨部门聚合）\n\n**技术方案：**\n- 配置中绑定Agent ID\n- Agent工作流负责数据拉取→AI分析→周报保存\n- 支持手动触发和定时触发\n- 非管理员只能查看本部门周报', created_at: ago(1499), sources: [
+      { doc_name: '智能周报需求PRD.pdf', chunk_index: 0, score: 0.96, content: '## 智能周报核心需求\n\n1. 各部门有自己的Agent负责生成周报\n2. 周报数据有存放位置...' },
+    ] },
+  ],
+  'cs-6': [
+    { id: 'msg-19', role: 'user', content: '你好', created_at: ago(2900) },
+    { id: 'msg-20', role: 'assistant', content: '你好！我是OpenClaw AI助手，有什么可以帮您的吗？\n\n我可以帮您：\n- 基于知识库进行文档问答（RAG增强）\n- 与智能体对话完成复杂任务\n- 回答技术问题\n- 协助分析和生成文档内容\n\n请随时提问！', created_at: ago(2899) },
+  ],
+  'cs-7': [
+    { id: 'msg-21', role: 'user', content: '最近有什么新的销售线索？', created_at: ago(50) },
+    { id: 'msg-22', role: 'assistant', content: '通过CRM系统查询，最近24小时有以下新销售线索：\n\n1. **华为技术有限公司** - AI平台采购意向，预估金额 ¥500万\n   - 联系人：张经理\n   - 阶段：初步接洽\n\n2. **中国移动** - 智能客服项目POC，预估金额 ¥200万\n   - 联系人：李总监\n   - 阶段：方案评估\n\n3. **比亚迪** - 生产质检AI方案，预估金额 ¥150万\n   - 联系人：王工\n   - 阶段：需求确认', created_at: ago(49), agent_action: { type: 'call_skill', skill_name: 'CRM数据同步', status: 'completed', duration_ms: 1200 } },
+    { id: 'msg-23', role: 'user', content: '帮我给华为的张经理发一封跟进邮件', created_at: ago(30) },
+    { id: 'msg-24', role: 'assistant', content: '已为您草拟跟进邮件并通过企业微信发送：\n\n---\n**收件人**：张经理（华为技术有限公司）\n**主题**：OpenClaw AI平台合作方案跟进\n\n张经理您好，\n\n感谢贵司对我们AI平台的关注。针对贵司的采购需求，我们已准备了详细的方案材料和Demo环境，方便您进一步评估。\n\n如您方便，希望能安排一次线上演示，为您展示平台核心能力。\n\n期待您的回复。\n\n---\n\n邮件已发送成功。', created_at: ago(29), agent_action: { type: 'send_im', channel: '企业微信', status: 'completed', duration_ms: 800 } },
+  ],
+};
+
+// 模拟AI回复（返回结构化数据：content + sources）
+function generateAIReply(query: string, session: any): { content: string; sources?: any[]; agent_action?: any } {
+  const kbName = session.kb_name;
+  const mode = session.mode || 'chat';
+
+  if (mode === 'agent' && session.agent_name) {
+    return {
+      content: `[${session.agent_name}] 已收到您的指令"${query}"，正在执行相关操作...\n\n执行完成。根据Agent工作流处理结果，已完成对应操作。如需进一步操作请继续指示。`,
+      agent_action: { type: 'call_skill', skill_name: session.agent_name, status: 'completed', duration_ms: Math.floor(Math.random() * 2000 + 500) },
+    };
+  }
+
+  if (mode === 'rag' && kbName) {
+    const sources = [
+      { doc_name: `${kbName}文档1.pdf`, chunk_index: Math.floor(Math.random() * 10), score: +(0.85 + Math.random() * 0.12).toFixed(4), content: `与"${query}"相关的文档片段内容...该部分描述了核心概念和操作规范。` },
+      { doc_name: `${kbName}文档2.md`, chunk_index: Math.floor(Math.random() * 5), score: +(0.7 + Math.random() * 0.15).toFixed(4), content: `补充参考内容：关于"${query}"的延伸说明和注意事项。` },
+    ];
+    return {
+      content: `根据「${kbName}」知识库中的相关文档，针对您的问题"${query}"：\n\n这是基于检索到的文档片段生成的回答。RAG系统首先将您的问题向量化，然后从知识库中检索最相关的文档片段，最后结合检索结果生成回答。\n\n如需更详细的信息，可以展开下方「参考来源」查看原始文档片段。`,
+      sources,
+    };
+  }
+
+  return {
+    content: `您好！关于"${query}"，这是一个很好的问题。\n\n目前该对话未关联知识库，我将基于通用知识进行回答。建议您创建新对话时选择「知识库问答」模式并关联相关知识库，以获得更准确的基于文档的RAG增强回答。\n\n您也可以选择「智能体对话」模式，让Agent帮您执行更复杂的任务。`,
+  };
+}
+
 // =================== 路由匹配 & 响应 ===================
 export function handleMockRequest(method: string, url: string, params?: any, data?: any) {
   const path = url.replace(/^\/api\/v1/, '');
@@ -1461,9 +2202,26 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // Tokens
   if (path === '/tokens' && method === 'get') return paginate(tokens, p.page, p.page_size, p.search);
   if (path === '/tokens' && method === 'post') {
+    const cfg = data.credential_config || {};
+    let tokenValue = '';
+    const ct = data.credential_type || 'api_key';
+    if (ct === 'api_key' && cfg.api_key) {
+      tokenValue = cfg.api_key;
+    } else if (ct === 'bearer' && cfg.bearer_token) {
+      tokenValue = cfg.bearer_token;
+    } else if (ct === 'basic' && cfg.username) {
+      tokenValue = 'Basic ' + btoa(cfg.username + ':' + (cfg.password || ''));
+    } else if (ct === 'oauth2' && cfg.client_id) {
+      tokenValue = cfg.client_id + ':' + (cfg.client_secret || '');
+    } else if (ct === 'jwt' && cfg.issuer) {
+      tokenValue = 'jwt_' + cfg.issuer.replace(/[^a-z0-9]/gi, '_') + '_' + Date.now().toString(36).slice(-6);
+    }
+    if (!tokenValue) {
+      tokenValue = 'oc_tk_' + ct + '_' + Math.random().toString(36).slice(2, 10);
+    }
     const newToken = {
       id: 'tk-' + Date.now(),
-      token_value: 'oc_tk_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36).slice(-6),
+      token_value: tokenValue,
       ...data,
     };
     tokens.push(newToken);
@@ -1667,6 +2425,448 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const pad = (n: number) => String(n).padStart(2, '0');
     agentsMdFiles[idx].updatedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     return ok(agentsMdFiles[idx]);
+  }
+
+  // Weekly Reports（智能周报）
+  // 部门直接来源于组织，排除总公司根节点
+  if (path === '/weekly/departments' && method === 'get') {
+    return ok(organizations.filter((o: any) => o.type !== 'company'));
+  }
+  if (path === '/weekly/data-sources' && method === 'get') return ok(weeklyDataSources);
+
+  // ---- 周报生成配置 CRUD ----
+  if (path === '/weekly/configs' && method === 'get') {
+    return paginate(weeklyReportConfigs, p.page, p.page_size, p.search);
+  }
+  if (path === '/weekly/configs' && method === 'post') {
+    const dept = organizations.find((o: any) => o.id === data.department_id);
+    const agent = agents.find((a: any) => a.id === data.agent_id);
+    const newConfig = {
+      id: 'wrc-' + Date.now(),
+      ...data,
+      department_name: dept?.name || '运营汇总',
+      agent_name: agent?.name || data.agent_name || '',
+      type: data.department_id ? 'department' : 'operation',
+      enabled: data.enabled !== false,
+      last_generated_at: null,
+      creator: data.creator || '当前用户',
+      created_at: new Date().toISOString(),
+    };
+    weeklyReportConfigs.unshift(newConfig);
+    return ok(newConfig);
+  }
+  if (/^\/weekly\/configs\/[^/]+$/.test(path) && method === 'put') {
+    const cid = path.split('/').pop();
+    const idx = weeklyReportConfigs.findIndex((c: any) => c.id === cid);
+    if (idx < 0) return { code: 404, message: 'not found', data: null };
+    const dept = organizations.find((o: any) => o.id === data.department_id);
+    const agent = agents.find((a: any) => a.id === data.agent_id);
+    weeklyReportConfigs[idx] = {
+      ...weeklyReportConfigs[idx],
+      ...data,
+      department_name: dept?.name || data.department_name || '运营汇总',
+      agent_name: agent?.name || data.agent_name || weeklyReportConfigs[idx].agent_name,
+      type: data.department_id ? 'department' : 'operation',
+    };
+    return ok(weeklyReportConfigs[idx]);
+  }
+  if (/^\/weekly\/configs\/[^/]+$/.test(path) && method === 'delete') {
+    const cid = path.split('/').pop();
+    const idx = weeklyReportConfigs.findIndex((c: any) => c.id === cid);
+    if (idx >= 0) weeklyReportConfigs.splice(idx, 1);
+    return ok(null);
+  }
+  if (/^\/weekly\/configs\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const cid = path.split('/')[3];
+    const config = weeklyReportConfigs.find((c: any) => c.id === cid);
+    if (config) config.enabled = !config.enabled;
+    return ok(config || null);
+  }
+  // 手动触发配置立即生成一次周报（模拟调用绑定的 Agent 执行）
+  if (/^\/weekly\/configs\/[^/]+\/trigger$/.test(path) && method === 'post') {
+    const cid = path.split('/')[3];
+    const config = weeklyReportConfigs.find((c: any) => c.id === cid);
+    if (!config) return { code: 404, message: 'not found', data: null };
+
+    // 模拟 Agent 执行记录
+    const agent = agents.find((a: any) => a.id === config.agent_id);
+    if (agent) {
+      agent.last_run_at = new Date().toISOString();
+      agentRuns.unshift({
+        id: 'ar-' + Date.now(),
+        agent_id: agent.id,
+        agent_name: agent.name,
+        trigger_type: 'manual',
+        status: 'completed',
+        duration_ms: Math.floor(Math.random() * 8000) + 3000,
+        model_tokens: Math.floor(Math.random() * 3000) + 1000,
+        input_tokens: Math.floor(Math.random() * 2000) + 500,
+        output_tokens: Math.floor(Math.random() * 1500) + 300,
+        cost: Number((Math.random() * 0.08).toFixed(4)),
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    const weekInfo = getWeekInfo();
+    const dept = organizations.find((o: any) => o.id === config.department_id);
+    const title = config.type === 'operation'
+      ? `运营周报（第${weekInfo.week}周）`
+      : `${dept?.name || config.department_name}第${weekInfo.week}周周报`;
+    // 同周重复校验
+    const exists = weeklyReports.find((r: any) =>
+      r.year === weekInfo.year && r.week === weekInfo.week &&
+      (config.type === 'operation' ? r.type === 'operation' : r.department_id === config.department_id)
+    );
+    if (exists) {
+      // 更新已有周报内容
+      exists.status = 'published';
+      exists.created_at = new Date().toISOString();
+      if (config.type === 'department') {
+        exists.metrics = generateMetrics(weeklyDataSources, config.department_id);
+      } else {
+        const deptReports = weeklyReports.filter((r: any) => r.type === 'department');
+        exists.metrics = aggregateOperationMetrics(deptReports, weeklyDataSources);
+        const opSummary = buildOperationSummary(deptReports, weekInfo.week);
+        exists.summary = opSummary.summary;
+        exists.highlights = opSummary.highlights;
+        exists.risks = opSummary.risks;
+        exists.next_week_plan = opSummary.next_week_plan;
+      }
+      config.last_generated_at = new Date().toISOString();
+      return ok(exists);
+    }
+    let metrics: any[] = [];
+    let summary = '';
+    let highlights: string[] = [];
+    let risks: string[] = [];
+    let next_week_plan: string[] = [];
+    if (config.type === 'operation') {
+      const deptReports = weeklyReports.filter((r: any) => r.type === 'department');
+      metrics = aggregateOperationMetrics(deptReports, weeklyDataSources);
+      const opSummary = buildOperationSummary(deptReports, weekInfo.week);
+      summary = opSummary.summary;
+      highlights = opSummary.highlights;
+      risks = opSummary.risks;
+      next_week_plan = opSummary.next_week_plan;
+    } else {
+      metrics = generateMetrics(weeklyDataSources, config.department_id);
+      summary = `本周${dept?.name || config.department_name}整体运行平稳，核心指标表现符合预期。`;
+      highlights = ['完成本周核心目标', '关键指标保持稳定'];
+      risks = ['需持续关注资源使用趋势'];
+      next_week_plan = ['推进下周重点工作', '完成数据复盘'];
+    }
+    const newReport = {
+      id: 'wr-' + Date.now(),
+      title,
+      department_id: config.department_id,
+      department_name: dept?.name || '运营汇总',
+      agent_id: config.agent_id,
+      agent_name: config.agent_name,
+      type: config.type,
+      year: weekInfo.year,
+      week: weekInfo.week,
+      week_start: weekInfo.week_start,
+      week_end: weekInfo.week_end,
+      status: 'published',
+      creator: config.creator || '系统自动',
+      created_at: new Date().toISOString(),
+      summary,
+      highlights,
+      risks,
+      next_week_plan,
+      metrics,
+    };
+    weeklyReports.unshift(newReport);
+    config.last_generated_at = new Date().toISOString();
+    return ok(newReport);
+  }
+
+  if (path === '/weekly/reports' && method === 'get') {
+    let filtered = weeklyReports;
+    if (p.department_id) filtered = filtered.filter(r => r.department_id === p.department_id);
+    if (p.type) filtered = filtered.filter(r => r.type === p.type);
+    if (p.user_org_id) {
+      // 非管理员只能看自己所属部门及下级的周报；运营周报始终可见
+      filtered = filtered.filter(r => r.type === 'operation' || r.department_id === p.user_org_id);
+    }
+    // 按创建时间倒序，最新的周报在前
+    filtered = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return paginate(filtered, p.page, p.page_size, p.search);
+  }
+  if (path === '/weekly/reports' && method === 'post') {
+    const dept = organizations.find((o: any) => o.id === data.department_id);
+    // 同部门同周报重校验
+    const exists = weeklyReports.find((r: any) =>
+      r.year === data.year && r.week === data.week &&
+      (data.type === 'operation' ? r.type === 'operation' : r.department_id === data.department_id)
+    );
+    if (exists) {
+      return { code: 409, message: '该周期周报已存在，如需更新请使用重新生成', data: exists };
+    }
+    const newReport = {
+      id: 'wr-' + Date.now(),
+      ...data,
+      status: 'published',
+      creator: data.creator || '当前用户',
+      created_at: new Date().toISOString(),
+      department_name: dept?.name || data.department_name || '运营汇总',
+    };
+    weeklyReports.unshift(newReport);
+    return ok(newReport);
+  }
+  if (/^\/weekly\/reports\/[^/]+$/.test(path) && method === 'get') {
+    const rid = path.split('/').pop();
+    return ok(weeklyReports.find(r => r.id === rid) || null);
+  }
+  if (/^\/weekly\/reports\/[^/]+\/generate$/.test(path) && method === 'post') {
+    const rid = path.split('/')[3];
+    const report = weeklyReports.find(r => r.id === rid);
+    if (report) {
+      report.status = 'published';
+      report.created_at = new Date().toISOString();
+      // 重新生成内容
+      if (report.type === 'operation') {
+        const deptReports = weeklyReports.filter((r: any) => r.type === 'department');
+        report.metrics = aggregateOperationMetrics(deptReports, weeklyDataSources);
+        const opSummary = buildOperationSummary(deptReports, report.week);
+        report.summary = opSummary.summary;
+        report.highlights = opSummary.highlights;
+        report.risks = opSummary.risks;
+        report.next_week_plan = opSummary.next_week_plan;
+      } else {
+        report.metrics = generateMetrics(weeklyDataSources, report.department_id);
+        report.summary = `本周${report.department_name}整体运行平稳，核心指标表现符合预期。`;
+        report.highlights = ['完成本周核心目标', '关键指标保持稳定'];
+        report.risks = ['需持续关注资源使用趋势'];
+        report.next_week_plan = ['推进下周重点工作', '完成数据复盘'];
+      }
+    }
+    return ok(report || null);
+  }
+  if (/^\/weekly\/reports\/[^/]+\/export$/.test(path) && method === 'get') {
+    const rid = path.split('/')[3];
+    const report = weeklyReports.find(r => r.id === rid);
+    if (!report) return { code: 404, message: 'not found', data: null };
+    return ok({
+      format: 'markdown',
+      content: toMarkdown(report),
+      filename: `${report.title}.md`,
+    });
+  }
+
+  // =================== RAG 知识库 ===================
+  if (path === '/rag/knowledge-bases' && method === 'get') {
+    return paginate(knowledgeBases, p.page, p.page_size, p.search);
+  }
+  if (path === '/rag/knowledge-bases' && method === 'post') {
+    const newKB = {
+      id: 'kb-' + Date.now(), ...data,
+      doc_count: 0, vector_count: 0, status: 'active',
+      creator: '当前用户', created_at: new Date().toISOString(),
+    };
+    knowledgeBases.unshift(newKB);
+    return ok(newKB);
+  }
+  if (/^\/rag\/knowledge-bases\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop();
+    const kb = knowledgeBases.find(k => k.id === id);
+    if (kb) Object.assign(kb, data);
+    return ok(kb);
+  }
+  if (/^\/rag\/knowledge-bases\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop();
+    const idx = knowledgeBases.findIndex(k => k.id === id);
+    if (idx >= 0) {
+      knowledgeBases.splice(idx, 1);
+      // 同步删除关联文档
+      for (let i = ragDocuments.length - 1; i >= 0; i--) {
+        if (ragDocuments[i].kb_id === id) ragDocuments.splice(i, 1);
+      }
+    }
+    return ok(null);
+  }
+
+  // =================== RAG 文档 ===================
+  if (path === '/rag/documents' && method === 'get') {
+    let filtered = ragDocuments;
+    if (p.kb_id) filtered = filtered.filter(d => d.kb_id === p.kb_id);
+    return paginate(filtered, p.page, p.page_size, p.search);
+  }
+  if (path === '/rag/documents' && method === 'post') {
+    const newDoc = {
+      id: 'doc-' + Date.now(), ...data,
+      chunk_count: 0, vector_count: 0, status: 'processing',
+      uploaded_by: '当前用户', uploaded_at: new Date().toISOString(),
+    };
+    ragDocuments.unshift(newDoc);
+    // 更新知识库文档数
+    const kb = knowledgeBases.find(k => k.id === data.kb_id);
+    if (kb) kb.doc_count = ragDocuments.filter(d => d.kb_id === data.kb_id).length;
+    // 模拟处理完成
+    setTimeout(() => {
+      const doc = ragDocuments.find(d => d.id === newDoc.id);
+      if (doc) {
+        doc.status = 'completed';
+        doc.chunk_count = Math.floor(Math.random() * 50) + 10;
+        doc.vector_count = doc.chunk_count;
+        if (kb) kb.vector_count = ragDocuments
+          .filter(d => d.kb_id === data.kb_id && d.status === 'completed')
+          .reduce((sum: number, d: any) => sum + d.vector_count, 0);
+      }
+    }, 3000);
+    return ok(newDoc);
+  }
+  if (/^\/rag\/documents\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop();
+    const idx = ragDocuments.findIndex(d => d.id === id);
+    if (idx >= 0) {
+      const doc = ragDocuments[idx];
+      const kbId = doc.kb_id;
+      ragDocuments.splice(idx, 1);
+      const kb = knowledgeBases.find(k => k.id === kbId);
+      if (kb) {
+        kb.doc_count = ragDocuments.filter(d => d.kb_id === kbId).length;
+        kb.vector_count = ragDocuments
+          .filter(d => d.kb_id === kbId && d.status === 'completed')
+          .reduce((sum: number, d: any) => sum + d.vector_count, 0);
+      }
+    }
+    return ok(null);
+  }
+  if (/^\/rag\/documents\/[^/]+\/chunks$/.test(path) && method === 'get') {
+    const docId = path.split('/')[3];
+    const chunks = docChunks.filter(c => c.doc_id === docId);
+    // 如果没有真实分块数据，生成模拟分块
+    if (chunks.length === 0) {
+      const doc = ragDocuments.find(d => d.id === docId);
+      if (doc && doc.chunk_count > 0) {
+        const mockChunks = [];
+        for (let i = 0; i < Math.min(doc.chunk_count, 5); i++) {
+          mockChunks.push({
+            id: `chk-${docId}-${i}`, doc_id: docId, kb_id: doc.kb_id,
+            chunk_index: i, content: `文档分块 ${i + 1}：这是从文档《${doc.name}》中提取的第 ${i + 1} 个文本片段。包含文档的部分内容，用于向量化检索。`,
+            token_count: Math.floor(Math.random() * 200) + 50, score: 0,
+          });
+        }
+        return ok(mockChunks);
+      }
+    }
+    return ok(chunks);
+  }
+
+  // =================== RAG 检索测试 ===================
+  if (path === '/rag/retrieve' && method === 'post') {
+    const { query, kb_id, top_k = 5 } = data;
+    // 从指定知识库的分块中模拟检索
+    const candidates = docChunks.filter(c => c.kb_id === kb_id);
+    const results: any[] = [];
+    if (candidates.length > 0) {
+      candidates.slice(0, top_k).forEach((chunk, i) => {
+        results.push({
+          ...chunk,
+          score: Number((0.95 - i * 0.08 - Math.random() * 0.05).toFixed(4)),
+          doc_name: ragDocuments.find(d => d.id === chunk.doc_id)?.name || '',
+        });
+      });
+    } else {
+      // 生成模拟检索结果
+      const kb = knowledgeBases.find(k => k.id === kb_id);
+      const docs = ragDocuments.filter(d => d.kb_id === kb_id && d.status === 'completed');
+      docs.slice(0, top_k).forEach((doc, i) => {
+        results.push({
+          id: `ret-${Date.now()}-${i}`, doc_id: doc.id, doc_name: doc.name,
+          kb_id, chunk_index: 0,
+          content: `从《${doc.name}》检索到的相关片段：与查询"${query}"相关的文档内容。该文档属于「${kb?.name || ''}」知识库。`,
+          token_count: Math.floor(Math.random() * 200) + 50,
+          score: Number((0.92 - i * 0.1 - Math.random() * 0.05).toFixed(4)),
+        });
+      });
+    }
+    return ok({ query, kb_id, total: results.length, results });
+  }
+
+  // =================== AI 对话 ===================
+  if (path === '/chat/sessions' && method === 'get') {
+    return paginate(chatSessions, p.page, p.page_size, p.search);
+  }
+  if (path === '/chat/sessions' && method === 'post') {
+    const newSession = {
+      id: 'cs-' + Date.now(), title: data.title || '新对话',
+      model_policy: data.model_policy || '通用对话策略',
+      kb_id: data.kb_id || '', kb_name: data.kb_name || '',
+      agent_id: data.agent_id || '', agent_name: data.agent_name || '',
+      message_count: 0, last_message_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    };
+    chatSessions.unshift(newSession);
+    chatMessages[newSession.id] = [];
+    return ok(newSession);
+  }
+  if (/^\/chat\/sessions\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop();
+    const idx = chatSessions.findIndex(s => s.id === id);
+    if (idx >= 0) chatSessions.splice(idx, 1);
+    delete chatMessages[id];
+    return ok(null);
+  }
+  if (/^\/chat\/sessions\/[^/]+\/messages$/.test(path) && method === 'get') {
+    const sid = path.split('/')[3];
+    return ok(chatMessages[sid] || []);
+  }
+  if (/^\/chat\/sessions\/[^/]+\/messages$/.test(path) && method === 'post') {
+    const sid = path.split('/')[3];
+    const session = chatSessions.find(s => s.id === sid);
+    if (!session) return { code: 404, message: 'session not found', data: null };
+    const userMsg = {
+      id: 'msg-' + Date.now(), role: 'user', content: data.content,
+      created_at: new Date().toISOString(),
+    };
+    if (!chatMessages[sid]) chatMessages[sid] = [];
+    chatMessages[sid].push(userMsg);
+    // 生成AI回复（结构化，含sources）
+    const aiResult = generateAIReply(data.content, session);
+    const aiMsg = {
+      id: 'msg-' + (Date.now() + 1), role: 'assistant', content: aiResult.content,
+      created_at: new Date().toISOString(),
+      sources: aiResult.sources || undefined,
+      agent_action: aiResult.agent_action || undefined,
+    };
+    chatMessages[sid].push(aiMsg);
+    session.message_count = chatMessages[sid].length;
+    session.last_message_at = new Date().toISOString();
+    if (session.title === '新对话' && data.content) {
+      session.title = data.content.slice(0, 20) + (data.content.length > 20 ? '...' : '');
+    }
+    return ok({ user_message: userMsg, ai_message: aiMsg });
+  }
+
+  // =================== Token 转售 ===================
+  if (path === '/token-resale/overview' && method === 'get') return ok(tokenResaleOverview);
+  if (path === '/token-resale/packages' && method === 'get') return ok(tokenResalePackages);
+  if (path === '/token-resale/transactions' && method === 'get') {
+    return paginate(tokenResaleTransactions, p.page, p.page_size, p.search);
+  }
+  if (path === '/token-resale/purchase' && method === 'post') {
+    const pkg = tokenResalePackages.find(pk => pk.id === data.package_id);
+    if (!pkg) return { code: 404, message: 'package not found', data: null };
+    const tx = {
+      id: 'tx-' + String(Date.now()).slice(-6),
+      buyer_name: data.buyer_name,
+      buyer_contact: data.buyer_contact || '',
+      package_id: pkg.id,
+      package_name: pkg.name,
+      token_amount: pkg.token_amount,
+      price: pkg.price,
+      status: 'completed',
+      created_at: new Date().toISOString(),
+    };
+    tokenResaleTransactions.unshift(tx);
+    pkg.sold += pkg.token_amount;
+    tokenResaleOverview.allocated_tokens += pkg.token_amount;
+    tokenResaleOverview.available_tokens -= pkg.token_amount;
+    tokenResaleOverview.total_transactions += 1;
+    tokenResaleOverview.total_revenue += pkg.price;
+    return ok(tx);
   }
 
   // Default
