@@ -38,7 +38,6 @@ import {
   MenuBook,
   Chat,
   FindInPage,
-  CloudSync,
   Storefront,
 } from '@mui/icons-material';
 
@@ -147,7 +146,6 @@ export const navConfig: NavSection[] = [
       { title: 'Python依赖', path: '/resources/python', icon: <Inventory2 fontSize="small" /> },
       { title: '网络白名单', path: '/resources/network-acl', icon: <Shield fontSize="small" /> },
       { title: '容器组', path: '/resources/pods', icon: <ViewInAr fontSize="small" /> },
-      { title: '云版转发', path: '/resources/cloud-forward', icon: <CloudSync fontSize="small" /> },
       { title: 'AGENTS.md 管理', path: '/resources/agents-md', icon: <DescriptionIcon fontSize="small" /> },
     ],
   },

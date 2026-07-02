@@ -46,7 +46,6 @@ import KnowledgeBasesPage from '../pages/rag/KnowledgeBasesPage';
 import DocumentsPage from '../pages/rag/DocumentsPage';
 import RetrievalTestPage from '../pages/rag/RetrievalTestPage';
 import ChatPage from '../pages/chat/ChatPage';
-import CloudForwardPage from '../pages/resources/CloudForwardPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -110,8 +109,6 @@ export const router = createBrowserRouter([
       { path: 'rag/retrieval-test', element: <RetrievalTestPage /> },
       // Chat
       { path: 'chat', element: <ChatPage /> },
-      // Cloud Forward (placeholder)
-      { path: 'resources/cloud-forward', element: <CloudForwardPage /> },
       // Catch all
       { path: '*', element: <Navigate to="/" /> },
     ],

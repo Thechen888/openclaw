@@ -158,6 +158,11 @@ export const matchingApi = {
   runs: (params?: ListParams) => api.get('/account-matching/runs', { params }),
   strategies: () => api.get('/account-matching/strategies'),
   createStrategy: (data: any) => api.post('/account-matching/strategies', data),
+  updateStrategy: (id: string, data: any) => api.put(`/account-matching/strategies/${id}`, data),
+  triggerRun: () => api.post('/account-matching/trigger', {}),
+  updateResult: (id: string, data: any) => api.put(`/account-matching/results/${id}`, data),
+  getConflicts: (id: string) => api.get(`/account-matching/results/${id}/conflicts`),
+  ignoreResult: (id: string) => api.put(`/account-matching/results/${id}`, { status: 'ignored' }),
 };
 
 export const approvalsApi = {

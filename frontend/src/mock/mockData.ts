@@ -543,27 +543,113 @@ const thirdPartyAccounts = [
 ];
 
 // =================== 匹配结果 ===================
-const matchingResults = [
-  { id: 'mr-1', source_type: 'wechat_work', account_id: 'wx_zhangwei', external_id: 'wx_zhangwei', user_name: '张伟', score: 0.98, status: 'matched', protected: true },
-  { id: 'mr-2', source_type: 'dingtalk', account_id: 'dt_wangwu', external_id: 'dt_wangwu', user_name: '王五', score: 0.95, status: 'matched', protected: false },
-  { id: 'mr-3', source_type: 'crm', account_id: 'SF-004321', external_id: 'SF-004321', user_name: '张伟', score: 0.92, status: 'matched', protected: false },
-  { id: 'mr-4', source_type: 'feishu', account_id: 'fs_chenqi', external_id: 'fs_chenqi', user_name: '', score: 0.45, status: 'unmatched', protected: false },
-  { id: 'mr-5', source_type: 'wechat_work', account_id: 'wx_unknown1', external_id: 'wx_unknown1', user_name: '', score: 0.62, status: 'pending', protected: false },
-  { id: 'mr-6', source_type: 'dingtalk', account_id: 'dt_zhaoliu', external_id: 'dt_zhaoliu', user_name: '赵六', score: 0.75, status: 'conflict', protected: true },
+const matchingResults: any[] = [
+  {
+    id: 'mr-1', source_type: 'wechat_work', account_id: 'wx_zhangwei', external_id: 'wx_zhangwei',
+    user_name: '张伟', user_id: 'u-1', score: 0.98, status: 'matched',
+    // 第三方账号详情
+    external_profile: { name: '张伟', department: '技术研发部', email: 'zhangwei@wechat-work.com', phone: '138****1234' },
+    // 平台用户详情
+    platform_user: { name: '张伟', department: '技术研发部', email: 'zhangwei@company.com', phone: '138****1234', role: '管理员' },
+    // 匹配理由
+    match_reasons: [{ strategy: '手机号匹配', detail: '手机号完全一致', confidence: 0.95 }, { strategy: '邮箱匹配', detail: '邮箱前缀相同 (zhangwei)', confidence: 0.85 }],
+  },
+  {
+    id: 'mr-2', source_type: 'dingtalk', account_id: 'dt_wangwu', external_id: 'dt_wangwu',
+    user_name: '王五', user_id: 'u-3', score: 0.95, status: 'matched',
+    external_profile: { name: '王五', department: '研发二组', email: 'wangwu@dingtalk.com', phone: '139****5678' },
+    platform_user: { name: '王五', department: '技术研发部', email: 'wangwu@company.com', phone: '139****5678', role: '成员' },
+    match_reasons: [{ strategy: '手机号匹配', detail: '手机号完全一致', confidence: 0.95 }, { strategy: '姓名+部门匹配', detail: '姓名一致，部门名近似', confidence: 0.7 }],
+  },
+  {
+    id: 'mr-3', source_type: 'crm', account_id: 'SF-004321', external_id: 'SF-004321',
+    user_name: '张伟', user_id: 'u-1', score: 0.92, status: 'matched',
+    external_profile: { name: 'Zhang Wei', department: 'R&D', email: 'zhangwei@crm-system.com', phone: '' },
+    platform_user: { name: '张伟', department: '技术研发部', email: 'zhangwei@company.com', phone: '138****1234', role: '管理员' },
+    match_reasons: [{ strategy: '邮箱匹配', detail: '邮箱前缀相同 (zhangwei)', confidence: 0.88 }, { strategy: 'AI语义匹配', detail: '姓名拼音与中文姓名匹配', confidence: 0.72 }],
+  },
+  {
+    id: 'mr-4', source_type: 'feishu', account_id: 'fs_chenqi', external_id: 'fs_chenqi',
+    user_name: '', user_id: '', score: 0.45, status: 'unmatched',
+    external_profile: { name: '陈琪', department: '市场部', email: 'chenqi@feishu.com', phone: '152****9999' },
+    platform_user: null,
+    match_reasons: [{ strategy: '姓名+部门匹配', detail: '姓名相似但部门不匹配', confidence: 0.45 }],
+  },
+  {
+    id: 'mr-5', source_type: 'wechat_work', account_id: 'wx_unknown1', external_id: 'wx_unknown1',
+    user_name: '李思', user_id: 'u-2', score: 0.62, status: 'pending',
+    external_profile: { name: '李思思', department: '销售一部', email: 'lisisi@wechat-work.com', phone: '186****3210' },
+    platform_user: { name: '李思', department: '销售部', email: 'lisi@company.com', phone: '186****3210', role: '经理' },
+    match_reasons: [{ strategy: '手机号匹配', detail: '手机号完全一致', confidence: 0.95 }, { strategy: '姓名+部门匹配', detail: '姓名相似（李思思→李思），部门相关', confidence: 0.42 }],
+  },
+  {
+    id: 'mr-6', source_type: 'dingtalk', account_id: 'dt_zhaoliu', external_id: 'dt_zhaoliu',
+    user_name: '赵六', user_id: 'u-4', score: 0.75, status: 'conflict',
+    external_profile: { name: '赵六', department: '研发部', email: 'zhaoliu@dingtalk.com', phone: '' },
+    platform_user: { name: '赵六', department: '技术研发部', email: 'zhaoliu@company.com', phone: '137****4567', role: '成员' },
+    match_reasons: [{ strategy: '姓名+部门匹配', detail: '姓名一致，部门相似', confidence: 0.75 }, { strategy: '邮箱匹配', detail: '邮箱前缀相同', confidence: 0.65 }],
+  },
+  {
+    id: 'mr-7', source_type: 'email', account_id: 'sunba@gmail.com', external_id: 'sunba@gmail.com',
+    user_name: '', user_id: '', score: 0.30, status: 'unmatched',
+    external_profile: { name: 'Sun Ba', department: '', email: 'sunba@gmail.com', phone: '' },
+    platform_user: null,
+    match_reasons: [{ strategy: 'AI语义匹配', detail: '邮箱前缀与平台用户「孙八」拼音相似', confidence: 0.30 }],
+  },
+  {
+    id: 'mr-8', source_type: 'feishu', account_id: 'fs_zhoujiu', external_id: 'fs_zhoujiu',
+    user_name: '周九', user_id: 'u-7', score: 0.58, status: 'pending',
+    external_profile: { name: '周玖', department: '商务部', email: 'zhoujiu@feishu.com', phone: '155****8888' },
+    platform_user: { name: '周九', department: '销售部', email: 'zhoujiu@company.com', phone: '155****8888', role: '经理' },
+    match_reasons: [{ strategy: '手机号匹配', detail: '手机号完全一致', confidence: 0.95 }, { strategy: '姓名+部门匹配', detail: '姓名近似（周玖→周九），部门不同', confidence: 0.35 }],
+  },
+  // ---- 多平台关联示例：张伟还关联了钉钉 ----
+  {
+    id: 'mr-9', source_type: 'dingtalk', account_id: 'dt_zhangwei', external_id: 'dt_zhangwei',
+    user_name: '张伟', user_id: 'u-1', score: 0.96, status: 'matched',
+    external_profile: { name: '张伟', department: '技术研发部', email: 'zhangwei@dingtalk-corp.com', phone: '138****1234' },
+    platform_user: { name: '张伟', department: '技术研发部', email: 'zhangwei@company.com', phone: '138****1234', role: '管理员' },
+    match_reasons: [{ strategy: '手机号匹配', detail: '手机号完全一致', confidence: 0.95 }, { strategy: '姓名+部门匹配', detail: '姓名完全一致，部门一致', confidence: 0.90 }],
+  },
+  // ---- 多平台关联示例：王五还关联了飞书 ----
+  {
+    id: 'mr-10', source_type: 'feishu', account_id: 'fs_wangwu', external_id: 'fs_wangwu',
+    user_name: '王五', user_id: 'u-3', score: 0.93, status: 'matched',
+    external_profile: { name: '王五', department: '技术研发部', email: 'wangwu@feishu-corp.com', phone: '139****5678' },
+    platform_user: { name: '王五', department: '技术研发部', email: 'wangwu@company.com', phone: '139****5678', role: '成员' },
+    match_reasons: [{ strategy: '手机号匹配', detail: '手机号完全一致', confidence: 0.95 }, { strategy: '邮箱匹配', detail: '邮箱前缀相同 (wangwu)', confidence: 0.82 }],
+  },
+  // ---- 多平台关联示例：张伟还关联了飞书（待确认状态） ----
+  {
+    id: 'mr-11', source_type: 'feishu', account_id: 'fs_zhangwei', external_id: 'fs_zhangwei',
+    user_name: '张伟', user_id: 'u-1', score: 0.72, status: 'pending',
+    external_profile: { name: 'Wei Zhang', department: 'Tech R&D', email: 'weizhang@feishu-corp.com', phone: '' },
+    platform_user: { name: '张伟', department: '技术研发部', email: 'zhangwei@company.com', phone: '138****1234', role: '管理员' },
+    match_reasons: [{ strategy: 'AI语义匹配', detail: '姓名拼音与中文姓名匹配 (Wei Zhang→张伟)', confidence: 0.72 }],
+  },
 ];
 
-const matchingStrategies = [
+const matchingStrategies: any[] = [
   { id: 'strat-1', name: '手机号匹配', strategy_type: 'phone_match', status: 'active', description: '通过手机号进行身份关联', weight: 0.4 },
   { id: 'strat-2', name: '邮箱匹配', strategy_type: 'email_match', status: 'active', description: '通过邮箱地址进行身份关联', weight: 0.3 },
   { id: 'strat-3', name: '姓名+部门匹配', strategy_type: 'name_dept_match', status: 'active', description: '通过姓名和部门组合进行模糊匹配', weight: 0.2 },
   { id: 'strat-4', name: 'AI语义匹配', strategy_type: 'ai_match', status: 'disabled', description: '基于AI语义模型的智能匹配', weight: 0.1 },
 ];
 
-const matchingRuns = [
-  { id: 'run-1', status: 'completed', created_at: ago(30), matched_count: 156, total_count: 203 },
-  { id: 'run-2', status: 'completed', created_at: ago(1440), matched_count: 148, total_count: 198 },
-  { id: 'run-3', status: 'completed', created_at: ago(2880), matched_count: 142, total_count: 195 },
+const matchingRuns: any[] = [
+  { id: 'run-1', status: 'completed', created_at: ago(30), matched_count: 167, total_count: 205 },
+  { id: 'run-2', status: 'completed', created_at: ago(720), matched_count: 156, total_count: 203 },
+  { id: 'run-3', status: 'completed', created_at: ago(1440), matched_count: 148, total_count: 198 },
+  { id: 'run-4', status: 'completed', created_at: ago(2880), matched_count: 142, total_count: 195 },
 ];
+
+// 冲突候选（用于冲突详情弹窗）
+const matchingConflicts: Record<string, any[]> = {
+  'mr-6': [
+    { user_id: 'u-3', user_name: '王五', score: 0.75, reason: '部门相同' },
+    { user_id: 'u-4', user_name: '赵六', score: 0.68, reason: '邮箱前缀相似' },
+  ],
+};
 
 // =================== 运营数据源（用于智能周报）====================
 // trend_direction: higher_better（越高越好）/ lower_better（越低越好）/ neutral（中性）
@@ -2286,9 +2372,30 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
   // Matching
   if (path === '/account-matching/results') return paginate(matchingResults, p.page, p.page_size, p.search);
+  if (/^\/account-matching\/results\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop()!;
+    const idx = matchingResults.findIndex(r => r.id === id);
+    if (idx >= 0) Object.assign(matchingResults[idx], data);
+    return ok(idx >= 0 ? matchingResults[idx] : data);
+  }
+  if (/^\/account-matching\/results\/[^/]+\/conflicts$/.test(path) && method === 'get') {
+    const id = path.split('/')[3]!;
+    return ok(matchingConflicts[id] || []);
+  }
   if (path === '/account-matching/runs') return paginate(matchingRuns, p.page, p.page_size);
-  if (path === '/account-matching/strategies') return ok(matchingStrategies);
+  if (path === '/account-matching/strategies' && method === 'get') return ok(matchingStrategies);
   if (path === '/account-matching/strategies' && method === 'post') return ok(data);
+  if (/^\/account-matching\/strategies\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop()!;
+    const idx = matchingStrategies.findIndex(s => s.id === id);
+    if (idx >= 0) Object.assign(matchingStrategies[idx], data);
+    return ok(idx >= 0 ? matchingStrategies[idx] : data);
+  }
+  if (path === '/account-matching/trigger' && method === 'post') {
+    const newRun = { id: `run-${Date.now()}`, status: 'completed', created_at: new Date().toISOString(), matched_count: Math.floor(Math.random() * 50) + 140, total_count: Math.floor(Math.random() * 20) + 195 };
+    matchingRuns.unshift(newRun);
+    return ok(newRun);
+  }
 
   // Agents
   if (path === '/agents' && method === 'get') return paginate(agents, p.page, p.page_size, p.search);
