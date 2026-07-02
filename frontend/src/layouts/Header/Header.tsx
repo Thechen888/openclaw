@@ -36,9 +36,20 @@ export default function Header() {
       position="sticky"
       elevation={0}
       sx={{
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(10,11,13,0.85)' : 'rgba(255,255,255,0.85)',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(10,11,13,0.72)' : 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: 'none',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '1px',
+          background: 'linear-gradient(90deg, #00D4FF 0%, #7C3AED 40%, transparent 80%)',
+          opacity: 0.6,
+        },
       }}
     >
       <Toolbar sx={{ gap: 1 }}>
@@ -52,14 +63,21 @@ export default function Header() {
 
         {/* Page Title */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: 16 }}>
+          <Typography variant="h6" sx={{
+            fontWeight: 700,
+            fontSize: 16,
+            background: 'linear-gradient(135deg, #E8ECF0 30%, #00D4FF)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '0.5px',
+          }}>
             {currentPage?.title || '仪表盘'}
           </Typography>
           {pathSegments.length > 0 && (
-            <Breadcrumbs sx={{ display: { xs: 'none', sm: 'flex' } }}>
+            <Breadcrumbs sx={{ display: { xs: 'none', sm: 'flex' }, '& .MuiBreadcrumbs-separator': { color: 'rgba(0,212,255,0.3)' } }}>
               {breadcrumbs.map((crumb, i) => (
                 i === breadcrumbs.length - 1 ? (
-                  <Typography key={crumb.path} variant="caption" color="text.secondary">
+                  <Typography key={crumb.path} variant="caption" sx={{ color: 'rgba(0,212,255,0.6)' }}>
                     {crumb.title}
                   </Typography>
                 ) : (
@@ -70,6 +88,7 @@ export default function Header() {
                     underline="hover"
                     variant="caption"
                     color="text.secondary"
+                    sx={{ '&:hover': { color: '#00D4FF' } }}
                   >
                     {crumb.title}
                   </Link>
@@ -80,27 +99,56 @@ export default function Header() {
         </Box>
 
         {/* Environment badge */}
-        <Chip label="开发" size="small" color="warning" variant="outlined"
-          sx={{ display: { xs: 'none', sm: 'flex' }, height: 22, fontSize: 11 }} />
+        <Chip label="开发" size="small" variant="outlined"
+          sx={{
+            display: { xs: 'none', sm: 'flex' },
+            height: 22,
+            fontSize: 11,
+            fontWeight: 600,
+            color: '#00D4FF',
+            borderColor: 'rgba(0,212,255,0.4)',
+            textShadow: '0 0 8px rgba(0,212,255,0.5)',
+            boxShadow: '0 0 8px rgba(0,212,255,0.15), inset 0 0 8px rgba(0,212,255,0.05)',
+          }} />
 
         {/* Theme toggle */}
-        <IconButton onClick={toggleMode} size="small" sx={{ color: 'text.secondary' }}>
+        <IconButton onClick={toggleMode} size="small" sx={{
+          color: 'text.secondary',
+          transition: 'all 0.3s',
+          '&:hover': { color: '#00D4FF', boxShadow: '0 0 12px rgba(0,212,255,0.3)' },
+        }}>
           {mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
         </IconButton>
 
         {/* Notifications */}
-        <IconButton size="small" sx={{ color: 'text.secondary', position: 'relative' }}>
+        <IconButton size="small" sx={{
+          color: 'text.secondary',
+          position: 'relative',
+          transition: 'all 0.3s',
+          '&:hover': { color: '#00D4FF', boxShadow: '0 0 12px rgba(0,212,255,0.3)' },
+        }}>
           <Notifications fontSize="small" />
           <Box sx={{
             position: 'absolute', top: 4, right: 4,
             width: 8, height: 8, borderRadius: '50%',
-            bgcolor: 'error.main', border: '2px solid', borderColor: 'background.paper',
+            bgcolor: '#FF006E',
+            border: '2px solid',
+            borderColor: 'background.paper',
+            animation: 'dotPulse 2s ease-in-out infinite',
+            boxShadow: '0 0 6px rgba(255,0,110,0.6)',
           }} />
         </IconButton>
 
         {/* User menu */}
         <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} size="small">
-          <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 13 }}>
+          <Avatar sx={{
+            width: 30, height: 30,
+            background: 'linear-gradient(135deg, #00D4FF, #7C3AED)',
+            fontSize: 13,
+            fontWeight: 700,
+            boxShadow: '0 0 12px rgba(0,212,255,0.3)',
+            border: '2px solid rgba(0,212,255,0.3)',
+          }}>
             {user?.name?.charAt(0) || 'A'}
           </Avatar>
         </IconButton>

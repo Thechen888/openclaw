@@ -90,7 +90,21 @@ export default function AgentsPage() {
         }
       />
 
-      <Tabs value={ownerTab} onChange={(_, v) => { setOwnerTab(v); setPage(1); }} sx={{ mb: 2 }}>
+      <Tabs value={ownerTab} onChange={(_, v) => { setOwnerTab(v); setPage(1); }}
+        sx={{
+          mb: 2,
+          '& .MuiTab-root': {
+            minHeight: 40, fontSize: 13, fontWeight: 500,
+            transition: 'all 0.25s',
+            '&.Mui-selected': { color: '#00D4FF', textShadow: '0 0 8px rgba(0,212,255,0.3)' },
+          },
+          '& .MuiTabs-indicator': {
+            background: 'linear-gradient(90deg, #00D4FF, #7C3AED)',
+            height: 2, borderRadius: 2,
+            boxShadow: '0 0 8px rgba(0,212,255,0.4)',
+          },
+        }}
+      >
         {OWNER_TABS.map(tab => (
           <Tab key={tab.value} label={tab.label} value={tab.value} />
         ))}
@@ -176,7 +190,7 @@ export default function AgentsPage() {
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
       >
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={2.5}>
           <Grid size={12}>
             <TextField fullWidth label="名称" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           </Grid>

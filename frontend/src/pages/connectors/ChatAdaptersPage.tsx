@@ -251,7 +251,7 @@ export default function ChatAdaptersPage() {
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
       >
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={2.5}>
           {/* 名称 */}
           <Grid size={12}>
             <TextField

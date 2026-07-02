@@ -87,7 +87,8 @@ export const navConfig: NavSection[] = [
       { title: '聊天账号', path: '/identity/chat-accounts', icon: <PersonSearch fontSize="small" /> },
       { title: '第三方账号', path: '/identity/3p-accounts', icon: <PersonSearch fontSize="small" /> },
       { title: '匹配队列', path: '/identity/matching', icon: <PlaylistAddCheckCircle fontSize="small" /> },
-      { title: '权限管理', path: '/identity/permissions', icon: <VerifiedUser fontSize="small" /> },
+      { title: '权限菜单', path: '/identity/permissions', icon: <VerifiedUser fontSize="small" /> },
+      { title: '角色', path: '/identity/roles', icon: <Policy fontSize="small" /> },
     ],
   },
   {

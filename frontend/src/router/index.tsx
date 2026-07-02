@@ -17,6 +17,7 @@ import ChatAccountsPage from '../pages/identity/ChatAccountsPage';
 import ThirdPartyAccountsPage from '../pages/identity/ThirdPartyAccountsPage';
 import MatchingPage from '../pages/identity/MatchingPage';
 import PermissionsPage from '../pages/identity/PermissionsPage';
+import RolesPage from '../pages/identity/RolesPage';
 import AgentsPage from '../pages/agents/AgentsPage';
 import AgentRunsPage from '../pages/agents/AgentRunsPage';
 import WorkflowsPage from '../pages/agents/WorkflowsPage';
@@ -72,6 +73,7 @@ export const router = createBrowserRouter([
       { path: 'identity/3p-accounts', element: <ThirdPartyAccountsPage /> },
       { path: 'identity/matching', element: <MatchingPage /> },
       { path: 'identity/permissions', element: <PermissionsPage /> },
+      { path: 'identity/roles', element: <RolesPage /> },
       // Agents
       { path: 'agents', element: <AgentsPage /> },
       { path: 'agents/workflows', element: <WorkflowsPage /> },

@@ -442,6 +442,56 @@ const permGroupConfigs: Record<string, Record<string, string[]>> = {
   },
 };
 
+// =================== 权限菜单（菜单树 + 按钮权限） ===================
+const permMenus: any[] = [
+  { id: 'pm-1', name: '仪表盘', code: 'dashboard', permission: 'dashboard:list', route: '/', icon: 'Dashboard', type: 'menu', parent_id: null, sort_order: 1, remark: '' },
+  { id: 'pm-2', name: '模型管理', code: 'models', permission: 'models:list', route: '', icon: 'Psychology', type: 'directory', parent_id: null, sort_order: 2, remark: '' },
+  { id: 'pm-3', name: '模型源', code: 'model-source', permission: 'model:source:list', route: '/models/sources', icon: 'CubeOutline', type: 'menu', parent_id: 'pm-2', sort_order: 1, remark: '' },
+  { id: 'pm-4', name: '连接器', code: 'connectors', permission: 'connectors:list', route: '', icon: 'Cable', type: 'directory', parent_id: null, sort_order: 3, remark: '' },
+  { id: 'pm-5', name: '身份与账号', code: 'identity', permission: 'identity:list', route: '', icon: 'People', type: 'directory', parent_id: null, sort_order: 4, remark: '' },
+  { id: 'pm-6', name: '用户', code: 'users', permission: 'users:list', route: '/identity/users', icon: 'People', type: 'menu', parent_id: 'pm-5', sort_order: 1, remark: '' },
+  { id: 'pm-7', name: '组织', code: 'organizations', permission: 'organizations:list', route: '/identity/orgs', icon: 'AccountTree', type: 'menu', parent_id: 'pm-5', sort_order: 2, remark: '' },
+  { id: 'pm-8', name: '权限菜单', code: 'permissions', permission: 'permissions:list', route: '/identity/permissions', icon: 'VerifiedUser', type: 'menu', parent_id: 'pm-5', sort_order: 3, remark: '' },
+  { id: 'pm-9', name: 'Agent', code: 'agent', permission: 'agent:list', route: '', icon: 'SmartToy', type: 'directory', parent_id: null, sort_order: 5, remark: '' },
+  { id: 'pm-10', name: '凭证管理', code: 'credentials', permission: 'credentials:list', route: '', icon: 'Key', type: 'directory', parent_id: null, sort_order: 6, remark: '' },
+  { id: 'pm-11', name: '凭证', code: 'tokens', permission: 'tokens:list', route: '/tokens', icon: 'Key', type: 'menu', parent_id: 'pm-10', sort_order: 1, remark: '' },
+  { id: 'pm-12', name: '凭证新增', code: 'tokens:create', permission: 'tokens:create', route: '', icon: '', type: 'button', parent_id: 'pm-11', sort_order: 1, remark: '' },
+  { id: 'pm-13', name: '凭证修改', code: 'tokens:update', permission: 'tokens:update', route: '', icon: '', type: 'button', parent_id: 'pm-11', sort_order: 2, remark: '' },
+  { id: 'pm-14', name: '凭证删除', code: 'tokens:delete', permission: 'tokens:delete', route: '', icon: '', type: 'button', parent_id: 'pm-11', sort_order: 3, remark: '' },
+  { id: 'pm-15', name: '审批', code: 'approvals', permission: 'tokens:approvals:list', route: '/tokens/approvals', icon: 'Security', type: 'menu', parent_id: 'pm-10', sort_order: 2, remark: '' },
+  { id: 'pm-16', name: '资源与运维', code: 'resources', permission: 'resources:list', route: '', icon: 'Storage', type: 'directory', parent_id: null, sort_order: 7, remark: '' },
+  { id: 'pm-17', name: '平台SN', code: 'platform-sn', permission: 'resources:sn:list', route: '/resources/sn', icon: 'Fingerprint', type: 'menu', parent_id: 'pm-16', sort_order: 1, remark: '' },
+  { id: 'pm-18', name: '远程管理', code: 'remote-management', permission: 'resources:remote:list', route: '/resources/remote', icon: 'SettingsRemote', type: 'menu', parent_id: 'pm-16', sort_order: 2, remark: '' },
+  { id: 'pm-19', name: '配置备份', code: 'config-backup', permission: 'resources:backup:list', route: '/resources/backup', icon: 'Backup', type: 'menu', parent_id: 'pm-16', sort_order: 3, remark: '' },
+  { id: 'pm-20', name: '磁盘配额', code: 'disk-quota', permission: 'resources:quota:list', route: '/resources/quota', icon: 'DataUsage', type: 'menu', parent_id: 'pm-16', sort_order: 4, remark: '' },
+  { id: 'pm-21', name: 'K8s状态', code: 'k8s-status', permission: 'resources:k8s:list', route: '/resources/k8s', icon: 'Cloud', type: 'menu', parent_id: 'pm-16', sort_order: 5, remark: '' },
+  { id: 'pm-22', name: '服务重启', code: 'service-restart', permission: 'resources:restart:list', route: '/resources/restart', icon: 'RestartAlt', type: 'menu', parent_id: 'pm-16', sort_order: 6, remark: '' },
+];
+
+// =================== 角色 ===================
+const roles: any[] = [
+  {
+    id: 'role-1',
+    name: '超级管理员',
+    code: 'admin',
+    sort_order: 1,
+    status: 'active',
+    remark: '拥有全部菜单与按钮权限',
+    created_at: '2026-06-15T16:43:55',
+    menu_ids: permMenus.map(m => m.id),
+  },
+  {
+    id: 'role-2',
+    name: '普通用户',
+    code: 'user',
+    sort_order: 2,
+    status: 'active',
+    remark: '仅可访问基础菜单',
+    created_at: '2026-06-15T16:44:00',
+    menu_ids: ['pm-1', 'pm-3', 'pm-6', 'pm-7'],
+  },
+];
+
 // =================== 用户 ===================
 const users: any[] = [
   { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active' },
@@ -1320,13 +1370,65 @@ const costStats = {
 
 // =================== 仪表盘统计 ===================
 const dashboardStats = {
+  // 顶部 KPI
+  total_calls_today: '12,847',
+  token_usage_today: '2.4M',
+  model_cost_today: '1,280',
+  agent_success_rate: '98.2%',
+  active_users_today: 156,
+  pending_approvals: 8,
+  // Agent 相关
   agent_runs_today: 47,
   failed_tasks_today: 3,
-  token_usage_today: '128,450',
-  model_cost_today: '89.50',
   pending_matches: 5,
-  pending_approvals: 3,
   pending_skill_reviews: 2,
+  model_alerts: 2,
+  // 系统资源
+  cpu_usage: 67,
+  mem_usage: 82,
+  disk_usage: 45,
+  api_p90: '245ms',
+  success_rate: '99.7%',
+  gpu_usage: '54%',
+  pod_ready: '8/8',
+  // 7日趋势
+  token_trend: [18200, 22400, 19800, 25600, 21000, 12400, 24500],
+  cost_trend: [52, 68, 61, 78, 64, 38, 72],
+  call_trend: [1820, 2240, 1980, 2560, 2100, 1240, 2450],
+  // 模型源健康
+  model_health: [
+    { name: 'GPT-4o', status: 'healthy', latency: '120ms', calls: '5,240', cost: '¥680' },
+    { name: 'Claude 3.5 Sonnet', status: 'healthy', latency: '95ms', calls: '3,890', cost: '¥420' },
+    { name: '通义千问 VL', status: 'degraded', latency: '340ms', calls: '1,560', cost: '¥85' },
+    { name: 'DeepSeek V3', status: 'healthy', latency: '68ms', calls: '2,100', cost: '¥52' },
+    { name: 'GLM-4', status: 'error', latency: 'N/A', calls: '0', cost: '¥0' },
+  ],
+  // 成本 TOP5
+  cost_top5: [
+    { name: 'GPT-4o', cost: 2680 },
+    { name: 'Claude 3.5 Sonnet', cost: 1920 },
+    { name: 'GPT-4o-mini', cost: 850 },
+    { name: '通义千问 VL', cost: 420 },
+    { name: 'DeepSeek V3', cost: 180 },
+  ],
+  total_cost_month: 6050,
+  // 最近审计
+  recent_audit: [
+    { actor: '张伟', action: '执行', target: 'CRM销售通知 Agent', time: '2分钟前', outcome: 'success' },
+    { actor: '李思', action: '创建', target: 'API Token #tk-12', time: '15分钟前', outcome: 'success' },
+    { actor: '王五', action: '更新', target: '通义千问 VL 配置', time: '45分钟前', outcome: 'success' },
+    { actor: '赵六', action: '登录', target: '管理控制台', time: '1小时前', outcome: 'success' },
+    { actor: '陈七', action: '登录', target: '管理控制台', time: '2小时前', outcome: 'failure' },
+  ],
+  // 最近 Agent 运行
+  recent_runs: [
+    { agent: 'CRM销售通知', owner: '销售部', trigger: '事件触发', status: 'completed', duration: '2.3s', tokens: '1,240', cost: '¥0.12', time: '2分钟前' },
+    { agent: '设备巡检Agent', owner: '售后部', trigger: '定时任务', status: 'completed', duration: '8.1s', tokens: '3,420', cost: '¥0.34', time: '15分钟前' },
+    { agent: '摄像头监控#12', owner: '安保部', trigger: '定时任务', status: 'failed', duration: '30s', tokens: '0', cost: '¥0', time: '32分钟前' },
+    { agent: '每日智能总结', owner: '管理员', trigger: '定时任务', status: 'completed', duration: '4.5s', tokens: '2,180', cost: '¥0.22', time: '1小时前' },
+    { agent: '客户意向分析', owner: '市场部', trigger: '手动触发', status: 'completed', duration: '12.3s', tokens: '8,560', cost: '¥0.86', time: '2小时前' },
+    { agent: '周报自动生成', owner: '全员', trigger: '定时任务', status: 'completed', duration: '6.8s', tokens: '4,200', cost: '¥0.42', time: '3小时前' },
+  ],
 };
 
 // =================== 使用统计 ===================
@@ -2013,7 +2115,42 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (/^\/identity\/sources\/[^/]+\/test-connection$/.test(path)) return ok({ success: true });
   if (/^\/identity\/sources\/[^/]+\/sync$/.test(path)) return ok({ triggered: true, run_id: 'isr-' + Date.now() });
 
-  // Permissions (权限管理)
+  // Permissions (权限菜单)
+  if (path === '/identity/permissions/menus' && method === 'get') return ok(permMenus);
+  if (path === '/identity/permissions/menus' && method === 'post') {
+    const newMenu = { id: 'pm-' + Date.now(), ...data };
+    permMenus.push(newMenu);
+    return ok(newMenu);
+  }
+  if (/^\/identity\/permissions\/menus\/[^/]+$/.test(path) && method === 'get') {
+    const id = path.split('/').pop()!;
+    return ok(permMenus.find(m => m.id === id) || null);
+  }
+  if (/^\/identity\/permissions\/menus\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop()!;
+    const idx = permMenus.findIndex(m => m.id === id);
+    if (idx >= 0) permMenus[idx] = { ...permMenus[idx], ...data };
+    return ok(permMenus[idx]);
+  }
+  if (/^\/identity\/permissions\/menus\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop()!;
+    const idx = permMenus.findIndex(m => m.id === id);
+    if (idx >= 0) {
+      // 删除子节点
+      const idsToDelete = new Set<string>();
+      const collect = (pid: string) => {
+        idsToDelete.add(pid);
+        permMenus.filter(m => m.parent_id === pid).forEach(c => collect(c.id));
+      };
+      collect(id);
+      for (let i = permMenus.length - 1; i >= 0; i--) {
+        if (idsToDelete.has(permMenus[i].id)) permMenus.splice(i, 1);
+      }
+    }
+    return ok(null);
+  }
+
+  // 旧权限管理 API（保留兼容）
   if (path === '/identity/permissions/groups' && method === 'get') return ok(permGroups);
   if (path === '/identity/permissions/skills' && method === 'get') return ok(permSkills);
   if (/^\/identity\/permissions\/groups\/[^/]+$/.test(path) && method === 'get') {
@@ -2039,6 +2176,30 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       delete userPermissions[uid];
     }
     return ok(data);
+  }
+
+  // Roles
+  if (path === '/roles' && method === 'get') return paginate(roles, p.page, p.page_size, p.search);
+  if (path === '/roles' && method === 'post') {
+    const newRole = { id: 'role-' + Date.now(), created_at: new Date().toISOString(), ...data };
+    roles.push(newRole);
+    return ok(newRole);
+  }
+  if (/^\/roles\/[^/]+$/.test(path) && method === 'get') {
+    const rid = path.split('/').pop()!;
+    return ok(roles.find(r => r.id === rid) || null);
+  }
+  if (/^\/roles\/[^/]+$/.test(path) && method === 'put') {
+    const rid = path.split('/').pop()!;
+    const idx = roles.findIndex(r => r.id === rid);
+    if (idx >= 0) roles[idx] = { ...roles[idx], ...data };
+    return ok(roles[idx]);
+  }
+  if (/^\/roles\/[^/]+$/.test(path) && method === 'delete') {
+    const rid = path.split('/').pop()!;
+    const idx = roles.findIndex(r => r.id === rid);
+    if (idx >= 0) roles.splice(idx, 1);
+    return ok(null);
   }
 
   // Users
@@ -2803,7 +2964,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok(newSession);
   }
   if (/^\/chat\/sessions\/[^/]+$/.test(path) && method === 'delete') {
-    const id = path.split('/').pop();
+    const id = path.split('/').pop()!;
     const idx = chatSessions.findIndex(s => s.id === id);
     if (idx >= 0) chatSessions.splice(idx, 1);
     delete chatMessages[id];

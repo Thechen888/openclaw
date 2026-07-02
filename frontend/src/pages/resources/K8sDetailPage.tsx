@@ -18,7 +18,7 @@ function CircleProgress({ pct, label, color = '#1976d2' }: { pct: number; label:
   return (
     <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width={56} height={56}>
-        <circle cx={28} cy={28} r={r} fill="none" stroke="#e0e0e0" strokeWidth={4} />
+        <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(0,212,255,0.12)" strokeWidth={4} />
         <circle
           cx={28} cy={28} r={r} fill="none" stroke={color} strokeWidth={4}
           strokeDasharray={`${dash} ${circ - dash}`}
@@ -37,7 +37,7 @@ function CircleProgress({ pct, label, color = '#1976d2' }: { pct: number; label:
 function ResourceRow({ pct, label, used, total, unit = '' }: {
   pct: number; label: string; used: number | string; total: number | string; unit?: string;
 }) {
-  const color = pct >= 90 ? '#d32f2f' : pct >= 70 ? '#ed6c02' : '#1976d2';
+  const color = pct >= 90 ? '#FF3366' : pct >= 70 ? '#FFB800' : '#00D4FF';
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
       <CircleProgress pct={pct} color={color} label={label} />
@@ -50,7 +50,7 @@ function ResourceRow({ pct, label, used, total, unit = '' }: {
           value={pct}
           sx={{
             height: 6, borderRadius: 3,
-            bgcolor: '#e0e0e0',
+            bgcolor: 'rgba(0,212,255,0.08)',
             '& .MuiLinearProgress-bar': { bgcolor: color },
           }}
         />
@@ -89,10 +89,10 @@ function ToolCard({ icon, name, desc }: { icon: string; name: string; desc: stri
 function NodeIcon() {
   return (
     <Box sx={{
-      width: 36, height: 32, bgcolor: '#e8f5e9', borderRadius: 1,
+      width: 36, height: 32, bgcolor: 'rgba(0,255,136,0.1)', borderRadius: 1,
       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
     }}>
-      <Storage sx={{ fontSize: 18, color: '#388e3c' }} />
+      <Storage sx={{ fontSize: 18, color: '#00FF88' }} />
     </Box>
   );
 }
@@ -236,7 +236,7 @@ export default function K8sDetailPage() {
                 <Grid size={6} sx={{ mt: 1 }}>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
                     {cluster.schedule_fail > 0
-                      ? <span style={{ color: '#d32f2f' }}>{cluster.schedule_fail}</span>
+                      ? <span style={{ color: '#FF3366' }}>{cluster.schedule_fail}</span>
                       : '—'}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">调度失败次数</Typography>
@@ -268,7 +268,7 @@ export default function K8sDetailPage() {
 
               {topNodes.map((node: any) => {
                 const pct = nodeSort === 'memory' ? node.memory_pct : nodeSort === 'pods' ? 0 : node.cpu_pct;
-                const color = pct >= 80 ? '#d32f2f' : pct >= 60 ? '#ed6c02' : '#388e3c';
+                const color = pct >= 80 ? '#FF3366' : pct >= 60 ? '#FFB800' : '#00FF88';
                 const pctLabel = nodeSort === 'pods'
                   ? `${node.pods} Pods`
                   : `${nodeSort === 'memory' ? node.memory_pct : node.cpu_pct}%`;

@@ -344,7 +344,7 @@ export default function TokensPage() {
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
       >
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={2.5}>
           <Grid size={12}>
             <TextField fullWidth label="名称" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           </Grid>

@@ -152,7 +152,7 @@ export default function QuotasPage() {
         onSave={handleSave}
         saving={updateMutation.isPending}
       >
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={2.5}>
           <Grid size={12}>
             <TextField fullWidth label="配额类型" value={form.quota_type} disabled />
           </Grid>

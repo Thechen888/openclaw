@@ -8,13 +8,13 @@ import {
 } from '@mui/material';
 import {
   Add, Send, Delete, Chat as ChatIcon, SmartToy, Person,
-  MenuBook, Refresh, AutoAwesome, Search, Settings,
+  MenuBook, Refresh, AutoAwesome, Search,
   ExpandMore, ExpandLess, Description, Score,
-  Psychology, Extension, Forum, Edit, Close,
+  Psychology, Forum, Close,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { chatApi, ragApi, modelPoliciesApi, agentsApi } from '../../api/client';
+import { chatApi, ragApi, modelPoliciesApi } from '../../api/client';
 
 // =================== Markdown渲染 ===================
 function formatMessage(content: string) {
@@ -127,31 +127,10 @@ function SourcesPanel({ sources }: { sources: any[] }) {
   );
 }
 
-// =================== Agent动作展示组件 ===================
-function AgentActionBadge({ action }: { action: any }) {
-  if (!action) return null;
-  return (
-    <Box sx={{
-      display: 'inline-flex', alignItems: 'center', gap: 0.5, mt: 0.5,
-      px: 1, py: 0.25, borderRadius: 1, bgcolor: (t) => alpha(t.palette.success.main, 0.08),
-      border: '1px solid', borderColor: (t) => alpha(t.palette.success.main, 0.3),
-    }}>
-      <Extension sx={{ fontSize: 12, color: 'success.main' }} />
-      <Typography variant="caption" sx={{ fontSize: 10, color: 'success.dark' }}>
-        {action.type === 'call_skill' ? `调用技能: ${action.skill_name}` :
-         action.type === 'send_im' ? `发送消息: ${action.channel}` :
-         action.type}
-        {action.duration_ms && ` (${action.duration_ms}ms)`}
-      </Typography>
-    </Box>
-  );
-}
-
 // =================== 对话模式标签 ===================
 const MODE_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   chat: { label: '纯聊天', color: 'default', icon: <Forum sx={{ fontSize: 12 }} /> },
   rag: { label: '知识库问答', color: 'primary', icon: <MenuBook sx={{ fontSize: 12 }} /> },
-  agent: { label: '智能体', color: 'secondary', icon: <SmartToy sx={{ fontSize: 12 }} /> },
 };
 
 // =================== 主组件 ===================
@@ -166,7 +145,6 @@ export default function ChatPage() {
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [newMode, setNewMode] = useState<string>('rag');
   const [newKb, setNewKb] = useState('');
-  const [newAgent, setNewAgent] = useState('');
   const [newPolicy, setNewPolicy] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -188,12 +166,6 @@ export default function ChatPage() {
     queryFn: () => modelPoliciesApi.list({ page: 1, page_size: 50 }),
   });
   const policies: any[] = policyData?.data?.data || [];
-
-  const { data: agentData } = useQuery({
-    queryKey: ['chat-agents'],
-    queryFn: () => agentsApi.list({ page: 1, page_size: 50, status: 'active' }),
-  });
-  const agentsList: any[] = agentData?.data?.data || [];
 
   const { data: msgData } = useQuery({
     queryKey: ['chat-messages', selectedSession],
@@ -257,7 +229,6 @@ export default function ChatPage() {
 
   const handleCreateSession = () => {
     const kbObj = kbs.find(k => k.id === newKb);
-    const agentObj = agentsList.find(a => a.id === newAgent);
     const policyObj = policies.find(p => p.id === newPolicy);
     createSessionMutation.mutate({
       title: '新对话',
@@ -266,8 +237,6 @@ export default function ChatPage() {
       model_policy: policyObj?.name || '通用对话策略',
       kb_id: newMode === 'rag' ? newKb : '',
       kb_name: newMode === 'rag' ? (kbObj?.name || '') : '',
-      agent_id: newMode === 'agent' ? newAgent : '',
-      agent_name: newMode === 'agent' ? (agentObj?.name || '') : '',
     });
   };
 
@@ -332,11 +301,9 @@ export default function ChatPage() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Avatar sx={{
                           width: 28, height: 28, fontSize: 12,
-                          bgcolor: session.mode === 'rag' ? 'primary.main' :
-                                   session.mode === 'agent' ? 'secondary.main' : 'grey.500',
+                          bgcolor: session.mode === 'rag' ? 'primary.main' : 'grey.500',
                         }}>
                           {session.mode === 'rag' ? <MenuBook sx={{ fontSize: 14 }} /> :
-                           session.mode === 'agent' ? <SmartToy sx={{ fontSize: 14 }} /> :
                            <Forum sx={{ fontSize: 14 }} />}
                         </Avatar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -367,10 +334,6 @@ export default function ChatPage() {
                           <Chip label={session.kb_name} size="small" variant="outlined"
                             sx={{ height: 18, fontSize: 10, maxWidth: 100 }} />
                         )}
-                        {session.agent_name && (
-                          <Chip label={session.agent_name} size="small" variant="outlined" color="secondary"
-                            sx={{ height: 18, fontSize: 10, maxWidth: 100 }} />
-                        )}
                       </Box>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, pl: 4, mt: 0.25, display: 'block' }}>
                         {session.message_count}条消息 · {new Date(session.last_message_at).toLocaleDateString('zh-CN')}
@@ -394,12 +357,11 @@ export default function ChatPage() {
               OpenClaw AI 对话中心
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500, textAlign: 'center', mb: 4 }}>
-              与AI智能助手对话，支持三种模式：基于知识库的RAG增强问答、智能体驱动的任务执行、以及纯AI对话。
+              与AI智能助手对话，支持两种模式：基于知识库的RAG增强问答，以及纯AI对话。
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
               {[
                 { icon: <MenuBook />, title: '知识库问答 (RAG)', desc: '关联知识库，AI基于文档检索回答', color: 'primary' },
-                { icon: <SmartToy />, title: '智能体对话', desc: '与Agent交互，执行复杂业务任务', color: 'secondary' },
                 { icon: <Forum />, title: '纯AI对话', desc: '通用对话，无知识库增强', color: 'info' },
               ].map((item, i) => (
                 <Paper key={i} sx={{
@@ -408,7 +370,7 @@ export default function ChatPage() {
                   '&:hover': { borderColor: `${item.color}.main`, boxShadow: 2 },
                   transition: 'all 0.2s',
                 }} onClick={() => {
-                  setNewMode(i === 0 ? 'rag' : i === 1 ? 'agent' : 'chat');
+                  setNewMode(i === 0 ? 'rag' : 'chat');
                   setNewDialogOpen(true);
                 }}>
                   <Avatar sx={{ mx: 'auto', mb: 1, bgcolor: `${item.color}.main`, width: 40, height: 40 }}>
@@ -429,11 +391,9 @@ export default function ChatPage() {
             }}>
               <Avatar sx={{
                 width: 28, height: 28,
-                bgcolor: currentSession?.mode === 'rag' ? 'primary.main' :
-                         currentSession?.mode === 'agent' ? 'secondary.main' : 'grey.500',
+                bgcolor: currentSession?.mode === 'rag' ? 'primary.main' : 'grey.500',
               }}>
                 {currentSession?.mode === 'rag' ? <MenuBook sx={{ fontSize: 14 }} /> :
-                 currentSession?.mode === 'agent' ? <SmartToy sx={{ fontSize: 14 }} /> :
                  <Forum sx={{ fontSize: 14 }} />}
               </Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -462,14 +422,6 @@ export default function ChatPage() {
                       sx={{ height: 18, fontSize: 10, '& .MuiChip-icon': { fontSize: 10 } }}
                     />
                   )}
-                  {currentSession?.agent_name && (
-                    <Chip
-                      icon={<SmartToy sx={{ fontSize: 10 }} />}
-                      label={currentSession.agent_name}
-                      size="small" color="secondary" variant="outlined"
-                      sx={{ height: 18, fontSize: 10, '& .MuiChip-icon': { fontSize: 10 } }}
-                    />
-                  )}
                 </Box>
               </Box>
               <Tooltip title="刷新消息">
@@ -490,8 +442,6 @@ export default function ChatPage() {
                   <Typography variant="caption" color="text.secondary">
                     {currentSession?.mode === 'rag'
                       ? `AI 将从「${currentSession.kb_name}」中检索相关文档并生成回答`
-                      : currentSession?.mode === 'agent'
-                      ? `「${currentSession.agent_name}」将响应您的指令`
                       : '基于通用知识进行对话'}
                   </Typography>
                 </Box>
@@ -505,10 +455,8 @@ export default function ChatPage() {
                   }}>
                     <Avatar sx={{
                       width: 34, height: 34, flexShrink: 0,
-                      bgcolor: msg.role === 'user' ? 'primary.main' :
-                               currentSession?.mode === 'agent' ? 'secondary.main' : 'grey.200',
-                      color: msg.role === 'user' ? 'white' :
-                             currentSession?.mode === 'agent' ? 'white' : 'grey.700',
+                      bgcolor: msg.role === 'user' ? 'primary.main' : 'grey.200',
+                      color: msg.role === 'user' ? 'white' : 'grey.700',
                     }}>
                       {msg.role === 'user' ? <Person sx={{ fontSize: 18 }} /> : <SmartToy sx={{ fontSize: 18 }} />}
                     </Avatar>
@@ -532,10 +480,6 @@ export default function ChatPage() {
                       {/* RAG来源展示 */}
                       {msg.role === 'assistant' && msg.sources && (
                         <SourcesPanel sources={msg.sources} />
-                      )}
-                      {/* Agent动作展示 */}
-                      {msg.role === 'assistant' && msg.agent_action && (
-                        <AgentActionBadge action={msg.agent_action} />
                       )}
                       {/* 时间戳 */}
                       <Typography variant="caption" sx={{
@@ -565,8 +509,8 @@ export default function ChatPage() {
                 <Box sx={{ display: 'flex', gap: 1.5, mb: 2.5 }}>
                   <Avatar sx={{
                     width: 34, height: 34,
-                    bgcolor: currentSession?.mode === 'agent' ? 'secondary.main' : 'grey.200',
-                    color: currentSession?.mode === 'agent' ? 'white' : 'grey.700',
+                    bgcolor: 'grey.200',
+                    color: 'grey.700',
                   }}>
                     <SmartToy sx={{ fontSize: 18 }} />
                   </Avatar>
@@ -579,7 +523,6 @@ export default function ChatPage() {
                     <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
                         {currentSession?.mode === 'rag' ? 'AI 正在检索知识库并生成回答...' :
-                         currentSession?.mode === 'agent' ? `${currentSession?.agent_name} 正在执行任务...` :
                          'AI 正在思考...'}
                       </Typography>
                       {currentSession?.mode === 'rag' && (
@@ -601,7 +544,6 @@ export default function ChatPage() {
                   onKeyDown={handleKeyDown}
                   placeholder={
                     currentSession?.mode === 'rag' ? `向「${currentSession.kb_name}」知识库提问...` :
-                    currentSession?.mode === 'agent' ? `给「${currentSession.agent_name}」下达指令...` :
                     '输入消息...'
                   }
                   disabled={sending}
@@ -664,15 +606,6 @@ export default function ChatPage() {
                 </Typography>
               </Box>
             </ToggleButton>
-            <ToggleButton value="agent" sx={{ textTransform: 'none', flex: 1 }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <SmartToy sx={{ fontSize: 20, display: 'block', mx: 'auto', mb: 0.5 }} />
-                <Typography variant="caption" sx={{ fontWeight: 600 }}>智能体对话</Typography>
-                <Typography variant="caption" sx={{ display: 'block', fontSize: 10, color: 'text.secondary' }}>
-                  Agent 执行任务
-                </Typography>
-              </Box>
-            </ToggleButton>
             <ToggleButton value="chat" sx={{ textTransform: 'none', flex: 1 }}>
               <Box sx={{ textAlign: 'center' }}>
                 <Forum sx={{ fontSize: 20, display: 'block', mx: 'auto', mb: 0.5 }} />
@@ -716,22 +649,6 @@ export default function ChatPage() {
             </TextField>
           )}
 
-          {/* Agent模式：选Agent */}
-          {newMode === 'agent' && (
-            <TextField
-              fullWidth select size="small" label="关联智能体"
-              value={newAgent} onChange={e => setNewAgent(e.target.value)}
-              sx={{ mb: 2 }}
-              helperText="选择要对话的智能体，它将根据配置的工作流响应您的指令"
-            >
-              <MenuItem value="" disabled>请选择智能体</MenuItem>
-              {agentsList.map((a: any) => (
-                <MenuItem key={a.id} value={a.id}>
-                  {a.name} - {a.description?.slice(0, 30)}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setNewDialogOpen(false)}>取消</Button>
@@ -739,8 +656,7 @@ export default function ChatPage() {
             variant="contained" onClick={handleCreateSession}
             disabled={
               createSessionMutation.isPending ||
-              (newMode === 'rag' && !newKb) ||
-              (newMode === 'agent' && !newAgent)
+              (newMode === 'rag' && !newKb)
             }
           >
             创建对话

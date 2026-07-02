@@ -337,7 +337,7 @@ function RuleDialog({ open, editing, loading, onClose, onSubmit }: RuleDialogPro
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{editing ? '编辑规则' : '添加规则'}</DialogTitle>
       <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 0.5 }}>
+        <Grid container spacing={2.5}>
           <Grid size={{ xs: 12, sm: 7 }}>
             <TextField
               label="IP/CIDR/域名"

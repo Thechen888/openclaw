@@ -25,7 +25,6 @@ const ORG_TYPE_LABELS: Record<string, string> = {
   team:       '团队',
   project:    '项目',
 };
-const ORG_TYPES = Object.entries(ORG_TYPE_LABELS);
 
 const TYPE_COLORS: Record<string, string> = {
   company:    'primary',
@@ -53,7 +52,16 @@ function buildTree(items: any[]): any[] {
 /** 提取可提交字段，剔除服务端字段 */
 function extractOrgFields(item: any) {
   const { id: _id, member_count: _mc, children: _ch, created_at: _ca, ...payload } = item;
-  return payload;
+  return {
+    parent_id: payload.parent_id || null,
+    name: payload.name || '',
+    sort_order: payload.sort_order ?? 0,
+    manager: payload.manager || '',
+    phone: payload.phone || '',
+    email: payload.email || '',
+    status: payload.status || 'active',
+    description: payload.description || '',
+  };
 }
 
 function getInitials(name?: string) {
@@ -382,7 +390,7 @@ export default function OrganizationsPage() {
     <Box>
       <PageHeader
         title="组织架构"
-        subtitle="以树形结构管理公司、部门与团队"
+        subtitle="管理部门与组织树"
         actions={
           <>
             <Tooltip title="刷新">
@@ -393,7 +401,7 @@ export default function OrganizationsPage() {
               startIcon={<Add />}
               onClick={() => { resetForm(); setDialogOpen(true); }}
             >
-              添加组织
+              新增
             </Button>
           </>
         }
@@ -440,59 +448,70 @@ export default function OrganizationsPage() {
       <CrudDialog
         open={dialogOpen}
         onClose={() => { setDialogOpen(false); resetForm(); }}
-        title={editItem ? `编辑组织 — ${editItem.name}` : '添加组织'}
+        title={editItem ? `编辑组织 — ${editItem.name}` : '新增'}
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
       >
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid size={12}>
-            <TextField
-              fullWidth label="组织名称" required
-              value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
-            />
-          </Grid>
+        <Grid container spacing={2.5}>
           <Grid size={6}>
             <TextField
-              fullWidth select label="类型"
-              value={form.type}
-              onChange={e => setForm({ ...form, type: e.target.value })}
-            >
-              {ORG_TYPES.map(([val, label]) => (
-                <MenuItem key={val} value={val}>{label}</MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid size={6}>
-            <TextField
-              fullWidth select label="状态"
-              value={form.status}
-              onChange={e => setForm({ ...form, status: e.target.value })}
-            >
-              <MenuItem value="active">启用</MenuItem>
-              <MenuItem value="disabled">禁用</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid size={12}>
-            <TextField
-              fullWidth select label="上级组织（留空则为根节点）"
+              fullWidth select label="上级部门"
               value={form.parent_id || ''}
               onChange={e => setForm({ ...form, parent_id: e.target.value || null })}
             >
               <MenuItem value="">— 无上级（根节点）—</MenuItem>
               {parentOptions.map((o: any) => (
                 <MenuItem key={o.id} value={o.id}>
-                  {o.name}（{ORG_TYPE_LABELS[o.type] || o.type}）
+                  {o.name}
                 </MenuItem>
               ))}
             </TextField>
           </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth label="部门名称" required
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth label="排序" type="number"
+              value={form.sort_order}
+              onChange={e => setForm({ ...form, sort_order: Number(e.target.value) })}
+              inputProps={{ min: 0 }}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth label="负责人"
+              value={form.manager}
+              onChange={e => setForm({ ...form, manager: e.target.value })}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth label="联系电话"
+              value={form.phone}
+              onChange={e => setForm({ ...form, phone: e.target.value })}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth label="邮箱" type="email"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+            />
+          </Grid>
           <Grid size={12}>
             <TextField
-              fullWidth multiline rows={3} label="描述"
-              value={form.description}
-              onChange={e => setForm({ ...form, description: e.target.value })}
-            />
+              fullWidth select label="状态"
+              value={form.status}
+              onChange={e => setForm({ ...form, status: e.target.value })}
+            >
+              <MenuItem value="active">正常</MenuItem>
+              <MenuItem value="disabled">禁用</MenuItem>
+            </TextField>
           </Grid>
         </Grid>
       </CrudDialog>

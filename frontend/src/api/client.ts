@@ -74,6 +74,14 @@ export const usersApi = {
   delete: (id: string) => api.delete(`/users/${id}`),
 };
 
+export const rolesApi = {
+  list: (params?: ListParams) => api.get('/roles', { params }),
+  get: (id: string) => api.get(`/roles/${id}`),
+  create: (data: any) => api.post('/roles', data),
+  update: (id: string, data: any) => api.put(`/roles/${id}`, data),
+  delete: (id: string) => api.delete(`/roles/${id}`),
+};
+
 export const orgsApi = {
   list: (params?: ListParams) => api.get('/organizations', { params }),
   get: (id: string) => api.get(`/organizations/${id}`),

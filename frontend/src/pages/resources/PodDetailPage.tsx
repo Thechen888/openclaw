@@ -262,16 +262,16 @@ function ResourceTab({
                     slotProps={{
                       tooltip: {
                         sx: {
-                          bgcolor: '#fff',
-                          color: '#0f172a',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-                          border: '1px solid rgba(148,163,184,0.25)',
+                          bgcolor: 'rgba(13,15,20,0.95)',
+                          color: '#E8ECF0',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                          border: '1px solid rgba(0,212,255,0.15)',
                           maxWidth: 'none',
                           p: 1.5,
                           '& .MuiTypography-root': { color: 'inherit' },
                         },
                       },
-                      arrow: { sx: { color: '#fff', '&::before': { border: '1px solid rgba(148,163,184,0.25)' } } },
+                      arrow: { sx: { color: 'rgba(13,15,20,0.95)', '&::before': { border: '1px solid rgba(0,212,255,0.15)' } } },
                     }}
                     title={
                       <Box sx={{ minWidth: 220 }}>
@@ -286,12 +286,12 @@ function ResourceTab({
                               '& .MuiChip-label': { color: '#fff' },
                             }}
                           />
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>HTTP 请求</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#E8ECF0' }}>HTTP 请求</Typography>
                         </Box>
                         <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#64748b' }}>
                           5s 初始延迟，1s 超时时间
                         </Typography>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 1.5, color: '#0f172a' }}>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1.5, color: 'rgba(200,210,220,0.7)' }}>
                           GET / on port 9000 (HTTP)
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -300,17 +300,17 @@ function ResourceTab({
                             size="small"
                             sx={{
                               height: 20, fontSize: 11,
-                              bgcolor: '#fb923c',
+                              bgcolor: 'rgba(255,184,0,0.15)',
                               fontWeight: 600,
-                              '& .MuiChip-label': { color: '#fff' },
+                              '& .MuiChip-label': { color: '#FFB800' },
                             }}
                           />
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>HTTP 请求</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#E8ECF0' }}>HTTP 请求</Typography>
                         </Box>
                         <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#64748b' }}>
                           300s 初始延迟，1s 超时时间
                         </Typography>
-                        <Typography variant="caption" sx={{ display: 'block', color: '#0f172a' }}>
+                        <Typography variant="caption" sx={{ display: 'block', color: 'rgba(200,210,220,0.7)' }}>
                           GET / on port 9000 (HTTP)
                         </Typography>
                       </Box>
@@ -884,18 +884,18 @@ function YamlDialog({
       onClose={onClose}
       fullWidth
       maxWidth="lg"
-      slotProps={{ paper: { sx: { height: '90vh', bgcolor: '#334155' } } }}
+      slotProps={{ paper: { sx: { height: '90vh', bgcolor: '#0D0F14' } } }}
     >
       <DialogTitle
         sx={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           fontSize: 14, fontWeight: 600, py: 1,
-          bgcolor: '#fff',
-          borderBottom: '1px solid rgba(148,163,184,0.2)',
+          bgcolor: 'rgba(0,212,255,0.04)',
+          borderBottom: '1px solid rgba(0,212,255,0.1)',
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FiberManualRecord sx={{ fontSize: 12, color: '#1e293b' }} />
+          <FiberManualRecord sx={{ fontSize: 12, color: '#00D4FF' }} />
           <Typography variant="body2" sx={{ fontWeight: 600 }}>查看 YAML</Typography>
         </Box>
         <IconButton onClick={onClose} size="small" sx={{ bgcolor: '#1e293b', color: '#fff', borderRadius: 1, '&:hover': { bgcolor: '#334155' } }}>

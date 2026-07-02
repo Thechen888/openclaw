@@ -130,7 +130,7 @@ export default function ModelSourcesPage() {
       )}
 
       <CrudDialog open={dialogOpen} onClose={() => setDialogOpen(false)} title={editItem ? '编辑模型源' : '添加模型源'} onSave={handleSave} saving={createMutation.isPending || updateMutation.isPending}>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={2.5}>
           <Grid size={6}><TextField fullWidth label="供应商" placeholder="OpenAI / Anthropic / DeepSeek" value={form.provider} onChange={e => setForm({...form, provider: e.target.value})} /></Grid>
           <Grid size={6}><TextField fullWidth label="模型名称" placeholder="gpt-4o / claude-3.5-sonnet" value={form.model_name} onChange={e => setForm({...form, model_name: e.target.value})} /></Grid>
           <Grid size={12}><TextField fullWidth label="显示名称" placeholder="对外展示的友好名称" value={form.display_name} onChange={e => setForm({...form, display_name: e.target.value})} /></Grid>

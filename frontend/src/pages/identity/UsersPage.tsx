@@ -28,8 +28,15 @@ const ROLE_COLORS: Record<string, 'error' | 'warning' | 'primary' | 'default'> =
   viewer:  'default',
 };
 
+const DEPARTMENTS = ['开发部门', '产品部门', '测试部门', '运维部门', '市场部门', '人事部门'];
+const GENDERS = [
+  { value: 'male', label: '男' },
+  { value: 'female', label: '女' },
+];
+
 const EMPTY_FORM = {
-  username: '', name: '', email: '', role: 'member', org_id: '', status: 'active', password: '',
+  username: '', name: '', email: '', role: 'member', status: 'active', password: '',
+  department: '', phone: '', gender: 'male', remark: '',
 };
 
 /** 提取可提交字段，编辑时剔除服务端字段 */
@@ -225,10 +232,10 @@ export default function UsersPage() {
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
       >
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={2.5}>
           <Grid size={6}>
             <TextField
-              fullWidth label="账号名" required
+              fullWidth label="登录账号" required
               value={form.username}
               onChange={e => setForm({ ...form, username: e.target.value })}
               disabled={!!editItem}
@@ -237,19 +244,12 @@ export default function UsersPage() {
           </Grid>
           <Grid size={6}>
             <TextField
-              fullWidth label="姓名"
+              fullWidth label="姓名" required
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
             />
           </Grid>
-          <Grid size={12}>
-            <TextField
-              fullWidth label="邮箱" type="email"
-              value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-            />
-          </Grid>
-          <Grid size={12}>
+          <Grid size={6}>
             <TextField
               fullWidth
               label={editItem ? '密码（留空则不修改）' : '密码'}
@@ -261,12 +261,37 @@ export default function UsersPage() {
           </Grid>
           <Grid size={6}>
             <TextField
-              fullWidth select label="角色"
-              value={form.role}
-              onChange={e => setForm({ ...form, role: e.target.value })}
+              fullWidth select label="部门"
+              value={form.department || ''}
+              onChange={e => setForm({ ...form, department: e.target.value })}
             >
-              {ROLES.map(([val, label]) => (
-                <MenuItem key={val} value={val}>{label}</MenuItem>
+              {DEPARTMENTS.map((d) => (
+                <MenuItem key={d} value={d}>{d}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth label="邮箱" type="email"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth label="手机号"
+              value={form.phone}
+              onChange={e => setForm({ ...form, phone: e.target.value })}
+            />
+          </Grid>
+          <Grid size={6}>
+            <TextField
+              fullWidth select label="性别"
+              value={form.gender || 'male'}
+              onChange={e => setForm({ ...form, gender: e.target.value })}
+            >
+              {GENDERS.map((g) => (
+                <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>
               ))}
             </TextField>
           </Grid>
@@ -276,21 +301,27 @@ export default function UsersPage() {
               value={form.status}
               onChange={e => setForm({ ...form, status: e.target.value })}
             >
-              <MenuItem value="active">启用</MenuItem>
+              <MenuItem value="active">正常</MenuItem>
               <MenuItem value="disabled">禁用</MenuItem>
             </TextField>
           </Grid>
           <Grid size={12}>
             <TextField
-              fullWidth select label="所属组织（可选）"
-              value={form.org_id || ''}
-              onChange={e => setForm({ ...form, org_id: e.target.value || '' })}
+              fullWidth select label="角色"
+              value={form.role}
+              onChange={e => setForm({ ...form, role: e.target.value })}
             >
-              <MenuItem value="">— 暂不归属 —</MenuItem>
-              {allOrgs.map((o: any) => (
-                <MenuItem key={o.id} value={o.id}>{o.name}</MenuItem>
+              {ROLES.map(([val, label]) => (
+                <MenuItem key={val} value={val}>{label}</MenuItem>
               ))}
             </TextField>
+          </Grid>
+          <Grid size={12}>
+            <TextField
+              fullWidth multiline rows={2} label="备注"
+              value={form.remark}
+              onChange={e => setForm({ ...form, remark: e.target.value })}
+            />
           </Grid>
         </Grid>
       </CrudDialog>

@@ -94,7 +94,12 @@ function FileList({ onEdit }: { onEdit: (name: string) => void }) {
                   <Chip
                     label={`${(f.size / 1024).toFixed(1)} KB`}
                     size="small"
-                    sx={{ height: 20, fontSize: 11, bgcolor: '#f1f5f9' }}
+                    sx={{
+                      height: 22, fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
+                      bgcolor: 'rgba(0,212,255,0.08)',
+                      color: '#00D4FF',
+                      border: '1px solid rgba(0,212,255,0.15)',
+                    }}
                   />
                 </TableCell>
                 <TableCell>
@@ -170,7 +175,7 @@ function FileEditor({ name, onBack }: { name: string; onBack: () => void }) {
           <Chip
             label="未保存"
             size="small"
-            sx={{ height: 20, fontSize: 11, bgcolor: '#fef3c7', color: '#b45309' }}
+            sx={{ height: 20, fontSize: 11, bgcolor: 'rgba(255,184,0,0.12)', color: '#FFB800', border: '1px solid rgba(255,184,0,0.2)' }}
           />
         )}
       </Box>

@@ -188,7 +188,7 @@ export default function ModelPoliciesPage() {
         onSave={handleSave}
         saving={createMutation.isPending || updateMutation.isPending}
       >
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={2.5}>
           {/* 策略名称 */}
           <Grid size={12}>
             <TextField fullWidth label="策略名称" placeholder="如：通用对话策略、视觉理解策略" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
