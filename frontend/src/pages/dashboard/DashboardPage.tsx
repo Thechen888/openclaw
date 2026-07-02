@@ -119,7 +119,7 @@ export default function DashboardPage() {
       </Grid>
 
       {/* ========== 第二行：系统资源 + 趋势 + 模型健康 ========== */}
-      <Grid container spacing={2} sx={{ mb: 3 }} alignItems="stretch">
+      <Grid container spacing={2} sx={{ mb: 3, alignItems: 'stretch' }}>
         {/* 系统资源（左侧） */}
         <Grid size={{ xs: 12, md: 3 }} sx={{ display: 'flex' }}>
           <SectionCard title="系统资源" sx={{ flex: 1 }}>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
       </Grid>
 
       {/* ========== 第三行：成本 TOP5 + 待办事项 + 最近审计 ========== */}
-      <Grid container spacing={2} sx={{ mb: 3 }} alignItems="stretch">
+      <Grid container spacing={2} sx={{ mb: 3, alignItems: 'stretch' }}>
         {/* 成本 TOP5 */}
         <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
           <SectionCard title="模型成本 TOP5 (本月)" sx={{ flex: 1 }}>

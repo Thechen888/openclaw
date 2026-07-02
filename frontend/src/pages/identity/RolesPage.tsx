@@ -329,7 +329,7 @@ export default function RolesPage() {
     setForm({ ...form, menu_ids: [] });
   };
 
-  const checkedIds = useMemo(() => new Set(form.menu_ids || []), [form.menu_ids]);
+  const checkedIds = useMemo(() => new Set<string>(form.menu_ids || []), [form.menu_ids]);
 
   return (
     <Box>
@@ -475,7 +475,7 @@ export default function RolesPage() {
               fullWidth label="排序" type="number"
               value={form.sort_order}
               onChange={e => setForm({ ...form, sort_order: Number(e.target.value) })}
-              inputProps={{ min: 0 }}
+              slotProps={{ htmlInput: { min: 0 } }}
             />
           </Grid>
           <Grid size={6}>

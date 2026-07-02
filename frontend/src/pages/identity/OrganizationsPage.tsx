@@ -479,7 +479,7 @@ export default function OrganizationsPage() {
               fullWidth label="排序" type="number"
               value={form.sort_order}
               onChange={e => setForm({ ...form, sort_order: Number(e.target.value) })}
-              inputProps={{ min: 0 }}
+              slotProps={{ htmlInput: { min: 0 } }}
             />
           </Grid>
           <Grid size={6}>
