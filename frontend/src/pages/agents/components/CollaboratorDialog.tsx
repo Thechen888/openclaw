@@ -1,0 +1,219 @@
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Avatar,
+  Select, MenuItem, IconButton, Autocomplete, TextField, Chip, Divider, FormControl,
+  ToggleButton, ToggleButtonGroup, Tooltip,
+} from '@mui/material';
+import { Delete, PersonAdd, Close, Groups, Person, SwapHoriz } from '@mui/icons-material';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api, { agentsApi, usersApi } from '../../../api/client';
+import { ROLE_META, getRoleMeta, type CollaboratorRole } from './agentShared';
+
+const USER_ROLES: CollaboratorRole[] = ['admin', 'editor', 'viewer', 'chat_only'];
+const DEPT_ROLES: CollaboratorRole[] = ['editor', 'viewer', 'chat_only'];
+
+const principalId = (c: any) => (c.principal_type === 'department' ? c.dept_id : c.user_id);
+
+export default function CollaboratorDialog({
+  open, onClose, agent,
+}: {
+  open: boolean;
+  onClose: () => void;
+  agent: any;
+}) {
+  const qc = useQueryClient();
+  const agentId = agent?.id;
+  const [kind, setKind] = useState<'user' | 'department'>('user');
+  const [pickUser, setPickUser] = useState<any>(null);
+  const [pickDept, setPickDept] = useState<any>(null);
+  const [pickRole, setPickRole] = useState<CollaboratorRole>('viewer');
+
+  const { data: collabData } = useQuery({
+    queryKey: ['agent-collaborators', agentId],
+    queryFn: () => agentsApi.collaborators(agentId),
+    enabled: !!agentId && open,
+  });
+  const collaborators: any[] = collabData?.data?.data || [];
+
+  const { data: usersData } = useQuery({
+    queryKey: ['users-all-collab'],
+    queryFn: () => usersApi.list({ page_size: 200 }),
+    enabled: open,
+  });
+  const users: any[] = usersData?.data?.data || [];
+
+  const { data: deptData } = useQuery({
+    queryKey: ['perm-groups-collab'],
+    queryFn: () => api.get('/identity/permissions/groups'),
+    enabled: open,
+  });
+  const depts: any[] = deptData?.data?.data || [];
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['agent-collaborators', agentId] });
+    qc.invalidateQueries({ queryKey: ['agent', agentId] });
+    qc.invalidateQueries({ queryKey: ['agents'] });
+  };
+
+  const addMutation = useMutation({
+    mutationFn: (d: any) => agentsApi.addCollaborator(agentId, d),
+    onSuccess: () => { invalidate(); setPickUser(null); setPickDept(null); setPickRole('viewer'); },
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ pid, role }: any) => agentsApi.updateCollaborator(agentId, pid, { role }),
+    onSuccess: invalidate,
+  });
+  const removeMutation = useMutation({
+    mutationFn: (pid: string) => agentsApi.removeCollaborator(agentId, pid),
+    onSuccess: invalidate,
+  });
+  const transferMutation = useMutation({
+    mutationFn: (userId: string) => agentsApi.transferOwnership(agentId, { user_id: userId }),
+    onSuccess: invalidate,
+  });
+
+  const existingUserIds = new Set(collaborators.filter((c) => c.principal_type !== 'department').map((c) => c.user_id));
+  const existingDeptIds = new Set(collaborators.filter((c) => c.principal_type === 'department').map((c) => c.dept_id));
+  const userCandidates = users.filter((u) => !existingUserIds.has(u.id));
+  const deptCandidates = depts.filter((d) => !existingDeptIds.has(d.id));
+
+  const roleOptions = kind === 'department' ? DEPT_ROLES : USER_ROLES;
+
+  const handleAdd = () => {
+    if (kind === 'department') {
+      if (!pickDept) return;
+      addMutation.mutate({ principal_type: 'department', dept_id: pickDept.id, name: pickDept.name, member_count: pickDept.member_count, role: pickRole });
+    } else {
+      if (!pickUser) return;
+      addMutation.mutate({ principal_type: 'user', user_id: pickUser.id, name: pickUser.name || pickUser.username, role: pickRole });
+    }
+  };
+
+  const handleTransfer = (c: any) => {
+    if (confirm(`确认将所有权转让给「${c.name}」？转让后你将降级为管理员。`)) {
+      transferMutation.mutate(c.user_id);
+    }
+  };
+
+  const switchKind = (v: 'user' | 'department') => {
+    setKind(v);
+    setPickRole('viewer');
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>协作者与权限</Typography>
+          <Typography variant="caption" color="text.secondary">{agent?.name}</Typography>
+        </Box>
+        <IconButton size="small" onClick={onClose}><Close fontSize="small" /></IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        {/* 授权对象类型切换 */}
+        <ToggleButtonGroup
+          size="small" exclusive value={kind}
+          onChange={(_, v) => v && switchKind(v)}
+          sx={{ mb: 1.5 }}
+        >
+          <ToggleButton value="user" sx={{ px: 1.5, textTransform: 'none' }}><Person fontSize="small" sx={{ mr: 0.5 }} />成员</ToggleButton>
+          <ToggleButton value="department" sx={{ px: 1.5, textTransform: 'none' }}><Groups fontSize="small" sx={{ mr: 0.5 }} />组织部门</ToggleButton>
+        </ToggleButtonGroup>
+
+        {/* 添加协作者 */}
+        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          {kind === 'department' ? (
+            <Autocomplete
+              size="small" sx={{ flex: 1 }} options={deptCandidates} value={pickDept}
+              onChange={(_, v) => setPickDept(v)}
+              getOptionLabel={(o: any) => o.name || o.id}
+              renderOption={(props, o: any) => (
+                <li {...props} key={o.id}>
+                  <Groups fontSize="small" style={{ marginRight: 8, opacity: 0.6 }} />
+                  {o.name}
+                  <Chip size="small" label={`${o.member_count} 人`} sx={{ ml: 'auto', height: 18, fontSize: 10 }} />
+                </li>
+              )}
+              renderInput={(params) => <TextField {...params} label="选择部门" placeholder="部门下所有成员将获得权限" />}
+            />
+          ) : (
+            <Autocomplete
+              size="small" sx={{ flex: 1 }} options={userCandidates} value={pickUser}
+              onChange={(_, v) => setPickUser(v)}
+              getOptionLabel={(o: any) => o.name || o.username || o.id}
+              renderInput={(params) => <TextField {...params} label="选择成员" placeholder="搜索用户" />}
+            />
+          )}
+          <FormControl size="small" sx={{ minWidth: 110 }}>
+            <Select value={pickRole} onChange={(e) => setPickRole(e.target.value as CollaboratorRole)}>
+              {roleOptions.map((r) => (
+                <MenuItem key={r} value={r}>{ROLE_META[r].label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="contained" startIcon={<PersonAdd />} onClick={handleAdd}
+            disabled={(kind === 'department' ? !pickDept : !pickUser) || addMutation.isPending}
+          >
+            添加
+          </Button>
+        </Box>
+
+        <Divider sx={{ mb: 1.5 }} />
+
+        {/* 协作者列表 */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {collaborators.map((c) => {
+            const rm = getRoleMeta(c.role);
+            const isOwner = c.role === 'owner';
+            const isDept = c.principal_type === 'department';
+            const roleOpts = isDept ? DEPT_ROLES : USER_ROLES;
+            return (
+              <Box key={principalId(c)} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1, borderRadius: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
+                <Avatar sx={{ width: 34, height: 34, fontSize: 14, bgcolor: isDept ? 'secondary.main' : 'primary.main' }}>
+                  {isDept ? <Groups fontSize="small" /> : (c.name || '?').slice(0, 1)}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.name}</Typography>
+                    {isDept && <Chip size="small" label={`部门 · ${c.member_count} 人`} sx={{ height: 18, fontSize: 10 }} />}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">{rm.desc}</Typography>
+                </Box>
+                {isOwner ? (
+                  <Chip size="small" label={rm.label} color={rm.color} sx={{ height: 24 }} />
+                ) : (
+                  <>
+                    {!isDept && (
+                      <Tooltip title="转让所有权">
+                        <IconButton size="small" color="primary" onClick={() => handleTransfer(c)} disabled={transferMutation.isPending}>
+                          <SwapHoriz fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <Select
+                        value={c.role}
+                        onChange={(e) => updateMutation.mutate({ pid: principalId(c), role: e.target.value })}
+                      >
+                        {roleOpts.map((r) => (
+                          <MenuItem key={r} value={r}>{ROLE_META[r].label}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <IconButton size="small" color="error" onClick={() => removeMutation.mutate(principalId(c))}>
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </>
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>关闭</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}

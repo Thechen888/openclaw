@@ -20,7 +20,10 @@ import PermissionsPage from '../pages/identity/PermissionsPage';
 import RolesPage from '../pages/identity/RolesPage';
 import AgentsPage from '../pages/agents/AgentsPage';
 import AgentRunsPage from '../pages/agents/AgentRunsPage';
-import WorkflowsPage from '../pages/agents/WorkflowsPage';
+import AgentCreatePage from '../pages/agents/AgentCreatePage';
+import AgentDetailPage from '../pages/agents/AgentDetailPage';
+import AgentWorkflowEditPage from '../pages/agents/AgentWorkflowEditPage';
+import AgentChatEditPage from '../pages/agents/AgentChatEditPage';
 import SkillsPage from '../pages/skills/SkillsPage';
 import MarketplacePage from '../pages/skills/MarketplacePage';
 import TokensPage from '../pages/tokens/TokensPage';
@@ -75,8 +78,11 @@ export const router = createBrowserRouter([
       { path: 'identity/roles', element: <RolesPage /> },
       // Agents
       { path: 'agents', element: <AgentsPage /> },
-      { path: 'agents/workflows', element: <WorkflowsPage /> },
+      { path: 'agents/create', element: <AgentCreatePage /> },
       { path: 'agents/runs', element: <AgentRunsPage /> },
+      { path: 'agents/:id', element: <AgentDetailPage /> },
+      { path: 'agents/:id/edit/workflow', element: <AgentWorkflowEditPage /> },
+      { path: 'agents/:id/edit/chat', element: <AgentChatEditPage /> },
       // Skills
       { path: 'skills', element: <SkillsPage /> },
       { path: 'skills/marketplace', element: <MarketplacePage /> },

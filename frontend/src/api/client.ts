@@ -133,6 +133,18 @@ export const agentsApi = {
   delete: (id: string) => api.delete(`/agents/${id}`),
   executions: (id: string, params?: ListParams) => api.get(`/agents/${id}/executions`, { params }),
   execution: (execId: string) => api.get(`/agents/executions/${execId}`),
+  // 工作流配置（拖拽画布）
+  getWorkflow: (id: string) => api.get(`/agents/workflows/${id}`),
+  saveWorkflow: (id: string, data: any) => api.put(`/agents/workflows/${id}`, data),
+  // 协作者与权限
+  collaborators: (id: string) => api.get(`/agents/${id}/collaborators`),
+  addCollaborator: (id: string, data: any) => api.post(`/agents/${id}/collaborators`, data),
+  updateCollaborator: (id: string, principalId: string, data: any) => api.put(`/agents/${id}/collaborators/${principalId}`, data),
+  removeCollaborator: (id: string, principalId: string) => api.delete(`/agents/${id}/collaborators/${principalId}`),
+  transferOwnership: (id: string, data: any) => api.post(`/agents/${id}/transfer`, data),
+  // 调试
+  debugChat: (id: string, data: any) => api.post(`/agents/${id}/debug/chat`, data),
+  debugWorkflow: (id: string, data: any) => api.post(`/agents/${id}/debug/workflow`, data),
 };
 
 export const tokensApi = {
@@ -286,7 +298,25 @@ export const chatApi = {
 
 export const tokenResaleApi = {
   overview: () => api.get('/token-resale/overview'),
-  packages: () => api.get('/token-resale/packages'),
+  packages: (params?: { all?: number }) => api.get('/token-resale/packages', { params }),
   transactions: (params?: ListParams) => api.get('/token-resale/transactions', { params }),
   purchase: (data: any) => api.post('/token-resale/purchase', data),
+  modelWeights: () => api.get('/token-resale/model-weights'),
+  supply: () => api.get('/token-resale/supply'),
+  updateSupply: (data: any) => api.put('/token-resale/supply', data),
+  pricing: () => api.get('/token-resale/pricing'),
+  togglePricing: (id: string) => api.post(`/token-resale/pricing/${id}/toggle`),
+  togglePackage: (id: string) => api.post(`/token-resale/packages/${id}/toggle`),
+  bills: (params?: ListParams) => api.get('/token-resale/bills', { params }),
+  settlements: () => api.get('/token-resale/settlements'),
+  // 按量计费（Pay-As-You-Go）
+  paygConfig: () => api.get('/token-resale/payg-config'),
+  updatePaygConfig: (data: any) => api.put('/token-resale/payg-config', data),
+  paygRates: () => api.get('/token-resale/payg-rates'),
+  togglePaygRate: (id: string) => api.post(`/token-resale/payg-rates/${id}/toggle`),
+  paygAccounts: (params?: ListParams) => api.get('/token-resale/payg-accounts', { params }),
+  paygUsage: (params?: ListParams) => api.get('/token-resale/payg-usage', { params }),
+  openPayg: (data: any) => api.post('/token-resale/payg-open', data),
+  depositPayg: (id: string, data: any) => api.post(`/token-resale/payg-accounts/${id}/deposit`, data),
+  togglePaygAccount: (id: string) => api.post(`/token-resale/payg-accounts/${id}/toggle`),
 };

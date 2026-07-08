@@ -931,19 +931,45 @@ const weeklyReports: any[] = [
 ];
 
 // =================== Agent ===================
+// agent_type: 'workflow'（工作流编排，拖拽画布）| 'chat'（对话，右侧调试预览）
 const agents = [
-  { id: 'a-1', name: 'CRM销售通知', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。' },
-  { id: 'a-2', name: '设备巡检', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
-  { id: 'a-3', name: '摄像头监控#12', owner_type: 'organization', status: 'active', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
-  { id: 'a-4', name: '每日总结', owner_type: 'personal', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
-  { id: 'a-5', name: '个人提醒', owner_type: 'personal', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
-  { id: 'a-6', name: '知识库问答', owner_type: 'organization', status: 'draft', model_policy_id: '', policy_name: '', triggers_count: 0, last_run_at: '', description: '基于企业知识库的智能问答（开发中）', system_prompt: '你是知识库问答助手。' },
-  { id: 'a-7', name: '技术研发部周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
-  { id: 'a-8', name: 'AI平台组周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
-  { id: 'a-9', name: '销售部周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
-  { id: 'a-10', name: '智慧客服项目周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
-  { id: 'a-11', name: '运营汇总周报Agent', owner_type: 'organization', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
+  { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。' },
+  { id: 'a-2', name: '设备巡检', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), updated_at: ago(240), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
+  { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
+  { id: 'a-4', name: '每日总结', agent_type: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), updated_at: ago(360), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
+  { id: 'a-5', name: '个人提醒', agent_type: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), updated_at: ago(400), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
+  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
+  { id: 'a-7', name: '技术研发部周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
+  { id: 'a-8', name: 'AI平台组周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
+  { id: 'a-9', name: '销售部周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
+  { id: 'a-10', name: '智慧客服项目周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
+  { id: 'a-11', name: '运营汇总周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
+  { id: 'a-12', name: '智能客服助手', agent_type: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#00D4FF', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 0, last_run_at: ago(8), updated_at: ago(30), description: '面向客户的售前售后对话客服', system_prompt: '你是一名专业、友好的客服助手，请耐心解答客户关于产品与订单的问题。', chat_config: { welcome: '您好！我是智能客服，很高兴为您服务～', temperature: 0.7, max_tokens: 1024, model_policy_id: 'mp-2', authorized_skills: ['sk-8'], knowledge_base_ids: [], variables: [], opening_questions: ['如何查询我的订单？', '产品保修政策是什么？'] } },
+  { id: 'a-13', name: '研发问答助手', agent_type: 'chat', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#7C3AED', status: 'draft', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: '', updated_at: ago(15), description: '辅助研发团队快速查询技术文档与规范', system_prompt: '你是研发问答助手，请结合内部技术文档回答研发相关问题。', chat_config: { welcome: '嗨，我可以帮你查研发文档和规范～', temperature: 0.4, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5', 'sk-1'], knowledge_base_ids: ['kb-1'], variables: [], opening_questions: [] } },
 ];
+
+// =================== Agent 协作者（权限）===================
+// role: owner（拥有者）| admin（管理）| editor（可编辑）| viewer（只读）| chat_only（仅使用对话）
+// principal_type: user（个人成员，缺省）| department（组织部门，授权后部门下所有人生效）
+const agentCollaborators: Record<string, any[]> = {
+  'a-1': [
+    { principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' },
+    { principal_type: 'user', user_id: 'u-4', name: '赵敏', role: 'editor' },
+    { principal_type: 'user', user_id: 'u-5', name: '孙丽', role: 'viewer' },
+    { principal_type: 'department', dept_id: 'pg-1', name: '技术部', member_count: 12, role: 'chat_only' },
+  ],
+  'a-6': [
+    { principal_type: 'user', user_id: 'u-2', name: '李娜', role: 'owner' },
+    { principal_type: 'user', user_id: 'u-3', name: '王强', role: 'admin' },
+    { principal_type: 'user', user_id: 'u-6', name: '周杰', role: 'chat_only' },
+    { principal_type: 'department', dept_id: 'pg-3', name: '售后部', member_count: 6, role: 'chat_only' },
+  ],
+  'a-12': [
+    { principal_type: 'user', user_id: 'u-2', name: '李娜', role: 'owner' },
+    { principal_type: 'user', user_id: 'u-7', name: '吴芳', role: 'chat_only' },
+  ],
+};
+const getCollaborators = (id: string) => agentCollaborators[id] || [{ principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' }];
 
 // =================== Agent 工作流配置 ===================
 const workflows: Record<string, any> = {
@@ -1198,6 +1224,84 @@ const agentRuns = [
   { id: 'ar-13', agent_id: 'a-11', agent_name: '运营汇总周报Agent', trigger_type: 'schedule', status: 'completed', duration_ms: 12500, model_tokens: 5200, input_tokens: 3200, output_tokens: 2000, cost: 0.1024, created_at: ago(2820) },
 ];
 
+// =================== Agent 辅助函数（工作流画布、调试、运行详情）===================
+// 为工作流节点补充画布坐标，并根据顺序生成线性连线（若未显式定义 edges）
+function enrichWorkflow(wf: any) {
+  const nodes = (wf.nodes || []).map((n: any, i: number) => ({
+    ...n,
+    position: n.position || { x: 260, y: 60 + i * 140 },
+  }));
+  const edges = wf.edges || nodes.slice(1).map((n: any, i: number) => ({
+    id: `e-${nodes[i].id}-${n.id}`, source: nodes[i].id, target: n.id, animated: true,
+  }));
+  return {
+    ...wf,
+    nodes,
+    edges,
+    client_config: wf.client_config || {
+      show_progress: true, allow_interrupt: true, expose_variables: [], max_client_loops: 10,
+    },
+  };
+}
+
+// 对话调试：根据输入合成一段回复 + 引用 + Token/耗时
+function debugChat(data: any) {
+  const msg = (data?.message || data?.content || '你好').toString();
+  const reply = `（调试回复）已收到：“${msg}”。根据当前配置与知识库，我的建议是：请提供更具体的背景信息，我会结合检索到的资料给出准确回答。`;
+  return {
+    reply,
+    citations: [
+      { doc: '员工手册.pdf', chunk: '第 3.2 节 报销流程', score: 0.91 },
+      { doc: '研发规范.md', chunk: '代码提交规范', score: 0.83 },
+    ],
+    usage: { input_tokens: 320 + Math.floor(Math.random() * 200), output_tokens: 180 + Math.floor(Math.random() * 200), cost: +(0.01 + Math.random() * 0.03).toFixed(4) },
+    duration_ms: 800 + Math.floor(Math.random() * 1200),
+  };
+}
+
+// 工作流调试：逐节点生成执行结果
+function debugWorkflow(id: string, data: any) {
+  const wf = workflows[id] || { nodes: [] };
+  const node_executions = (wf.nodes || []).map((n: any, i: number) => ({
+    node_id: n.id, name: n.name, type: n.type,
+    status: 'success',
+    duration_ms: 200 + Math.floor(Math.random() * 900),
+    input: i === 0 ? (data?.input || { trigger_payload: { demo: true } }) : { from: wf.nodes[i - 1]?.name },
+    output: { ok: true, summary: `${n.name} 执行完成` },
+    tokens: n.type === 'model' ? 400 + Math.floor(Math.random() * 800) : 0,
+    logs: [`[${n.name}] 开始执行`, `[${n.name}] 执行成功`],
+  }));
+  return {
+    run_id: 'debug-' + Date.now(),
+    status: 'completed',
+    duration_ms: node_executions.reduce((s: number, x: any) => s + x.duration_ms, 0),
+    total_tokens: node_executions.reduce((s: number, x: any) => s + x.tokens, 0),
+    node_executions,
+  };
+}
+
+// 运行详情：根据运行记录 + 对应工作流节点合成逐节点执行链路
+function buildRunDetail(execId: string) {
+  const run = agentRuns.find((r: any) => r.id === execId) || agentRuns[0];
+  const wf = workflows[run.agent_id] || { nodes: [] };
+  const failed = run.status === 'failed';
+  const node_executions = (wf.nodes || []).map((n: any, i: number, arr: any[]) => {
+    const isLast = i === arr.length - 1;
+    const status = failed && isLast ? 'failed' : 'success';
+    return {
+      node_id: n.id, name: n.name, type: n.type, status,
+      duration_ms: 200 + Math.floor(Math.random() * 900),
+      tokens: n.type === 'model' ? 400 + Math.floor(Math.random() * 800) : 0,
+      input: i === 0 ? { trigger_payload: { source: run.trigger_type } } : { from: arr[i - 1]?.name },
+      output: status === 'failed' ? { error: '节点执行超时' } : { ok: true, summary: `${n.name} 完成` },
+      logs: status === 'failed'
+        ? [`[${n.name}] 开始执行`, `[${n.name}] 错误：请求超时`]
+        : [`[${n.name}] 开始执行`, `[${n.name}] 执行成功`],
+    };
+  });
+  return { ...run, node_executions };
+}
+
 // =================== 技能 ===================
 // source_adapter_id / source_adapter_name 标记 Skill 来源：
 // - 有值：由对应 Starlark 适配器自动登记
@@ -1405,24 +1509,35 @@ const tokenResaleOverview = {
 const tokenResalePackages = [
   {
     id: 'pkg-1', name: '入门体验包', tier: 'starter', description: '适合小型团队试用 AI 能力',
-    token_amount: 50000, price: 2980, total_quota: 500000, sold: 200000, popular: false,
-    features: ['50,000 次 API 调用', '支持所有基础模型', '7×12 技术支持', '30天有效期'],
+    token_amount: 50000, price: 2980, total_quota: 500000, sold: 200000, popular: false, status: 'listed',
+    applicable_models: ['基础模型'], unit_price: '¥596 / 1M',
+    features: ['5万加权Token调用', '基础模型(Flash/mini/GLM-4)', '7×12 技术支持', '30天有效期'],
   },
   {
     id: 'pkg-2', name: '标准业务包', tier: 'standard', description: '满足中型企业日常 AI 需求',
-    token_amount: 200000, price: 9800, total_quota: 800000, sold: 400000, popular: true,
-    features: ['200,000 次 API 调用', '支持所有模型（含高级）', '7×24 技术支持', '90天有效期', '调用分析报表'],
+    token_amount: 200000, price: 9800, total_quota: 800000, sold: 400000, popular: true, status: 'listed',
+    applicable_models: ['基础模型', '高级模型'], unit_price: '¥490 / 1M',
+    features: ['20万加权Token调用', '支持所有模型（含高级）', '7×24 技术支持', '90天有效期', '调用分析报表'],
   },
   {
     id: 'pkg-3', name: '专业版套餐', tier: 'pro', description: '面向高频调用的专业团队',
-    token_amount: 500000, price: 19800, total_quota: 1000000, sold: 350000, popular: false,
-    features: ['500,000 次 API 调用', '全模型无限制', '专属技术顾问', '180天有效期', '优先队列', 'SLA 99.9%'],
+    token_amount: 500000, price: 19800, total_quota: 1000000, sold: 350000, popular: false, status: 'listed',
+    applicable_models: ['基础模型', '高级模型', '旗舰模型'], unit_price: '¥396 / 1M',
+    features: ['50万加权Token调用', '全模型无限制', '专属技术顾问', '180天有效期', '优先队列', 'SLA 99.9%'],
   },
   {
     id: 'pkg-4', name: '企业定制包', tier: 'enterprise', description: '大型企业深度定制方案',
-    token_amount: 2000000, price: 59800, total_quota: 2000000, sold: 0, popular: false,
-    features: ['2,000,000 次 API 调用', '私有化部署支持', '一对一架构咨询', '365天有效期', '专属API网关', '定制模型微调'],
+    token_amount: 2000000, price: 59800, total_quota: 2000000, sold: 0, popular: false, status: 'unlisted',
+    applicable_models: ['全部模型'], unit_price: '¥299 / 1M',
+    features: ['200万加权Token调用', '私有化部署支持', '一对一架构咨询', '365天有效期', '专属API网关', '定制模型微调'],
   },
+];
+
+// 模型消耗系数：调用不同模型按系数折算加权 Token
+const tokenResaleModelWeights = [
+  { tier: '基础模型', models: 'DeepSeek Flash / GPT-4o-mini / GLM-4', weight: 1 },
+  { tier: '高级模型', models: 'GPT-4o / Claude 3.5 Sonnet / 通义千问VL', weight: 5 },
+  { tier: '旗舰模型', models: 'DeepSeek Pro / o4 / Claude Opus', weight: 12 },
 ];
 
 const tokenResaleTransactions: any[] = [
@@ -1432,6 +1547,101 @@ const tokenResaleTransactions: any[] = [
   { id: 'tx-004', buyer_name: '上海微创网络', buyer_contact: 'api@weichuang.com', package_id: 'pkg-2', package_name: '标准业务包', token_amount: 200000, price: 9800, status: 'completed', created_at: dayAgo(12) },
   { id: 'tx-005', buyer_name: '广州智行科技', buyer_contact: 'biz@zhixing.tech', package_id: 'pkg-1', package_name: '入门体验包', token_amount: 50000, price: 2980, status: 'pending', created_at: dayAgo(1) },
 ];
+
+// 卖方（算力供应商）可售额度概览
+// listed/sold/available 为派生字段，由 recalcSupply() 依据 packages 与可编辑字段重算
+const tokenResaleSupply = {
+  card_model: 'NVIDIA H20 ×8 算力卡集群',
+  monthly_capacity: 5000000,   // 月产能加权 Token（可编辑）
+  self_reserved: 1200000,      // 自用预留（可编辑）
+  listed: 0,                   // 已挂售（派生 = Σ 已上架套餐剩余额度）
+  sold: 0,                     // 已售出（派生 = Σ 套餐 sold）
+  payg_pool: 0,                // 按量池预留产能（可编辑，独立分区）
+  available: 0,                // 可挂售余量（派生）
+  markup_rate: 30,             // 加价率 %（可编辑）
+  auto_pricing: true,          // 跟随官方价自动加价（可编辑）
+  month_revenue: 89600,        // 本月销售额（套餐+按量合计）
+  month_settled: 62300,        // 已结算
+  pending_settle: 27300,       // 待结算
+};
+
+// 派生联动：依据 packages 与 supply 可编辑字段重算 listed/sold/available，并同步 overview
+function recalcSupply() {
+  let listed = 0;
+  let sold = 0;
+  tokenResalePackages.forEach((pk: any) => {
+    sold += pk.sold || 0;
+    if (pk.status === 'listed') listed += Math.max(0, (pk.total_quota || 0) - (pk.sold || 0));
+  });
+  tokenResaleSupply.listed = listed;
+  tokenResaleSupply.sold = sold;
+  const paygPool = tokenResalePaygConfig.payg_pool_quota || 0;
+  tokenResaleSupply.payg_pool = paygPool;
+  tokenResaleSupply.available = Math.max(
+    0,
+    tokenResaleSupply.monthly_capacity - tokenResaleSupply.self_reserved - listed - sold - paygPool,
+  );
+  // 同步 overview（模块内闭环）；已分配含自用+已售+按量池
+  tokenResaleOverview.total_tokens = tokenResaleSupply.monthly_capacity;
+  tokenResaleOverview.allocated_tokens = tokenResaleSupply.self_reserved + sold + paygPool;
+  tokenResaleOverview.available_tokens = tokenResaleSupply.available;
+}
+
+// 模型等级定价表（单位：分 / 1M tokens）
+const tokenResalePricing = [
+  { id: 'pr-1', model_tier: '基础模型', cost_input_miss: 100, cost_output: 200, sell_input_miss: 180, sell_output: 350, enabled: true },
+  { id: 'pr-2', model_tier: '高级模型', cost_input_miss: 300, cost_output: 600, sell_input_miss: 550, sell_output: 1000, enabled: true },
+  { id: 'pr-3', model_tier: '旗舰模型', cost_input_miss: 800, cost_output: 1600, sell_input_miss: 1400, sell_output: 2800, enabled: false },
+];
+
+// 买方账单明细（按调用聚合）
+const tokenResaleBills = [
+  { id: 'bill-01', buyer_name: '深圳星辰科技', model_tier: '高级模型', calls: 12480, tokens_used: 186000, weighted_tokens: 930000, amount: 4560, date: dayAgo(1) },
+  { id: 'bill-02', buyer_name: '杭州数据智联', model_tier: '基础模型', calls: 43200, tokens_used: 420000, weighted_tokens: 420000, amount: 1470, date: dayAgo(2) },
+  { id: 'bill-03', buyer_name: '北京云途信息', model_tier: '基础模型', calls: 8600, tokens_used: 48000, weighted_tokens: 48000, amount: 168, date: dayAgo(3) },
+  { id: 'bill-04', buyer_name: '上海微创网络', model_tier: '高级模型', calls: 5200, tokens_used: 92000, weighted_tokens: 460000, amount: 2256, date: dayAgo(4) },
+];
+
+// 卖方结算记录
+const tokenResaleSettlements = [
+  { id: 'st-01', period: '2026-06 上半月', gross: 46800, platform_fee: 7020, net: 39780, status: 'settled', settled_at: dayAgo(1) },
+  { id: 'st-02', period: '2026-05 下半月', gross: 22500, platform_fee: 3375, net: 19125, status: 'settled', settled_at: dayAgo(16) },
+  { id: 'st-03', period: '2026-06 下半月', gross: 27300, platform_fee: 4095, net: 23205, status: 'pending', settled_at: null },
+];
+
+// ===== 按量计费（Pay-As-You-Go）=====
+// 全局配置：卖方设定（总开关/按量池产能/风控）
+const tokenResalePaygConfig = {
+  enabled: true,               // 总开关：是否开放按量售卖
+  payg_pool_quota: 800000,     // 按量池产能分配（加权 Token）
+  min_deposit: 500,            // 最低预充值金额（元）
+  buyer_credit_limit: 10000,   // 买方默认信用/消费上限（元）
+  settle_cycle: 'monthly',     // 结算周期 daily | weekly | monthly
+};
+
+// 按量定价表（分 / 1M 加权 Token，每个模型等级独立开关）
+const tokenResalePaygRates = [
+  { id: 'payg-1', model_tier: '基础模型', cost_input: 100, cost_output: 200, sell_input: 180, sell_output: 350, enabled: true },
+  { id: 'payg-2', model_tier: '高级模型', cost_input: 300, cost_output: 600, sell_input: 550, sell_output: 1000, enabled: true },
+  { id: 'payg-3', model_tier: '旗舰模型', cost_input: 800, cost_output: 1600, sell_input: 1400, sell_output: 2800, enabled: false },
+];
+
+// 买方按量账户
+const tokenResalePaygAccounts = [
+  { id: 'pa-1', buyer_name: '深圳星辰科技', buyer_contact: 'tech@starchen.com', balance: 2340, total_consumed: 3580, used_tokens: 230000, credit_limit: 10000, month_consumed: 1260, status: 'active', opened_at: dayAgo(20) },
+  { id: 'pa-2', buyer_name: '杭州数据智联', buyer_contact: 'ai@datazl.cn', balance: 4200, total_consumed: 2100, used_tokens: 180000, credit_limit: 10000, month_consumed: 890, status: 'active', opened_at: dayAgo(35) },
+  { id: 'pa-3', buyer_name: '北京云途信息', buyer_contact: 'dev@yuntu.io', balance: 0, total_consumed: 480, used_tokens: 42000, credit_limit: 5000, month_consumed: 0, status: 'suspended', opened_at: dayAgo(50) },
+];
+
+// 按量使用明细
+const tokenResalePaygUsage = [
+  { id: 'pu-01', buyer_name: '深圳星辰科技', model_tier: '高级模型', calls: 8600, input_tokens: 120000, output_tokens: 46000, weighted_tokens: 230000, unit_price: 550, amount: 1265, settle_status: 'pending', created_at: dayAgo(1) },
+  { id: 'pu-02', buyer_name: '杭州数据智联', model_tier: '基础模型', calls: 21000, input_tokens: 150000, output_tokens: 30000, weighted_tokens: 180000, unit_price: 180, amount: 315, settle_status: 'settled', created_at: dayAgo(2) },
+  { id: 'pu-03', buyer_name: '北京云途信息', model_tier: '基础模型', calls: 5200, input_tokens: 38000, output_tokens: 4000, weighted_tokens: 42000, unit_price: 180, amount: 76, settle_status: 'settled', created_at: dayAgo(4) },
+];
+
+recalcSupply();
+
 
 // =================== 调用日志 ===================
 const callLogs = [
@@ -2399,25 +2609,105 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
   // Agents
   if (path === '/agents' && method === 'get') return paginate(agents, p.page, p.page_size, p.search);
-  if (path === '/agents' && method === 'post') return ok(data);
+  if (path === '/agents' && method === 'post') {
+    const newAgent = {
+      id: 'a-' + Date.now(),
+      agent_type: data?.agent_type || 'workflow',
+      owner_type: data?.owner_type || 'personal',
+      owner_id: 'u-1', owner_name: '张伟', avatar_color: data?.avatar_color || '#00D4FF',
+      status: 'draft', triggers_count: 0, last_run_at: '', updated_at: new Date().toISOString(),
+      policy_name: '', ...data,
+    };
+    agents.unshift(newAgent);
+    return ok(newAgent);
+  }
   if (/^\/agents\/runs$/.test(path)) return paginate(agentRuns, p.page, p.page_size, p.search);
-  // Agent 工作流
+  // Agent 工作流（补充画布坐标与连线）
   if (/^\/agents\/workflows\/[^/]+$/.test(path) && method === 'get') {
     const id = path.split('/').pop() as string;
-    return ok(workflows[id] || {
-      agent_id: id, name: '新建流程', max_iterations: 1, timeout_seconds: 60, on_error: 'stop', nodes: [],
-    });
+    const wf = workflows[id] || { agent_id: id, name: '新建流程', max_iterations: 1, timeout_seconds: 60, on_error: 'stop', nodes: [] };
+    return ok(enrichWorkflow(wf));
   }
   if (/^\/agents\/workflows\/[^/]+$/.test(path) && method === 'put') {
     const id = path.split('/').pop() as string;
     workflows[id] = { ...(workflows[id] || {}), ...data, agent_id: id };
     return ok(workflows[id]);
   }
-  if (/^\/agents\/[^/]+$/.test(path) && method === 'get') return ok(agents[0]);
-  if (/^\/agents\/[^/]+$/.test(path) && method === 'put') return ok(data);
-  if (/^\/agents\/[^/]+$/.test(path) && method === 'delete') return ok(null);
-  if (/^\/agents\/[^/]+\/executions$/.test(path)) return paginate(agentRuns, p.page, p.page_size);
-  if (/^\/agents\/executions\/[^/]+$/.test(path)) return ok(agentRuns[0]);
+  // Agent 协作者（权限）
+  if (/^\/agents\/[^/]+\/collaborators$/.test(path) && method === 'get') {
+    const id = path.split('/')[2];
+    return ok(getCollaborators(id));
+  }
+  if (/^\/agents\/[^/]+\/collaborators$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const list = agentCollaborators[id] || (agentCollaborators[id] = getCollaborators(id).slice());
+    if (data?.principal_type === 'department') {
+      list.push({ principal_type: 'department', dept_id: data?.dept_id, name: data?.name, member_count: data?.member_count || 0, role: data?.role || 'viewer' });
+    } else {
+      list.push({ principal_type: 'user', user_id: data?.user_id, name: data?.name, role: data?.role || 'viewer' });
+    }
+    return ok(list);
+  }
+  if (/^\/agents\/[^/]+\/collaborators\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/')[2];
+    const pid = path.split('/')[4];
+    const list = agentCollaborators[id] || (agentCollaborators[id] = getCollaborators(id).slice());
+    const c = list.find((x: any) => x.user_id === pid || x.dept_id === pid);
+    if (c) c.role = data?.role;
+    return ok(list);
+  }
+  if (/^\/agents\/[^/]+\/collaborators\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/')[2];
+    const pid = path.split('/')[4];
+    agentCollaborators[id] = (agentCollaborators[id] || getCollaborators(id)).filter((x: any) => x.user_id !== pid && x.dept_id !== pid);
+    return ok(agentCollaborators[id]);
+  }
+  // Agent 所有权转让：目标成员升为 owner，原 owner 降为 admin，并更新 agent 归属
+  if (/^\/agents\/[^/]+\/transfer$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const list = agentCollaborators[id] || (agentCollaborators[id] = getCollaborators(id).slice());
+    const target = list.find((x: any) => x.user_id === data?.user_id && x.principal_type !== 'department');
+    if (target) {
+      list.forEach((x: any) => { if (x.role === 'owner') x.role = 'admin'; });
+      target.role = 'owner';
+      const ai = agents.findIndex((a: any) => a.id === id);
+      if (ai >= 0) { agents[ai].owner_id = target.user_id; agents[ai].owner_name = target.name; agents[ai].updated_at = new Date().toISOString(); }
+    }
+    return ok(list);
+  }
+  // Agent 调试
+  if (/^\/agents\/[^/]+\/debug\/chat$/.test(path) && method === 'post') {
+    return ok(debugChat(data));
+  }
+  if (/^\/agents\/[^/]+\/debug\/workflow$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    return ok(debugWorkflow(id, data));
+  }
+  if (/^\/agents\/[^/]+\/executions$/.test(path)) {
+    const id = path.split('/')[2];
+    return paginate(agentRuns.filter((r: any) => r.agent_id === id), p.page, p.page_size);
+  }
+  if (/^\/agents\/executions\/[^/]+$/.test(path)) {
+    const execId = path.split('/').pop() as string;
+    return ok(buildRunDetail(execId));
+  }
+  if (/^\/agents\/[^/]+$/.test(path) && method === 'get') {
+    const id = path.split('/').pop() as string;
+    const agent = agents.find((a: any) => a.id === id) || agents[0];
+    return ok({ ...agent, collaborators: getCollaborators(id) });
+  }
+  if (/^\/agents\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/').pop() as string;
+    const idx = agents.findIndex((a: any) => a.id === id);
+    if (idx >= 0) agents[idx] = { ...agents[idx], ...data, updated_at: new Date().toISOString() };
+    return ok(idx >= 0 ? agents[idx] : data);
+  }
+  if (/^\/agents\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/').pop() as string;
+    const idx = agents.findIndex((a: any) => a.id === id);
+    if (idx >= 0) agents.splice(idx, 1);
+    return ok(null);
+  }
 
   // Skills
   if (path === '/skills' && method === 'get') return paginate(skills, p.page, p.page_size, p.search);
@@ -3110,13 +3400,20 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
   // =================== Token 转售 ===================
   if (path === '/token-resale/overview' && method === 'get') return ok(tokenResaleOverview);
-  if (path === '/token-resale/packages' && method === 'get') return ok(tokenResalePackages);
+  if (path === '/token-resale/packages' && method === 'get') {
+    // 卖方看板传 all=1 取全量；市场仅返回已上架
+    const list = p.all ? tokenResalePackages : tokenResalePackages.filter((pk: any) => pk.status === 'listed');
+    return ok(list);
+  }
   if (path === '/token-resale/transactions' && method === 'get') {
     return paginate(tokenResaleTransactions, p.page, p.page_size, p.search);
   }
   if (path === '/token-resale/purchase' && method === 'post') {
     const pkg = tokenResalePackages.find(pk => pk.id === data.package_id);
     if (!pkg) return { code: 404, message: 'package not found', data: null };
+    if ((pkg as any).status !== 'listed') return { code: 400, message: '该套餐已下架', data: null };
+    const remaining = (pkg.total_quota || 0) - (pkg.sold || 0);
+    if (pkg.token_amount > remaining) return { code: 400, message: '套餐剩余额度不足', data: null };
     const tx = {
       id: 'tx-' + String(Date.now()).slice(-6),
       buyer_name: data.buyer_name,
@@ -3130,11 +3427,122 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     };
     tokenResaleTransactions.unshift(tx);
     pkg.sold += pkg.token_amount;
-    tokenResaleOverview.allocated_tokens += pkg.token_amount;
-    tokenResaleOverview.available_tokens -= pkg.token_amount;
+    tokenResaleSupply.month_revenue += pkg.price;
+    tokenResaleSupply.pending_settle += pkg.price;
     tokenResaleOverview.total_transactions += 1;
     tokenResaleOverview.total_revenue += pkg.price;
+    recalcSupply();
     return ok(tx);
+  }
+  if (path === '/token-resale/supply' && method === 'put') {
+    const cap = Number(data.monthly_capacity ?? tokenResaleSupply.monthly_capacity);
+    const reserved = Number(data.self_reserved ?? tokenResaleSupply.self_reserved);
+    // 校验：自用预留 + 已挂售 + 已售出 不得超过月产能
+    if (reserved + tokenResaleSupply.listed + tokenResaleSupply.sold > cap) {
+      return { code: 400, message: '自用预留与已挂售/已售出之和超过月产能，请调高产能或降低自用', data: null };
+    }
+    tokenResaleSupply.monthly_capacity = cap;
+    tokenResaleSupply.self_reserved = reserved;
+    if (data.markup_rate !== undefined) tokenResaleSupply.markup_rate = Number(data.markup_rate);
+    if (data.auto_pricing !== undefined) tokenResaleSupply.auto_pricing = !!data.auto_pricing;
+    recalcSupply();
+    return ok(tokenResaleSupply);
+  }
+  if (/^\/token-resale\/packages\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const pid = path.split('/')[3];
+    const pkg: any = tokenResalePackages.find(pk => pk.id === pid);
+    if (!pkg) return { code: 404, message: 'package not found', data: null };
+    pkg.status = pkg.status === 'listed' ? 'unlisted' : 'listed';
+    recalcSupply();
+    return ok(pkg);
+  }
+  if (/^\/token-resale\/pricing\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const prid = path.split('/')[3];
+    const pr: any = tokenResalePricing.find(x => x.id === prid);
+    if (!pr) return { code: 404, message: 'pricing not found', data: null };
+    pr.enabled = !pr.enabled;
+    return ok(pr);
+  }
+  if (path === '/token-resale/model-weights' && method === 'get') return ok(tokenResaleModelWeights);
+  if (path === '/token-resale/supply' && method === 'get') return ok(tokenResaleSupply);
+  if (path === '/token-resale/pricing' && method === 'get') return ok(tokenResalePricing);
+  if (path === '/token-resale/bills' && method === 'get') {
+    return paginate(tokenResaleBills, p.page, p.page_size, p.search);
+  }
+  if (path === '/token-resale/settlements' && method === 'get') return ok(tokenResaleSettlements);
+
+  // ===== 按量计费 =====
+  if (path === '/token-resale/payg-config' && method === 'get') return ok(tokenResalePaygConfig);
+  if (path === '/token-resale/payg-config' && method === 'put') {
+    const cfg: any = tokenResalePaygConfig;
+    if (data.enabled !== undefined) cfg.enabled = !!data.enabled;
+    if (data.payg_pool_quota !== undefined) {
+      const pool = Number(data.payg_pool_quota);
+      // 校验：自用 + 已挂售 + 已售出 + 按量池 不得超过月产能；且不小于已消耗
+      const usedPayg = tokenResalePaygUsage.reduce((s, u) => s + (u.weighted_tokens || 0), 0);
+      if (pool < usedPayg) return { code: 400, message: '按量池不得小于已消耗量 ' + usedPayg, data: null };
+      if (tokenResaleSupply.self_reserved + tokenResaleSupply.listed + tokenResaleSupply.sold + pool > tokenResaleSupply.monthly_capacity) {
+        return { code: 400, message: '按量池与自用/挂售/已售之和超过月产能', data: null };
+      }
+      cfg.payg_pool_quota = pool;
+    }
+    if (data.min_deposit !== undefined) cfg.min_deposit = Number(data.min_deposit);
+    if (data.buyer_credit_limit !== undefined) cfg.buyer_credit_limit = Number(data.buyer_credit_limit);
+    if (data.settle_cycle !== undefined) cfg.settle_cycle = data.settle_cycle;
+    recalcSupply();
+    return ok(cfg);
+  }
+  if (path === '/token-resale/payg-rates' && method === 'get') return ok(tokenResalePaygRates);
+  if (/^\/token-resale\/payg-rates\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const rid = path.split('/')[3];
+    const r: any = tokenResalePaygRates.find(x => x.id === rid);
+    if (!r) return { code: 404, message: 'rate not found', data: null };
+    r.enabled = !r.enabled;
+    return ok(r);
+  }
+  if (path === '/token-resale/payg-accounts' && method === 'get') {
+    return paginate(tokenResalePaygAccounts, p.page, p.page_size, p.search);
+  }
+  if (path === '/token-resale/payg-usage' && method === 'get') {
+    return paginate(tokenResalePaygUsage, p.page, p.page_size, p.search);
+  }
+  if (path === '/token-resale/payg-open' && method === 'post') {
+    if (!tokenResalePaygConfig.enabled) return { code: 400, message: '按量计费未开放', data: null };
+    const deposit = Number(data.deposit || 0);
+    if (deposit < tokenResalePaygConfig.min_deposit) {
+      return { code: 400, message: '首充金额不得低于 ' + tokenResalePaygConfig.min_deposit + ' 元', data: null };
+    }
+    const exist = tokenResalePaygAccounts.find(a => a.buyer_name === data.buyer_name);
+    if (exist) return { code: 400, message: '该买方已开通按量账户', data: null };
+    const acc = {
+      id: 'pa-' + String(Date.now()).slice(-6),
+      buyer_name: data.buyer_name,
+      buyer_contact: data.buyer_contact || '',
+      balance: deposit,
+      total_consumed: 0,
+      used_tokens: 0,
+      credit_limit: Number(data.credit_limit || tokenResalePaygConfig.buyer_credit_limit),
+      month_consumed: 0,
+      status: 'active',
+      opened_at: new Date().toISOString(),
+    };
+    tokenResalePaygAccounts.unshift(acc);
+    return ok(acc);
+  }
+  if (/^\/token-resale\/payg-accounts\/[^/]+\/deposit$/.test(path) && method === 'post') {
+    const aid = path.split('/')[3];
+    const acc: any = tokenResalePaygAccounts.find(a => a.id === aid);
+    if (!acc) return { code: 404, message: 'account not found', data: null };
+    acc.balance += Number(data.amount || 0);
+    if (acc.status === 'suspended' && acc.balance > 0) acc.status = 'active';
+    return ok(acc);
+  }
+  if (/^\/token-resale\/payg-accounts\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const aid = path.split('/')[3];
+    const acc: any = tokenResalePaygAccounts.find(a => a.id === aid);
+    if (!acc) return { code: 404, message: 'account not found', data: null };
+    acc.status = acc.status === 'active' ? 'suspended' : 'active';
+    return ok(acc);
   }
 
   // Default

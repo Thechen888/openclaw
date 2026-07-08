@@ -6,7 +6,8 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MenuOpen } from '@mui/icons-material';
 import { useSidebarStore } from '../../stores/sidebarStore';
-import { navConfig } from './navConfig';
+import { useViewModeStore } from '../../stores/viewModeStore';
+import { adminNavConfig, frontNavConfig } from './navConfig';
 
 const DRAWER_WIDTH = 260;
 const COLLAPSED_WIDTH = 72;
@@ -16,6 +17,8 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { collapsed, mobileOpen, toggleCollapse, setMobileOpen } = useSidebarStore();
+  const { viewMode } = useViewModeStore();
+  const currentNav = viewMode === 'front' ? frontNavConfig : adminNavConfig;
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -24,7 +27,7 @@ export default function Sidebar() {
     // 前缀匹配：仅用于动态子路由（如 /resources/k8s/:id）
     if (location.pathname.startsWith(path + '/')) {
       // 若存在更精确的菜单项匹配当前路径，则当前项不应高亮
-      const hasMoreSpecificMatch = navConfig.some(section =>
+      const hasMoreSpecificMatch = currentNav.some(section =>
         section.items.some(item =>
           item.path !== path &&
           item.path.length > path.length &&
@@ -86,7 +89,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', py: 1 }}>
-        {navConfig.map((section, si) => (
+        {currentNav.map((section, si) => (
           <React.Fragment key={si}>
             {section.label && !collapsed && (
               <Typography

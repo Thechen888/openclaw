@@ -4,7 +4,7 @@ import {
   TextField, Button, Tooltip, Grid, MenuItem, Chip, Typography,
   Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab,
   List, ListItem, ListItemIcon, ListItemText, Divider, Alert,
-  TableSortLabel, Switch, FormControlLabel, Link as MuiLink,
+  TableSortLabel, Switch, FormControlLabel,
 } from '@mui/material';
 import {
   Add, Refresh, AutoStories, Visibility, PlayArrow,
@@ -14,7 +14,6 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { Link as RouterLink } from 'react-router-dom';
 import {
   PageHeader, FilterBar, DataTable, StatusBadge, useTableState,
   EmptyState, LoadingState, StatCard,
@@ -354,13 +353,9 @@ export default function WeeklyReportsPage() {
                       {config.agent_name ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <SmartToy sx={{ fontSize: 16, color: 'primary.main' }} />
-                          <MuiLink
-                            component={RouterLink}
-                            to="/agents/workflows"
-                            sx={{ fontSize: 12, cursor: 'pointer' }}
-                          >
+                          <Typography variant="body2" sx={{ fontSize: 12 }}>
                             {config.agent_name}
-                          </MuiLink>
+                          </Typography>
                         </Box>
                       ) : (
                         <Typography variant="caption" color="text.secondary">未绑定</Typography>
@@ -508,9 +503,6 @@ export default function WeeklyReportsPage() {
                           上次运行：{formatDateTime(selectedAgent.last_run_at)}
                         </Typography>
                       </Box>
-                      <MuiLink component={RouterLink} to="/agents/workflows" sx={{ fontSize: 11, mt: 0.5, display: 'inline-block' }}>
-                        查看 / 配置 Agent 工作流 →
-                      </MuiLink>
                     </Box>
                   </Grid>
                 )}

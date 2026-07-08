@@ -68,6 +68,25 @@ export default function ModelSourcesPage() {
 
   const toggleSecret = (field: string) => setShowSecret((s) => ({ ...s, [field]: !s[field] }));
 
+  const openEditDialog = (item: any) => {
+    let caps = item.capabilities;
+    if (typeof caps === 'string') {
+      try { caps = JSON.parse(caps); } catch { caps = []; }
+    }
+    if (!Array.isArray(caps)) caps = [];
+
+    // 只保留表单需要的字段，避免服务端字段污染
+    const cleanForm: any = { ...DEFAULT_FORM };
+    Object.keys(cleanForm).forEach((key) => {
+      if (item[key] !== undefined) cleanForm[key] = item[key];
+    });
+    cleanForm.capabilities = caps;
+
+    setEditItem(item);
+    setForm(cleanForm);
+    setDialogOpen(true);
+  };
+
   const handleTestConnection = () => {
     enqueueSnackbar('正在测试连接...', { variant: 'info' });
     setTimeout(() => {
@@ -119,7 +138,7 @@ export default function ModelSourcesPage() {
                 </TableCell>
                 <TableCell><StatusBadge status={item.status} /></TableCell>
                 <TableCell>
-                  <Tooltip title="编辑"><IconButton size="small" onClick={() => { setEditItem(item); setForm(item); setDialogOpen(true); }}><Edit fontSize="small" /></IconButton></Tooltip>
+                  <Tooltip title="编辑"><IconButton size="small" onClick={() => openEditDialog(item)}><Edit fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="测试"><IconButton size="small" color="primary"><PlayArrow fontSize="small" /></IconButton></Tooltip>
                   <Tooltip title="删除"><IconButton size="small" color="error" onClick={() => { if (confirm('确认删除？')) deleteMutation.mutate(item.id); }}><Delete fontSize="small" /></IconButton></Tooltip>
                 </TableCell>

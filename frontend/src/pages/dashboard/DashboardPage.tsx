@@ -1,8 +1,9 @@
-import { Box, Grid, Typography, List, ListItem, ListItemIcon, ListItemText, Chip, Button, LinearProgress, Avatar } from '@mui/material';
+import { Box, Grid, Typography, List, ListItem, ListItemIcon, ListItemText, Chip, Button, LinearProgress, Avatar, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import {
   SmartToy, Warning, CheckCircle, Error, Schedule,
-  People, DataUsage, Api, MonetizationOn,
+  People, DataUsage, Api, MonetizationOn, Today, AllInclusive,
 } from '@mui/icons-material';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { StatCard, PageHeader, SectionCard } from '../../components/shared';
@@ -73,6 +74,7 @@ function MiniHBar({ label, value, max, color }: { label: string; value: number; 
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const [kpiView, setKpiView] = useState<'today' | 'total'>('today');
   const { data: statsRes } = useQuery({ queryKey: ['dashboard'], queryFn: statsApi.dashboard });
   const stats = statsRes?.data?.data || {};
 
@@ -80,42 +82,65 @@ export default function DashboardPage() {
   const tokenTrend = stats.token_trend || [18200, 22400, 19800, 25600, 21000, 12400, 24500];
   const costTrend = stats.cost_trend || [52, 68, 61, 78, 64, 38, 72];
 
+  // KPI 卡片配置：今日数据 vs 累计数据
+  const kpiConfig: Record<'today' | 'total', Array<{ title: string; value: string | number; icon: React.ReactNode; color: string; change: { value: string; trend: 'up' | 'down'; label: string } }>> = {
+    today: [
+      { title: '今日 AI 调用', value: stats.total_calls_today || '12,847', icon: <Api />, color: 'primary', change: { value: '+12%', trend: 'up', label: 'vs 昨日' } },
+      { title: 'Token 消耗', value: stats.token_usage_today || '2.4M', icon: <DataUsage />, color: 'info', change: { value: '+8%', trend: 'up', label: 'vs 昨日' } },
+      { title: '今日成本', value: `¥${stats.model_cost_today || '1,280'}`, icon: <MonetizationOn />, color: 'warning', change: { value: '+5%', trend: 'up', label: 'vs 昨日' } },
+      { title: 'Agent 成功率', value: stats.agent_success_rate || '98.2%', icon: <SmartToy />, color: 'primary', change: { value: '+0.3%', trend: 'up', label: 'vs 昨日' } },
+      { title: '活跃用户', value: stats.active_users_today || 156, icon: <People />, color: 'info', change: { value: '+18', trend: 'up', label: 'vs 昨日' } },
+      { title: '在线模型', value: stats.online_models || '5/6', icon: <Api />, color: 'success', change: { value: '-1', trend: 'down', label: 'vs 昨日' } },
+    ],
+    total: [
+      { title: '累计 AI 调用', value: stats.total_calls_all || '3.85M', icon: <Api />, color: 'primary', change: { value: '+18.6%', trend: 'up', label: 'vs 上月' } },
+      { title: '累计 Token', value: stats.token_usage_all || '682M', icon: <DataUsage />, color: 'info', change: { value: '+22.4%', trend: 'up', label: 'vs 上月' } },
+      { title: '累计成本', value: `¥${stats.model_cost_all || '385,600'}`, icon: <MonetizationOn />, color: 'warning', change: { value: '+15.2%', trend: 'up', label: 'vs 上月' } },
+      { title: 'Agent 平均成功率', value: stats.agent_success_rate_all || '97.5%', icon: <SmartToy />, color: 'primary', change: { value: '+1.2%', trend: 'up', label: 'vs 上月' } },
+      { title: '累计用户', value: stats.total_users || '2,340', icon: <People />, color: 'info', change: { value: '+156', trend: 'up', label: 'vs 上月' } },
+      { title: '接入模型总数', value: stats.total_models || '18', icon: <Api />, color: 'success', change: { value: '+3', trend: 'up', label: 'vs 上月' } },
+    ],
+  };
+
   return (
     <Box>
       <PageHeader title="仪表盘" subtitle="平台运营概览 · AI 调用分析 · 系统健康监控" />
 
-      {/* ========== 第一行：6 个核心 KPI ========== */}
+      {/* ========== 第一行：6 个核心 KPI（支持今日/累计切换） ========== */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+        <Typography variant="subtitle2" sx={{ color: 'rgba(200,210,220,0.7)', fontSize: 13, fontWeight: 600, letterSpacing: '0.03em' }}>
+          {kpiView === 'today' ? '今日核心指标' : '累计核心指标'}
+        </Typography>
+        <ToggleButtonGroup
+          value={kpiView}
+          exclusive
+          size="small"
+          onChange={(_, v) => { if (v) setKpiView(v); }}
+          sx={{
+            '& .MuiToggleButton-root': {
+              px: 2, py: 0.5, fontSize: 12, textTransform: 'none',
+              color: 'rgba(200,210,220,0.6)',
+              border: '1px solid rgba(0,212,255,0.15)',
+              '&.Mui-selected': {
+                color: '#00D4FF',
+                bgcolor: 'rgba(0,212,255,0.12)',
+                borderColor: 'rgba(0,212,255,0.4)',
+                boxShadow: '0 0 12px rgba(0,212,255,0.2)',
+                '&:hover': { bgcolor: 'rgba(0,212,255,0.18)' },
+              },
+            },
+          }}
+        >
+          <ToggleButton value="today"><Today sx={{ fontSize: 15, mr: 0.5 }} />今日数据</ToggleButton>
+          <ToggleButton value="total"><AllInclusive sx={{ fontSize: 15, mr: 0.5 }} />累计数据</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 6, md: 2 }}>
-          <StatCard title="今日 AI 调用" value={stats.total_calls_today || '12,847'}
-            icon={<Api />} color="primary"
-            change={{ value: '+12%', trend: 'up' }} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 2 }}>
-          <StatCard title="Token 消耗" value={stats.token_usage_today || '2.4M'}
-            icon={<DataUsage />} color="info"
-            change={{ value: '+8%', trend: 'up' }} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 2 }}>
-          <StatCard title="今日成本" value={`¥${stats.model_cost_today || '1,280'}`}
-            icon={<MonetizationOn />} color="warning"
-            change={{ value: '+5%', trend: 'up' }} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 2 }}>
-          <StatCard title="Agent 成功率" value={stats.agent_success_rate || '98.2%'}
-            icon={<SmartToy />} color="primary"
-            change={{ value: '+0.3%', trend: 'up' }} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 2 }}>
-          <StatCard title="活跃用户" value={stats.active_users_today || 156}
-            icon={<People />} color="info"
-            change={{ value: '+18', trend: 'up' }} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 2 }}>
-          <StatCard title="在线模型" value={stats.online_models || '5/6'}
-            icon={<Api />} color="success"
-            change={{ value: '-1', trend: 'down' }} />
-        </Grid>
+        {kpiConfig[kpiView].map((kpi, i) => (
+          <Grid size={{ xs: 6, md: 2 }} key={i}>
+            <StatCard title={kpi.title} value={kpi.value} icon={kpi.icon} color={kpi.color} change={kpi.change} />
+          </Grid>
+        ))}
       </Grid>
 
       {/* ========== 第二行：系统资源 + 趋势 + 模型健康 ========== */}

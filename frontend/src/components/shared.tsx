@@ -49,7 +49,7 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
 
 // Stat Card — 带迷你柱状图装饰
 export function StatCard({ title, value, change, icon, color = 'primary' }: {
-  title: string; value: string | number; change?: { value: string; trend: 'up' | 'down' };
+  title: string; value: string | number; change?: { value: string; trend: 'up' | 'down'; label?: string };
   icon: React.ReactNode; color?: string;
 }) {
   // 随机但固定的迷你柱状图数据（7列）
@@ -119,7 +119,7 @@ export function StatCard({ title, value, change, icon, color = 'primary' }: {
             <Typography variant="caption" color={change.trend === 'up' ? 'success.main' : 'error.main'} sx={{ fontWeight: 600 }}>
               {change.value}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(200,210,220,0.5)', fontSize: 11, ml: 0.5 }}>vs 昨日</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(200,210,220,0.5)', fontSize: 11, ml: 0.5 }}>{change.label || 'vs 昨日'}</Typography>
           </Box>
         )}
       </CardContent>

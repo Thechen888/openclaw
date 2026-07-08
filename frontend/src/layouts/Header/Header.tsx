@@ -1,22 +1,31 @@
 import {
   AppBar, Toolbar, IconButton, Typography, Box, Avatar, Menu, MenuItem,
-  Breadcrumbs, Link, useTheme, Chip,
+  Breadcrumbs, Link, useTheme, Chip, ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
-import { Menu as MenuIcon, DarkMode, LightMode, Notifications } from '@mui/icons-material';
-import { useLocation, Link as RouterLink } from 'react-router-dom';
+import { Menu as MenuIcon, DarkMode, LightMode, Notifications, AdminPanelSettings, Storefront } from '@mui/icons-material';
+import { useLocation, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useThemeStore } from '../../stores/themeStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useSidebarStore } from '../../stores/sidebarStore';
-import { navConfig } from '../Sidebar/navConfig';
+import { useViewModeStore, VIEW_DEFAULT_PATH, type ViewMode } from '../../stores/viewModeStore';
+import { allNavConfig } from '../Sidebar/navConfig';
 
 export default function Header() {
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const { mode, toggleMode } = useThemeStore();
   const { user, logout } = useAuthStore();
   const { setMobileOpen, collapsed } = useSidebarStore();
+  const { viewMode, setViewMode } = useViewModeStore();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleViewChange = (_e: React.MouseEvent<HTMLElement>, next: ViewMode | null) => {
+    if (!next || next === viewMode) return;
+    setViewMode(next);
+    navigate(VIEW_DEFAULT_PATH[next]);
+  };
 
   // Build breadcrumbs from path
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -24,12 +33,12 @@ export default function Header() {
   let currentPath = '';
   for (const seg of pathSegments) {
     currentPath += `/${seg}`;
-    const navItem = navConfig.flatMap(s => s.items).find(i => i.path === currentPath);
+    const navItem = allNavConfig.flatMap(s => s.items).find(i => i.path === currentPath);
     breadcrumbs.push({ title: navItem?.title || seg.charAt(0).toUpperCase() + seg.slice(1), path: currentPath });
   }
 
   // Find current page title
-  const currentPage = navConfig.flatMap(s => s.items).find(i => i.path === location.pathname);
+  const currentPage = allNavConfig.flatMap(s => s.items).find(i => i.path === location.pathname);
 
   return (
     <AppBar
@@ -97,6 +106,33 @@ export default function Header() {
             </Breadcrumbs>
           )}
         </Box>
+
+        {/* 前台/后台切换 */}
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={handleViewChange}
+          size="small"
+          sx={{
+            mr: 0.5,
+            '& .MuiToggleButton-root': {
+              px: 1.25, py: 0.35, fontSize: 12, fontWeight: 600, textTransform: 'none',
+              color: 'text.secondary', borderColor: 'rgba(0,212,255,0.25)', gap: 0.5,
+              '&.Mui-selected': {
+                color: '#00D4FF', bgcolor: 'rgba(0,212,255,0.12)',
+                borderColor: 'rgba(0,212,255,0.5)',
+                '&:hover': { bgcolor: 'rgba(0,212,255,0.18)' },
+              },
+            },
+          }}
+        >
+          <ToggleButton value="admin">
+            <AdminPanelSettings sx={{ fontSize: 16 }} /> 后台
+          </ToggleButton>
+          <ToggleButton value="front">
+            <Storefront sx={{ fontSize: 16 }} /> 前台
+          </ToggleButton>
+        </ToggleButtonGroup>
 
         {/* Environment badge */}
         <Chip label="开发" size="small" variant="outlined"

@@ -26,7 +26,6 @@ import {
   LibraryBooks,
   ManageAccounts,
   VerifiedUser,
-  Schema,
   Fingerprint,
   AutoStories,
   SettingsRemote,
@@ -52,7 +51,44 @@ export interface NavSection {
   items: NavItem[];
 }
 
-export const navConfig: NavSection[] = [
+// ==================== 前台（面向业务用户） ====================
+export const frontNavConfig: NavSection[] = [
+  {
+    label: '智能体',
+    items: [
+      { title: '全部智能体', path: '/agents', icon: <SmartToyIcon fontSize="small" /> },
+      { title: '运行记录', path: '/agents/runs', icon: <BarChartIcon fontSize="small" /> },
+    ],
+  },
+  {
+    label: '智能周报',
+    items: [
+      { title: '周报中心', path: '/weekly-reports', icon: <AutoStories fontSize="small" /> },
+    ],
+  },
+  {
+    label: '知识库',
+    items: [
+      { title: '文档管理', path: '/rag/documents', icon: <DescriptionIcon fontSize="small" /> },
+      { title: '检索测试', path: '/rag/retrieval-test', icon: <FindInPage fontSize="small" /> },
+    ],
+  },
+  {
+    label: 'AI 对话',
+    items: [
+      { title: '对话中心', path: '/chat', icon: <Chat fontSize="small" /> },
+    ],
+  },
+  {
+    label: '交易',
+    items: [
+      { title: 'Token 转售', path: '/tokens/resale', icon: <Storefront fontSize="small" /> },
+    ],
+  },
+];
+
+// ==================== 后台（面向平台管理员） ====================
+export const adminNavConfig: NavSection[] = [
   {
     label: '',
     items: [
@@ -91,31 +127,9 @@ export const navConfig: NavSection[] = [
     ],
   },
   {
-    label: '智能体',
-    items: [
-      { title: '全部智能体', path: '/agents', icon: <SmartToyIcon fontSize="small" /> },
-      { title: '工作流配置', path: '/agents/workflows', icon: <Schema fontSize="small" /> },
-      { title: '运行记录', path: '/agents/runs', icon: <BarChartIcon fontSize="small" /> },
-    ],
-  },
-  {
-    label: '智能周报',
-    items: [
-      { title: '周报中心', path: '/weekly-reports', icon: <AutoStories fontSize="small" /> },
-    ],
-  },
-  {
     label: '知识库 (RAG)',
     items: [
       { title: '知识库管理', path: '/rag/knowledge-bases', icon: <MenuBook fontSize="small" /> },
-      { title: '文档管理', path: '/rag/documents', icon: <DescriptionIcon fontSize="small" /> },
-      { title: '检索测试', path: '/rag/retrieval-test', icon: <FindInPage fontSize="small" /> },
-    ],
-  },
-  {
-    label: 'AI 对话',
-    items: [
-      { title: '对话中心', path: '/chat', icon: <Chat fontSize="small" /> },
     ],
   },
   {
@@ -130,7 +144,6 @@ export const navConfig: NavSection[] = [
     items: [
       { title: '令牌', path: '/tokens', icon: <KeyIcon fontSize="small" /> },
       { title: '审批', path: '/tokens/approvals', icon: <Security fontSize="small" /> },
-      { title: 'Token 转售', path: '/tokens/resale', icon: <Storefront fontSize="small" /> },
     ],
   },
   {
@@ -157,3 +170,9 @@ export const navConfig: NavSection[] = [
     ],
   },
 ];
+
+// 兼容旧引用，默认指向后台导航
+export const navConfig: NavSection[] = adminNavConfig;
+
+// 合并全部导航项：供面包屑 / 页面标题查找使用
+export const allNavConfig: NavSection[] = [...adminNavConfig, ...frontNavConfig];
