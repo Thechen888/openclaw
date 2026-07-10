@@ -61,9 +61,9 @@ export const frontNavConfig: NavSection[] = [
     ],
   },
   {
-    label: '智能周报',
+    label: '智能报告',
     items: [
-      { title: '周报中心', path: '/weekly-reports', icon: <AutoStories fontSize="small" /> },
+      { title: '报告中心', path: '/reports', icon: <AutoStories fontSize="small" /> },
     ],
   },
   {

@@ -244,23 +244,30 @@ export const systemApi = {
   health: () => api.get('/system/health'),
 };
 
-export const weeklyReportsApi = {
-  departments: () => api.get('/weekly/departments'),
-  dataSources: () => api.get('/weekly/data-sources'),
-  list: (params?: ListParams) => api.get('/weekly/reports', { params }),
-  get: (id: string) => api.get(`/weekly/reports/${id}`),
-  create: (data: any) => api.post('/weekly/reports', data),
-  generate: (id: string) => api.post(`/weekly/reports/${id}/generate`),
-  export: (id: string) => api.get(`/weekly/reports/${id}/export`),
+// 智能报告：模板
+export const reportTemplatesApi = {
+  list: () => api.get('/reports/templates'),
+  create: (data: any) => api.post('/reports/templates', data),
+  update: (id: string, data: any) => api.put(`/reports/templates/${id}`, data),
+  delete: (id: string) => api.delete(`/reports/templates/${id}`),
 };
 
-export const weeklyConfigApi = {
-  list: (params?: ListParams) => api.get('/weekly/configs', { params }),
-  create: (data: any) => api.post('/weekly/configs', data),
-  update: (id: string, data: any) => api.put(`/weekly/configs/${id}`, data),
-  delete: (id: string) => api.delete(`/weekly/configs/${id}`),
-  toggle: (id: string) => api.post(`/weekly/configs/${id}/toggle`),
-  trigger: (id: string) => api.post(`/weekly/configs/${id}/trigger`),
+// 智能报告：生成配置
+export const reportConfigsApi = {
+  list: (params?: ListParams) => api.get('/reports/configs', { params }),
+  create: (data: any) => api.post('/reports/configs', data),
+  update: (id: string, data: any) => api.put(`/reports/configs/${id}`, data),
+  delete: (id: string) => api.delete(`/reports/configs/${id}`),
+  toggle: (id: string) => api.post(`/reports/configs/${id}/toggle`),
+  trigger: (id: string) => api.post(`/reports/configs/${id}/trigger`),
+};
+
+// 智能报告：报告实例
+export const reportsApi = {
+  list: (params?: ListParams & { scope?: string; period?: string; department_id?: string; status?: string }) => api.get('/reports/list', { params }),
+  get: (id: string) => api.get(`/reports/${id}`),
+  export: (id: string) => api.get(`/reports/${id}/export`),
+  departments: () => api.get('/reports/departments'),
 };
 
 // RAG 知识库
@@ -298,25 +305,18 @@ export const chatApi = {
 
 export const tokenResaleApi = {
   overview: () => api.get('/token-resale/overview'),
-  packages: (params?: { all?: number }) => api.get('/token-resale/packages', { params }),
-  transactions: (params?: ListParams) => api.get('/token-resale/transactions', { params }),
-  purchase: (data: any) => api.post('/token-resale/purchase', data),
-  modelWeights: () => api.get('/token-resale/model-weights'),
-  supply: () => api.get('/token-resale/supply'),
-  updateSupply: (data: any) => api.put('/token-resale/supply', data),
-  pricing: () => api.get('/token-resale/pricing'),
-  togglePricing: (id: string) => api.post(`/token-resale/pricing/${id}/toggle`),
-  togglePackage: (id: string) => api.post(`/token-resale/packages/${id}/toggle`),
-  bills: (params?: ListParams) => api.get('/token-resale/bills', { params }),
+  // 可售资源（模型源转售配置）
+  sources: () => api.get('/token-resale/sources'),
+  updateSource: (id: string, data: any) => api.put(`/token-resale/sources/${id}`, data),
+  toggleSource: (id: string) => api.post(`/token-resale/sources/${id}/toggle`),
+  // 客户账户（买方）
+  buyers: (params?: ListParams) => api.get('/token-resale/buyers', { params }),
+  createBuyer: (data: any) => api.post('/token-resale/buyers', data),
+  updateBuyer: (id: string, data: any) => api.put(`/token-resale/buyers/${id}`, data),
+  deleteBuyer: (id: string) => api.delete(`/token-resale/buyers/${id}`),
+  toggleBuyer: (id: string) => api.post(`/token-resale/buyers/${id}/toggle`),
+  depositBuyer: (id: string, data: any) => api.post(`/token-resale/buyers/${id}/deposit`, data),
+  // 交易账单
+  usage: (params?: ListParams & { buyer_id?: string; source_id?: string }) => api.get('/token-resale/usage', { params }),
   settlements: () => api.get('/token-resale/settlements'),
-  // 按量计费（Pay-As-You-Go）
-  paygConfig: () => api.get('/token-resale/payg-config'),
-  updatePaygConfig: (data: any) => api.put('/token-resale/payg-config', data),
-  paygRates: () => api.get('/token-resale/payg-rates'),
-  togglePaygRate: (id: string) => api.post(`/token-resale/payg-rates/${id}/toggle`),
-  paygAccounts: (params?: ListParams) => api.get('/token-resale/payg-accounts', { params }),
-  paygUsage: (params?: ListParams) => api.get('/token-resale/payg-usage', { params }),
-  openPayg: (data: any) => api.post('/token-resale/payg-open', data),
-  depositPayg: (id: string, data: any) => api.post(`/token-resale/payg-accounts/${id}/deposit`, data),
-  togglePaygAccount: (id: string) => api.post(`/token-resale/payg-accounts/${id}/toggle`),
 };

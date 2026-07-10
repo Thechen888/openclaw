@@ -44,7 +44,7 @@ import PodDetailPage from '../pages/resources/PodDetailPage';
 import AgentsMdPage from '../pages/resources/AgentsMdPage';
 import UsageStatsPage from '../pages/stats/UsageStatsPage';
 import AuditLogsPage from '../pages/stats/AuditLogsPage';
-import WeeklyReportsPage from '../pages/weekly/WeeklyReportsPage';
+import ReportsPage from '../pages/weekly/WeeklyReportsPage';
 import KnowledgeBasesPage from '../pages/rag/KnowledgeBasesPage';
 import DocumentsPage from '../pages/rag/DocumentsPage';
 import RetrievalTestPage from '../pages/rag/RetrievalTestPage';
@@ -107,8 +107,8 @@ export const router = createBrowserRouter([
       // Stats
       { path: 'stats/usage', element: <UsageStatsPage /> },
       { path: 'stats/audit', element: <AuditLogsPage /> },
-      // Weekly Reports
-      { path: 'weekly-reports', element: <WeeklyReportsPage /> },
+      // Reports
+      { path: 'reports', element: <ReportsPage /> },
       // RAG
       { path: 'rag/knowledge-bases', element: <KnowledgeBasesPage /> },
       { path: 'rag/documents', element: <DocumentsPage /> },

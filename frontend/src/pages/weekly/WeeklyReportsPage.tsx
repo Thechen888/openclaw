@@ -1,784 +1,732 @@
-import { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Box, TableHead, TableBody, TableRow, TableCell, IconButton,
-  TextField, Button, Tooltip, Grid, MenuItem, Chip, Typography,
-  Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab,
-  List, ListItem, ListItemIcon, ListItemText, Divider, Alert,
-  TableSortLabel, Switch, FormControlLabel,
+  Box, Typography, Tabs, Tab, Card, CardContent, Chip, IconButton,
+  Switch, Select, MenuItem, FormControl, InputLabel, TextField, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Tooltip,
+  Grid, Stack, Divider, LinearProgress, Avatar,
 } from '@mui/material';
 import {
-  Add, Refresh, AutoStories, Visibility, PlayArrow,
-  TrendingUp, TrendingDown, TrendingFlat, Business, Assessment,
-  Download, CompareArrows, Edit, Delete, Settings, RocketLaunch,
-  SmartToy, Schedule as ScheduleIcon,
+  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, PlayArrow as PlayIcon,
+  Download as DownloadIcon, Visibility as ViewIcon, Close as CloseIcon,
+  Article as ArticleIcon, Assessment as AssessmentIcon, FilterList as FilterIcon,
+  Schedule as ScheduleIcon, DragIndicator as DragIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import {
-  PageHeader, FilterBar, DataTable, StatusBadge, useTableState,
-  EmptyState, LoadingState, StatCard,
-} from '../../components/shared';
-import { weeklyReportsApi, weeklyConfigApi, agentsApi } from '../../api/client';
-import { useAuthStore } from '../../stores/authStore';
+import { reportTemplatesApi, reportConfigsApi, reportsApi } from '../../api/client';
+import { PageHeader, DataTable, StatusBadge, EmptyState, LoadingState, useTableState, CrudDialog } from '../../components/shared';
 
-const STATUS_LABEL: Record<string, string> = {
-  published: '已发布',
-  draft: '草稿',
-  generating: '生成中',
+// ===== 常量 =====
+const PERIOD_LABELS: Record<string, string> = { daily: '日报', weekly: '周报', monthly: '月报' };
+const SCOPE_LABELS: Record<string, string> = { company: '全公司', department: '部门' };
+const BLOCK_TYPE_LABELS: Record<string, string> = {
+  metrics_card: '指标卡片', chart_image: '图表图片', data_table: '数据表格', rich_text: '富文本', bullet_list: '列表',
 };
+const BLOCK_TYPE_ICONS: Record<string, string> = {
+  metrics_card: '📊', chart_image: '📈', data_table: '📋', rich_text: '📝', bullet_list: '✅',
+};
+const VAR_TYPE_LABELS: Record<string, string> = { metrics: '指标数组', image: '图片', table: '表格', text: '文本', list: '列表' };
 
-const DAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
-type SortField = 'title' | 'department_name' | 'week_start' | 'created_at';
-type SortOrder = 'asc' | 'desc';
-
-function formatDate(t?: string) {
-  return t ? new Date(t).toLocaleDateString() : '-';
-}
-
-function formatDateTime(t?: string) {
-  return t ? new Date(t).toLocaleString() : '-';
-}
-
-function getTrendColor(direction: string, value: number) {
-  if (value === 0) return 'text.secondary';
-  if (direction === 'lower_better') return value > 0 ? 'error.main' : 'success.main';
-  if (direction === 'higher_better') return value > 0 ? 'success.main' : 'error.main';
-  return 'text.secondary';
-}
-
-function getTrendIcon(direction: string, value: number) {
-  if (value === 0) return <TrendingFlat sx={{ fontSize: 16, color: 'text.secondary' }} />;
-  const upGood = direction === 'higher_better' || direction === 'neutral';
-  if (value > 0) return <TrendingUp sx={{ fontSize: 16, color: upGood ? 'success.main' : 'error.main' }} />;
-  return <TrendingDown sx={{ fontSize: 16, color: upGood ? 'error.main' : 'success.main' }} />;
-}
-
-export default function WeeklyReportsPage() {
-  const qc = useQueryClient();
+export default function ReportsPage() {
+  const [tab, setTab] = useState(0);
   const { enqueueSnackbar } = useSnackbar();
-  const { user } = useAuthStore();
-  const isAdmin = !!user?.is_admin;
-  const userOrgId = (user as any)?.org_id || (user as any)?.organization_id || '';
+  const qc = useQueryClient();
+  const ts = useTableState();
 
-  // 主 Tab：生成配置 / 周报列表
-  const [mainTab, setMainTab] = useState(0);
+  // ===== 报告门户 状态 =====
+  const [portalScope, setPortalScope] = useState('');
+  const [portalPeriod, setPortalPeriod] = useState('');
+  const [portalDept, setPortalDept] = useState('');
+  const [viewReport, setViewReport] = useState<any>(null);
 
-  // ---- 周报列表状态 ----
-  const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
-  const [typeTab, setTypeTab] = useState('');
-  const [deptFilter, setDeptFilter] = useState('');
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailItem, setDetailItem] = useState<any>(null);
-  const [sort, setSort] = useState<{ field: SortField; order: SortOrder }>({ field: 'created_at', order: 'desc' });
+  // ===== 生成配置 状态 =====
+  const [cfgOpen, setCfgOpen] = useState(false);
+  const [cfgForm, setCfgForm] = useState<any>({});
+  const [cfgIsNew, setCfgIsNew] = useState(true);
 
-  // ---- 配置管理状态 ----
-  const { page: cfgPage, pageSize: cfgPageSize, search: cfgSearch, setPage: setCfgPage, setPageSize: setCfgPageSize, setSearch: setCfgSearch, params: cfgParams } = useTableState();
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  const [editingConfig, setEditingConfig] = useState<any>(null);
-  const [configForm, setConfigForm] = useState({
-    name: '',
-    department_id: '',
-    agent_id: '',
-    schedule_day: 5,
-    schedule_time: '18:00',
-    enabled: true,
+  // ===== 报告模板 状态 =====
+  const [tplOpen, setTplOpen] = useState(false);
+  const [tplForm, setTplForm] = useState<any>({});
+  const [tplIsNew, setTplIsNew] = useState(true);
+
+  // ===== 查询 =====
+  const { data: reportsData, isLoading: reportsLoading } = useQuery({
+    queryKey: ['rpt-reports', ts.page, ts.pageSize, portalScope, portalPeriod, portalDept],
+    queryFn: () => reportsApi.list({ page: ts.page, page_size: ts.pageSize, scope: portalScope || undefined, period: portalPeriod || undefined, department_id: portalDept || undefined }),
   });
-
-  // ---- 数据查询 ----
-  const queryParams = useMemo(() => ({
-    ...params,
-    type: typeTab || undefined,
-    department_id: deptFilter || undefined,
-    user_org_id: isAdmin ? undefined : userOrgId,
-  }), [params, typeTab, deptFilter, isAdmin, userOrgId]);
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['weekly-reports', queryParams],
-    queryFn: () => weeklyReportsApi.list(queryParams),
+  const { data: configsData, isLoading: configsLoading } = useQuery({
+    queryKey: ['rpt-configs', ts.page, ts.pageSize],
+    queryFn: () => reportConfigsApi.list({ page: ts.page, page_size: ts.pageSize }),
   });
-  const items = useMemo(() => data?.data?.data || [], [data]);
-  const total = data?.data?.pagination?.total || 0;
-
-  const { data: allData } = useQuery({
-    queryKey: ['weekly-reports-all', { type: typeTab || undefined, user_org_id: isAdmin ? undefined : userOrgId }],
-    queryFn: () => weeklyReportsApi.list({
-      page: 1, page_size: 9999,
-      type: typeTab || undefined,
-      user_org_id: isAdmin ? undefined : userOrgId,
-    }),
-    enabled: !isLoading,
+  const { data: templatesData, isLoading: templatesLoading } = useQuery({
+    queryKey: ['rpt-templates'],
+    queryFn: () => reportTemplatesApi.list(),
   });
-  const allItems: any[] = allData?.data?.data || items;
-
   const { data: deptsData } = useQuery({
-    queryKey: ['weekly-departments'],
-    queryFn: () => weeklyReportsApi.departments(),
+    queryKey: ['rpt-depts'],
+    queryFn: () => reportsApi.departments(),
   });
-  const departments: any[] = deptsData?.data?.data || [];
 
-  // 全部智能体列表（用于配置中选择绑定的 Agent）
-  const { data: agentsData } = useQuery({
-    queryKey: ['weekly-agents'],
-    queryFn: () => agentsApi.list({ page: 1, page_size: 200 }),
+  const rptList = reportsData?.data?.data?.list || reportsData?.data?.data || [];
+  const cfgList = configsData?.data?.data?.list || configsData?.data?.data || [];
+  const tplList = templatesData?.data?.data || [];
+  const deptList = deptsData?.data?.data || [];
+
+  // ===== 变更 =====
+  const saveCfgMut = useMutation({
+    mutationFn: (d: any) => cfgIsNew ? reportConfigsApi.create(d) : reportConfigsApi.update(d.id, d),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rpt-configs'] }); setCfgOpen(false); enqueueSnackbar(cfgIsNew ? '配置已创建' : '配置已更新', { variant: 'success' }); },
+    onError: () => enqueueSnackbar('操作失败', { variant: 'error' }),
   });
-  const agents: any[] = agentsData?.data?.data || [];
-
-  // ---- 配置列表查询 ----
-  const { data: cfgData, isLoading: cfgLoading, refetch: cfgRefetch } = useQuery({
-    queryKey: ['weekly-configs', cfgParams],
-    queryFn: () => weeklyConfigApi.list(cfgParams),
+  const deleteCfgMut = useMutation({
+    mutationFn: (id: string) => reportConfigsApi.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rpt-configs'] }); enqueueSnackbar('已删除', { variant: 'success' }); },
   });
-  const cfgItems = useMemo(() => cfgData?.data?.data || [], [cfgData]);
-  const cfgTotal = cfgData?.data?.pagination?.total || 0;
-
-  // ---- Mutations ----
-  const regenerateMutation = useMutation({
-    mutationFn: (id: string) => weeklyReportsApi.generate(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['weekly-reports'] });
-      qc.invalidateQueries({ queryKey: ['weekly-reports-all'] });
-      enqueueSnackbar('周报已重新生成', { variant: 'success' });
+  const toggleCfgMut = useMutation({
+    mutationFn: (id: string) => reportConfigsApi.toggle(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['rpt-configs'] }),
+  });
+  const triggerCfgMut = useMutation({
+    mutationFn: (id: string) => reportConfigsApi.trigger(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rpt-configs'] }); qc.invalidateQueries({ queryKey: ['rpt-reports'] }); enqueueSnackbar('已触发生成', { variant: 'success' }); },
+  });
+  const saveTplMut = useMutation({
+    mutationFn: (d: any) => tplIsNew ? reportTemplatesApi.create(d) : reportTemplatesApi.update(d.id, d),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rpt-templates'] }); setTplOpen(false); enqueueSnackbar(tplIsNew ? '模板已创建' : '模板已更新', { variant: 'success' }); },
+    onError: () => enqueueSnackbar('操作失败', { variant: 'error' }),
+  });
+  const deleteTplMut = useMutation({
+    mutationFn: (id: string) => reportTemplatesApi.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['rpt-templates'] }); enqueueSnackbar('已删除', { variant: 'success' }); },
+  });
+  const exportMut = useMutation({
+    mutationFn: (id: string) => reportsApi.export(id),
+    onSuccess: (res) => {
+      const d = res?.data?.data;
+      if (d?.content) {
+        const blob = new Blob([d.content], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = d.filename || 'report.md'; a.click();
+        URL.revokeObjectURL(url);
+        enqueueSnackbar('导出成功', { variant: 'success' });
+      }
     },
-    onError: () => enqueueSnackbar('重新生成失败', { variant: 'error' }),
   });
 
-  const exportMutation = useMutation({
-    mutationFn: (id: string) => weeklyReportsApi.export(id),
-    onSuccess: (res: any) => {
-      const blob = new Blob([res.data.data.content], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = res.data.data.filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      enqueueSnackbar('导出成功', { variant: 'success' });
-    },
-    onError: () => enqueueSnackbar('导出失败', { variant: 'error' }),
-  });
+  // ===== 辅助 =====
+  const openNewCfg = () => { setCfgIsNew(true); setCfgForm({ name: '', scope: 'department', department_id: '', period: 'weekly', template_id: '', agent_id: '', block_configs: [], schedule: { type: 'weekly', day: 5, time: '18:00', date: null }, publish_to_portal: true, notify_users: true, enabled: true }); setCfgOpen(true); };
+  const openEditCfg = (c: any) => { setCfgIsNew(false); setCfgForm({ ...c, block_configs: c.block_configs || [] }); setCfgOpen(true); };
 
-  const configCreateMutation = useMutation({
-    mutationFn: (d: any) => editingConfig ? weeklyConfigApi.update(editingConfig.id, d) : weeklyConfigApi.create(d),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['weekly-configs'] });
-      setConfigDialogOpen(false);
-      enqueueSnackbar(editingConfig ? '配置已更新' : '配置已创建', { variant: 'success' });
-    },
-    onError: () => enqueueSnackbar('保存配置失败', { variant: 'error' }),
-  });
-
-  const configDeleteMutation = useMutation({
-    mutationFn: (id: string) => weeklyConfigApi.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['weekly-configs'] });
-      enqueueSnackbar('配置已删除', { variant: 'success' });
-    },
-    onError: () => enqueueSnackbar('删除失败', { variant: 'error' }),
-  });
-
-  const configToggleMutation = useMutation({
-    mutationFn: (id: string) => weeklyConfigApi.toggle(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['weekly-configs'] });
-    },
-    onError: () => enqueueSnackbar('切换失败', { variant: 'error' }),
-  });
-
-  const configTriggerMutation = useMutation({
-    mutationFn: (id: string) => weeklyConfigApi.trigger(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['weekly-configs'] });
-      qc.invalidateQueries({ queryKey: ['weekly-reports'] });
-      qc.invalidateQueries({ queryKey: ['weekly-reports-all'] });
-      qc.invalidateQueries({ queryKey: ['weekly-agents'] });
-      enqueueSnackbar('已触发 Agent 生成周报', { variant: 'success' });
-    },
-    onError: () => enqueueSnackbar('触发失败', { variant: 'error' }),
-  });
-
-  // ---- Handlers ----
-  const handleOpenDetail = (item: any) => {
-    setDetailItem(item);
-    setDetailOpen(true);
+  // 严格模式：block.type -> variable.type 映射
+  const blockTypeToVarType = (t: string) => t === 'metrics_card' ? 'metrics' : t === 'chart_image' ? 'image' : t === 'data_table' ? 'table' : t === 'rich_text' ? 'text' : 'list';
+  // 为某个 block 生成默认 config
+  const defaultBlockConfig = (blockType: string): any => {
+    if (blockType === 'metrics_card') return { metrics: [{ name: '', unit: '', data_source: '', format: 'integer', aggregation: 'sum', trend: 'higher_better' }] };
+    if (blockType === 'chart_image') return { chart_title: '', chart_type: 'line', x_axis: '', y_axis: '', data_source: '', color_theme: 'cyber' };
+    if (blockType === 'data_table') return { columns: [{ key: '', header: '', width: 120, align: 'left' }], data_source: '', default_sort: '', max_rows: 20 };
+    if (blockType === 'rich_text') return { topic: '', angle: '', word_limit: 300, tone: '专业简洁', must_include: '' };
+    if (blockType === 'bullet_list') return { list_kind: 'highlight', max_items: 5, category: '', style: '简洁中性' };
+    return {};
   };
-
-  const handleRegenerate = (item: any, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    regenerateMutation.mutate(item.id);
-  };
-
-  const handleSort = (field: SortField) => {
-    setSort(prev => ({ field, order: prev.field === field && prev.order === 'asc' ? 'desc' : 'asc' }));
-  };
-
-  const sortedItems = useMemo(() => {
-    const sorted = [...items];
-    sorted.sort((a: any, b: any) => {
-      const order = sort.order === 'asc' ? 1 : -1;
-      if (sort.field === 'week_start') return order * (new Date(a.week_start || 0).getTime() - new Date(b.week_start || 0).getTime());
-      if (sort.field === 'created_at') return order * (new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
-      return order * String(a[sort.field] || '').localeCompare(String(b[sort.field] || ''));
+  // 切换模板时按模板 blocks 自动生成 block_configs；已有同 key 的 label/description/prompt/config 保留
+  const syncBlockConfigsFromTemplate = (templateId: string, oldConfigs: any[] = []) => {
+    const tpl = tplList.find((t: any) => t.id === templateId);
+    if (!tpl) return [];
+    const oldMap = new Map((oldConfigs || []).map((c: any) => [c.key, c]));
+    return (tpl.blocks || []).map((b: any) => {
+      const old = oldMap.get(b.variable_key) as any;
+      return {
+        key: b.variable_key,
+        type: blockTypeToVarType(b.type),
+        label: old?.label || b.title,
+        description: old?.description || '',
+        prompt: old?.prompt || '',
+        config: old?.config || defaultBlockConfig(b.type),
+      };
     });
-    return sorted;
-  }, [items, sort]);
+  };
+  const selectedTemplate = tplList.find((t: any) => t.id === cfgForm.template_id);
+  // 更新某个 block 的字段
+  const updateBlockCfg = (idx: number, patch: any) => {
+    const list = [...(cfgForm.block_configs || [])];
+    list[idx] = { ...list[idx], ...patch };
+    setCfgForm({ ...cfgForm, block_configs: list });
+  };
+  const updateBlockInnerCfg = (idx: number, patch: any) => {
+    const list = [...(cfgForm.block_configs || [])];
+    list[idx] = { ...list[idx], config: { ...(list[idx].config || {}), ...patch } };
+    setCfgForm({ ...cfgForm, block_configs: list });
+  };
+  const openNewTpl = () => { setTplIsNew(true); setTplForm({ name: '', description: '', scope_type: 'department', period_type: 'weekly', blocks: [] }); setTplOpen(true); };
+  const openEditTpl = (t: any) => { setTplIsNew(false); setTplForm({ ...t, blocks: [...(t.blocks || [])] }); setTplOpen(true); };
 
-  const handleOpenConfigDialog = (config?: any) => {
-    if (config) {
-      setEditingConfig(config);
-      setConfigForm({
-        name: config.name || '',
-        department_id: config.department_id || '',
-        agent_id: config.agent_id || '',
-        schedule_day: config.schedule_day ?? 5,
-        schedule_time: config.schedule_time || '18:00',
-        enabled: config.enabled !== false,
-      });
-    } else {
-      setEditingConfig(null);
-      setConfigForm({ name: '', department_id: '', agent_id: '', schedule_day: 5, schedule_time: '18:00', enabled: true });
-    }
-    setConfigDialogOpen(true);
+  const addBlock = () => {
+    const blocks = [...(tplForm.blocks || [])];
+    blocks.push({ id: 'blk-' + Date.now(), type: 'rich_text', title: '新内容块', variable_key: '', config: {} });
+    setTplForm({ ...tplForm, blocks });
+  };
+  const removeBlock = (idx: number) => {
+    const blocks = [...(tplForm.blocks || [])];
+    blocks.splice(idx, 1);
+    setTplForm({ ...tplForm, blocks });
+  };
+  const updateBlock = (idx: number, field: string, val: any) => {
+    const blocks = [...(tplForm.blocks || [])];
+    blocks[idx] = { ...blocks[idx], [field]: val };
+    setTplForm({ ...tplForm, blocks });
   };
 
-  const handleSaveConfig = () => {
-    if (!configForm.name.trim()) {
-      enqueueSnackbar('请填写配置名称', { variant: 'warning' });
-      return;
-    }
-    if (!configForm.agent_id) {
-      enqueueSnackbar('请选择绑定的 Agent', { variant: 'warning' });
-      return;
-    }
-    configCreateMutation.mutate(configForm);
-  };
-
-  const stats = [
-    { title: '生效配置数', value: cfgItems.filter((c: any) => c.enabled).length, icon: <Settings />, color: 'primary' },
-    { title: '本周已生成', value: allItems.length, icon: <AutoStories />, color: 'success' },
-    { title: '绑定 Agent', value: new Set(cfgItems.map((c: any) => c.agent_id)).size, icon: <SmartToy />, color: 'info' },
-  ];
-
-  const compareReports = useMemo(() => {
-    if (!detailItem || detailItem.type === 'operation') return [];
-    return allItems
-      .filter((r: any) => r.type === 'department' && r.department_id === detailItem.department_id && r.id !== detailItem.id)
-      .sort((a: any, b: any) => new Date(b.week_start).getTime() - new Date(a.week_start).getTime())
-      .slice(0, 3);
-  }, [detailItem, allItems]);
-
-  // 选中的 Agent 信息（用于弹窗中显示）
-  const selectedAgent = agents.find((a: any) => a.id === configForm.agent_id);
-
+  // ===== 渲染 =====
   return (
     <Box>
-      <PageHeader
-        title="智能周报"
-        subtitle="各部门绑定专属 Agent，由 Agent 自动拉取数据并 AI 生成周报"
-        actions={
-          <>
-            <Tooltip title="刷新"><IconButton onClick={() => { refetch(); cfgRefetch(); }}><Refresh /></IconButton></Tooltip>
-            {mainTab === 0 && (
-              <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenConfigDialog()}>
-                新增配置
-              </Button>
-            )}
-          </>
-        }
-      />
-
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        {stats.map(s => (
-          <Grid key={s.title} size={{ xs: 12, sm: 4 }}>
-            <StatCard title={s.title} value={s.value} icon={s.icon} color={s.color as any} />
-          </Grid>
-        ))}
-      </Grid>
-
-      <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 2 }}>
-        <Tab icon={<Settings />} iconPosition="start" label="生成配置" />
-        <Tab icon={<AutoStories />} iconPosition="start" label="周报列表" />
+      <PageHeader title="智能报告" subtitle="模板驱动 · Agent 变量产出 · 自动生成与发布" />
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, '& .MuiTab-root': { fontWeight: 600 } }}>
+        <Tab label="报告门户" />
+        <Tab label="生成配置" />
+        <Tab label="报告模板" />
       </Tabs>
 
-      {/* ==================== Tab 0: 生成配置 ==================== */}
-      {mainTab === 0 && (
-        <>
-          <Alert severity="info" sx={{ mb: 2, fontSize: 12 }}>
-            每条配置绑定一个 Agent，由 Agent 的工作流负责拉取部门数据、AI 分析并生成周报。Agent 的定时触发器控制自动生成频率，也可点击「立即生成」手动触发。
-          </Alert>
-          <FilterBar
-            search={cfgSearch}
-            onSearchChange={setCfgSearch}
-          />
-          {cfgLoading ? <LoadingState /> : (
-            <DataTable pagination={{ page: cfgPage, pageSize: cfgPageSize, total: cfgTotal, onPageChange: setCfgPage, onPageSizeChange: setCfgPageSize }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>配置名称</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>类型</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>部门</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>绑定 Agent</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>生成时间</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>上次生成</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {cfgItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8}>
-                      <EmptyState title="暂无配置" description="点击右上角新增配置，绑定 Agent 后系统将自动生成周报" />
-                    </TableCell>
-                  </TableRow>
-                ) : cfgItems.map((config: any) => (
-                  <TableRow key={config.id} hover>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <ScheduleIcon sx={{ fontSize: 18, color: 'primary.main' }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{config.name}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={config.type === 'operation' ? '运营周报' : '部门周报'}
-                        size="small"
-                        color={config.type === 'operation' ? 'success' : 'info'}
-                        variant="outlined"
-                        sx={{ fontSize: 11, height: 22 }}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{config.department_name || '-'}</TableCell>
-                    <TableCell>
-                      {config.agent_name ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <SmartToy sx={{ fontSize: 16, color: 'primary.main' }} />
-                          <Typography variant="body2" sx={{ fontSize: 12 }}>
-                            {config.agent_name}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">未绑定</Typography>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <ScheduleIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        {DAY_LABELS[config.schedule_day] || '-'} {config.schedule_time || ''}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{formatDateTime(config.last_generated_at)}</TableCell>
-                    <TableCell>
-                      <Switch
-                        size="small"
-                        checked={config.enabled}
-                        onChange={() => configToggleMutation.mutate(config.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title="立即生成">
-                        <IconButton size="small" color="primary" onClick={() => configTriggerMutation.mutate(config.id)} disabled={configTriggerMutation.isPending}>
-                          <RocketLaunch fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="编辑配置">
-                        <IconButton size="small" onClick={() => handleOpenConfigDialog(config)}>
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="删除配置">
-                        <IconButton size="small" color="error" onClick={() => configDeleteMutation.mutate(config.id)}>
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </DataTable>
-          )}
-
-          {/* 配置编辑弹窗 */}
-          <Dialog open={configDialogOpen} onClose={() => setConfigDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ fontWeight: 600 }}>{editingConfig ? '编辑配置' : '新增配置'}</DialogTitle>
-            <DialogContent>
-              <Alert severity="info" sx={{ mb: 2, fontSize: 12 }}>
-                配置保存后，绑定的 Agent 将按其定时触发器自动生成周报。也可在配置列表中点击「立即生成」手动触发 Agent 执行。
-              </Alert>
-              <Grid container spacing={2}>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth label="配置名称"
-                    value={configForm.name}
-                    onChange={e => setConfigForm({ ...configForm, name: e.target.value })}
-                    placeholder="如：技术研发部周报自动生成"
-                  />
-                </Grid>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth select label="选择部门"
-                    value={configForm.department_id}
-                    onChange={e => setConfigForm({ ...configForm, department_id: e.target.value })}
-                    helperText="部门来源于系统组织架构；留空表示运营汇总（跨部门聚合）"
-                  >
-                    <MenuItem value="">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Assessment fontSize="small" />
-                        运营汇总（跨部门聚合）
-                      </Box>
-                    </MenuItem>
-                    {departments.map((d: any) => (
-                      <MenuItem key={d.id} value={d.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Business fontSize="small" />
-                          {d.name}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid size={12}>
-                  <TextField
-                    fullWidth select label="绑定 Agent"
-                    value={configForm.agent_id}
-                    onChange={e => setConfigForm({ ...configForm, agent_id: e.target.value })}
-                    helperText="选择负责生成该部门周报的智能体，Agent 的工作流负责数据拉取和 AI 分析"
-                  >
-                    <MenuItem value="" disabled>请选择 Agent</MenuItem>
-                    {agents.map((a: any) => (
-                      <MenuItem key={a.id} value={a.id}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <SmartToy fontSize="small" color={a.status === 'active' ? 'success' : 'disabled'} />
-                          <Box>
-                            <Typography variant="body2" component="span">{a.name}</Typography>
-                            <Typography variant="caption" color="text.secondary" component="span" sx={{ ml: 1 }}>
-                              {a.status === 'active' ? '启用' : a.status === 'draft' ? '草稿' : a.status}
-                              {a.triggers_count > 0 ? ` · ${a.triggers_count}个触发器` : ' · 无触发器'}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid size={6}>
-                  <TextField
-                    fullWidth select label="生成日期"
-                    value={configForm.schedule_day}
-                    onChange={e => setConfigForm({ ...configForm, schedule_day: Number(e.target.value) })}
-                    helperText="每周几自动触发 Agent"
-                  >
-                    {DAY_LABELS.map((label, idx) => (
-                      <MenuItem key={idx} value={idx}>{label}</MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid size={6}>
-                  <TextField
-                    fullWidth label="生成时间"
-                    type="time"
-                    value={configForm.schedule_time}
-                    onChange={e => setConfigForm({ ...configForm, schedule_time: e.target.value })}
-                    helperText="Agent 触发时间"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                </Grid>
-                {selectedAgent && (
-                  <Grid size={12}>
-                    <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontSize: 12 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                        Agent 信息
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontSize: 12 }}>
-                        {selectedAgent.description || '无描述'}
-                      </Typography>
-                      <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          模型策略：{selectedAgent.policy_name || '无'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          触发器：{selectedAgent.triggers_count || 0} 个
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          上次运行：{formatDateTime(selectedAgent.last_run_at)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Grid>
-                )}
-                {configForm.department_id === '' && (
-                  <Grid size={12}>
-                    <Alert severity="warning" sx={{ fontSize: 12 }}>
-                      运营汇总周报将自动聚合所有部门周报数据，请绑定负责汇总的 Agent。
-                    </Alert>
-                  </Grid>
-                )}
-                <Grid size={12}>
-                  <FormControlLabel
-                    control={<Switch checked={configForm.enabled} onChange={e => setConfigForm({ ...configForm, enabled: e.target.checked })} />}
-                    label="启用自动生成"
-                  />
-                </Grid>
-              </Grid>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-              <Button onClick={() => setConfigDialogOpen(false)}>取消</Button>
-              <Button variant="contained" onClick={handleSaveConfig} disabled={configCreateMutation.isPending}>
-                {configCreateMutation.isPending ? '保存中...' : '保存'}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </>
-      )}
-
-      {/* ==================== Tab 1: 周报列表 ==================== */}
-      {mainTab === 1 && (
-        <>
-          <Tabs value={typeTab} onChange={(_, v) => { setTypeTab(v); setPage(1); }} sx={{ mb: 2 }}>
-            <Tab label="全部" value="" />
-            <Tab label="部门周报" value="department" />
-            <Tab label="运营周报" value="operation" />
-          </Tabs>
-
-          <FilterBar
-            search={search}
-            onSearchChange={setSearch}
-            filters={
-              <TextField
-                select size="small" label="部门"
-                value={deptFilter}
-                onChange={e => { setDeptFilter(e.target.value); setPage(1); }}
-                sx={{ minWidth: 140 }}
-              >
+      {/* ====== Tab 0: 报告门户 ====== */}
+      {tab === 0 && (
+        <Box>
+          {/* 筛选栏 */}
+          <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
+            <FilterIcon sx={{ color: 'rgba(180,190,200,0.6)' }} />
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>范围</InputLabel>
+              <Select value={portalScope} onChange={e => setPortalScope(e.target.value)} label="范围">
                 <MenuItem value="">全部</MenuItem>
-                {departments.map((d: any) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
-              </TextField>
-            }
-          />
+                <MenuItem value="company">全公司</MenuItem>
+                <MenuItem value="department">部门</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>频率</InputLabel>
+              <Select value={portalPeriod} onChange={e => setPortalPeriod(e.target.value)} label="频率">
+                <MenuItem value="">全部</MenuItem>
+                <MenuItem value="daily">日报</MenuItem>
+                <MenuItem value="weekly">周报</MenuItem>
+                <MenuItem value="monthly">月报</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>部门</InputLabel>
+              <Select value={portalDept} onChange={e => setPortalDept(e.target.value)} label="部门">
+                <MenuItem value="">全部</MenuItem>
+                {deptList.map((d: any) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Stack>
 
-          {isLoading ? <LoadingState /> : (
-            <DataTable pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: setPageSize }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>
-                    <TableSortLabel active={sort.field === 'title'} direction={sort.order} onClick={() => handleSort('title')}>周报标题</TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>类型</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>
-                    <TableSortLabel active={sort.field === 'department_name'} direction={sort.order} onClick={() => handleSort('department_name')}>部门</TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>
-                    <TableSortLabel active={sort.field === 'week_start'} direction={sort.order} onClick={() => handleSort('week_start')}>周期</TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>生成 Agent</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>核心指标</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>
-                    <TableSortLabel active={sort.field === 'created_at'} direction={sort.order} onClick={() => handleSort('created_at')}>创建人</TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9}>
-                      <EmptyState title="暂无周报" description="系统将按配置自动生成，也可在「生成配置」页手动触发" />
-                    </TableCell>
-                  </TableRow>
-                ) : sortedItems.map((item: any) => (
-                  <TableRow key={item.id} hover>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AutoStories sx={{ fontSize: 18, color: 'primary.main' }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.title}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={item.type === 'operation' ? '运营周报' : '部门周报'}
-                        size="small"
-                        color={item.type === 'operation' ? 'success' : 'info'}
-                        variant="outlined"
-                        sx={{ fontSize: 11, height: 22 }}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{item.department_name || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>
-                      {formatDate(item.week_start)} ~ {formatDate(item.week_end)}
-                    </TableCell>
-                    <TableCell>
-                      {item.agent_name ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <SmartToy sx={{ fontSize: 14, color: 'primary.main' }} />
-                          <Typography variant="caption">{item.agent_name}</Typography>
-                        </Box>
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">-</Typography>
-                      )}
-                    </TableCell>
-                    <TableCell><StatusBadge status={item.status} label={STATUS_LABEL[item.status] || item.status} /></TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        {item.metrics?.slice(0, 2).map((m: any) => (
-                          <Chip
-                            key={m.source_id}
-                            label={`${m.name} ${m.value}${m.unit}`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: 10, height: 20 }}
-                          />
-                        ))}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>
-                      {item.creator}
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        {formatDateTime(item.created_at)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title="查看详情">
-                        <IconButton size="small" onClick={() => handleOpenDetail(item)}><Visibility fontSize="small" /></IconButton>
-                      </Tooltip>
-                      <Tooltip title="重新生成">
-                        <IconButton size="small" color="primary" onClick={(e) => handleRegenerate(item, e)} disabled={regenerateMutation.isPending}>
-                          <PlayArrow fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </DataTable>
-          )}
-        </>
-      )}
-
-      {/* 周报详情弹窗 */}
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>{detailItem?.title}</DialogTitle>
-        <DialogContent>
-          {detailItem && (
+          {reportsLoading ? <LoadingState /> : rptList.length === 0 ? <EmptyState title="暂无报告" description="报告将在配置生成后自动出现" /> : (
             <Grid container spacing={2}>
-              <Grid size={12}>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-                  <Chip label={detailItem.type === 'operation' ? '运营周报' : '部门周报'} size="small" color={detailItem.type === 'operation' ? 'success' : 'info'} />
-                  <Chip label={`周期：${formatDate(detailItem.week_start)} ~ ${formatDate(detailItem.week_end)}`} size="small" variant="outlined" />
-                  <Chip label={`创建人：${detailItem.creator}`} size="small" variant="outlined" />
-                  <Chip label={`生成时间：${formatDateTime(detailItem.created_at)}`} size="small" variant="outlined" />
-                  {detailItem.agent_name && (
-                    <Chip
-                      icon={<SmartToy sx={{ fontSize: 14 }} />}
-                      label={`Agent：${detailItem.agent_name}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                  )}
-                </Box>
-              </Grid>
-
-              <Grid size={12}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>核心指标</Typography>
-                <Grid container spacing={1.5}>
-                  {detailItem.metrics?.map((m: any) => (
-                    <Grid key={m.source_id} size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                        <Typography variant="caption" color="text.secondary">{m.name}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 700 }}>{m.value}{m.unit}</Typography>
-                          {getTrendIcon(m.trend_direction || 'neutral', m.week_over_week)}
-                        </Box>
-                        <Typography variant="caption" color={getTrendColor(m.trend_direction || 'neutral', m.week_over_week)}>
-                          环比 {m.week_over_week >= 0 ? '+' : ''}{m.week_over_week}{m.unit}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Grid>
-
-              <Grid size={12}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>AI 总结</Typography>
-                <Typography variant="body2" color="text.secondary">{detailItem.summary}</Typography>
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>本周亮点</Typography>
-                <List dense>
-                  {detailItem.highlights?.map((h: string, idx: number) => (
-                    <ListItem key={idx} disablePadding>
-                      <ListItemIcon sx={{ minWidth: 28 }}><TrendingUp sx={{ fontSize: 16, color: 'success.main' }} /></ListItemIcon>
-                      <ListItemText primary={<Typography variant="body2">{h}</Typography>} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>风险与问题</Typography>
-                <List dense>
-                  {detailItem.risks?.map((r: string, idx: number) => (
-                    <ListItem key={idx} disablePadding>
-                      <ListItemIcon sx={{ minWidth: 28 }}><TrendingDown sx={{ fontSize: 16, color: 'error.main' }} /></ListItemIcon>
-                      <ListItemText primary={<Typography variant="body2">{r}</Typography>} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Grid>
-
-              <Grid size={12}>
-                <Divider sx={{ my: 1 }} />
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>下周计划</Typography>
-                <List dense>
-                  {detailItem.next_week_plan?.map((p: string, idx: number) => (
-                    <ListItem key={idx} disablePadding>
-                      <ListItemIcon sx={{ minWidth: 28 }}><Assessment sx={{ fontSize: 16, color: 'primary.main' }} /></ListItemIcon>
-                      <ListItemText primary={<Typography variant="body2">{p}</Typography>} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Grid>
-
-              {compareReports.length > 0 && (
-                <Grid size={12}>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CompareArrows fontSize="small" /> 历史对比
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {compareReports.map((r: any) => (
-                      <Box key={r.id} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          第{r.week}周 ({formatDate(r.week_start)} ~ {formatDate(r.week_end)})
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {r.metrics?.map((m: any) => (
-                            <Chip
-                              key={m.source_id}
-                              label={`${m.name}: ${m.value}${m.unit}`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ fontSize: 10, height: 20 }}
-                            />
+              {rptList.map((r: any) => (
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={r.id}>
+                  <Card sx={{ height: '100%', cursor: 'pointer', transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } }} onClick={() => setViewReport(r)}>
+                    <CardContent>
+                      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>{r.title}</Typography>
+                        <Chip label={PERIOD_LABELS[r.period] || r.period} size="small" color={r.period === 'daily' ? 'info' : r.period === 'weekly' ? 'primary' : 'secondary'} />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        {SCOPE_LABELS[r.scope] || r.scope}{r.department_name ? ` · ${r.department_name}` : ''} · {r.agent_name}
+                      </Typography>
+                      {/* 预览：第一个指标卡 */}
+                      {r.blocks?.find((b: any) => b.type === 'metrics_card') && (
+                        <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap' }}>
+                          {r.blocks.find((b: any) => b.type === 'metrics_card').data?.slice(0, 3).map((m: any, i: number) => (
+                            <Chip key={i} label={`${m.name}: ${m.value}${m.unit}`} size="small" variant="outlined" sx={{ fontSize: 11 }} />
                           ))}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
+                        </Stack>
+                      )}
+                      {/* AI 摘要预览 */}
+                      {r.blocks?.find((b: any) => b.type === 'rich_text') && (
+                        <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'rgba(200,210,220,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.blocks.find((b: any) => b.type === 'rich_text').data?.content?.slice(0, 60)}...
+                        </Typography>
+                      )}
+                      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
+                        <Typography variant="caption" color="text.secondary">{r.published_at?.slice(0, 16)?.replace('T', ' ')}</Typography>
+                        <StatusBadge status={r.status} />
+                      </Stack>
+                    </CardContent>
+                  </Card>
                 </Grid>
-              )}
+              ))}
             </Grid>
           )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button startIcon={<Download />} onClick={() => detailItem && exportMutation.mutate(detailItem.id)} disabled={exportMutation.isPending}>
-            导出 Markdown
-          </Button>
-          <Button onClick={() => setDetailOpen(false)}>关闭</Button>
-        </DialogActions>
-      </Dialog>
+
+          {/* 报告详情全宽对话框 */}
+          <Dialog open={!!viewReport} onClose={() => setViewReport(null)} maxWidth="md" fullWidth>
+            {viewReport && (
+              <>
+                <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="h6">{viewReport.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {SCOPE_LABELS[viewReport.scope]} · {PERIOD_LABELS[viewReport.period]} · {viewReport.agent_name} · {viewReport.published_at?.slice(0, 16)?.replace('T', ' ')}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1}>
+                    <Tooltip title="导出 Markdown"><IconButton size="small" onClick={() => exportMut.mutate(viewReport.id)}><DownloadIcon fontSize="small" /></IconButton></Tooltip>
+                    <IconButton size="small" onClick={() => setViewReport(null)}><CloseIcon fontSize="small" /></IconButton>
+                  </Stack>
+                </DialogTitle>
+                <DialogContent dividers>
+                  {viewReport.blocks?.map((block: any, idx: number) => (
+                    <Box key={idx} sx={{ mb: 3 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <span>{BLOCK_TYPE_ICONS[block.type] || '📄'}</span> {block.title}
+                      </Typography>
+                      {/* 指标卡片 */}
+                      {block.type === 'metrics_card' && (
+                        <Grid container spacing={1.5}>
+                          {block.data?.map((m: any, mi: number) => (
+                            <Grid size={{ xs: 6, md: 3 }} key={mi}>
+                              <Card variant="outlined" sx={{ p: 1.5, textAlign: 'center' }}>
+                                <Typography variant="caption" color="text.secondary">{m.name}</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>{typeof m.value === 'number' ? m.value.toLocaleString() : m.value}{m.unit}</Typography>
+                                <Typography variant="caption" sx={{ color: m.change >= 0 ? '#00FF88' : '#FF3366' }}>
+                                  {m.change >= 0 ? '↑' : '↓'} {Math.abs(m.change)}{typeof m.change === 'number' && !String(m.change).includes('.') ? '' : ''}
+                                </Typography>
+                              </Card>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      )}
+                      {/* 图表图片 */}
+                      {block.type === 'chart_image' && (
+                        <Box sx={{ p: 2, border: '1px dashed rgba(120,130,140,0.3)', borderRadius: 1, textAlign: 'center' }}>
+                          <AssessmentIcon sx={{ fontSize: 48, color: 'rgba(100,120,140,0.3)' }} />
+                          <Typography variant="caption" sx={{ display: 'block' }} color="text.secondary">{block.data?.caption || block.data?.alt || '图表'}</Typography>
+                        </Box>
+                      )}
+                      {/* 数据表格 */}
+                      {block.type === 'data_table' && block.data?.headers && (
+                        <Box sx={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                            <thead>
+                              <tr>{block.data.headers.map((h: string, hi: number) => <th key={hi} style={{ padding: '8px 12px', borderBottom: '1px solid rgba(100,110,120,0.2)', textAlign: 'left', fontWeight: 600 }}>{h}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                              {block.data.rows?.map((row: string[], ri: number) => (
+                                <tr key={ri}>{row.map((cell, ci) => <td key={ci} style={{ padding: '6px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>{cell}</td>)}</tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </Box>
+                      )}
+                      {/* 富文本 */}
+                      {block.type === 'rich_text' && (
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{block.data?.content}</Typography>
+                      )}
+                      {/* 列表 */}
+                      {block.type === 'bullet_list' && (
+                        <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                          {block.data?.items?.map((item: string, ii: number) => (
+                            <Typography component="li" variant="body2" key={ii} sx={{ mb: 0.5 }}>{item}</Typography>
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </DialogContent>
+              </>
+            )}
+          </Dialog>
+        </Box>
+      )}
+
+      {/* ====== Tab 1: 生成配置 ====== */}
+      {tab === 1 && (
+        <Box>
+          {configsLoading ? <LoadingState /> : (
+            <DataTable pagination={{ page: ts.page, pageSize: ts.pageSize, total: cfgList.length, onPageChange: ts.setPage, onPageSizeChange: ts.setPageSize }}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={openNewCfg}>新建配置</Button>
+              </Box>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    {['名称', '范围', '频率', '模板', 'Agent', '内容块数', '状态', '操作'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.2)', textAlign: 'left', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {cfgList.map((c: any) => (
+                    <tr key={c.id}>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.name}</Typography>
+                        {c.department_name && <Typography variant="caption" color="text.secondary">{c.department_name}</Typography>}
+                      </td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}><Chip label={SCOPE_LABELS[c.scope] || c.scope} size="small" /></td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}><Chip label={PERIOD_LABELS[c.period] || c.period} size="small" color="info" /></td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>{c.template_name}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>{c.agent_name}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>{c.block_configs?.length || 0}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>
+                        <Switch size="small" checked={!!c.enabled} onChange={() => toggleCfgMut.mutate(c.id)} />
+                      </td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>
+                        <Stack direction="row" spacing={0.5}>
+                          <Tooltip title="立即生成"><IconButton size="small" onClick={() => triggerCfgMut.mutate(c.id)} color="success"><PlayIcon fontSize="small" /></IconButton></Tooltip>
+                          <Tooltip title="编辑"><IconButton size="small" onClick={() => openEditCfg(c)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                          <Tooltip title="删除"><IconButton size="small" onClick={() => deleteCfgMut.mutate(c.id)} color="error"><DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                        </Stack>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </DataTable>
+          )}
+
+          {/* 配置弹窗 */}
+          <CrudDialog open={cfgOpen} onClose={() => setCfgOpen(false)} title={cfgIsNew ? '新建生成配置' : '编辑生成配置'} onSave={() => {
+            if (!cfgForm.name) { enqueueSnackbar('请输入配置名称', { variant: 'warning' }); return; }
+            if (!cfgForm.template_id) { enqueueSnackbar('请选择报告模板', { variant: 'warning' }); return; }
+            if (cfgForm.scope === 'department' && !cfgForm.department_id) { enqueueSnackbar('请选择部门', { variant: 'warning' }); return; }
+            const tpl = tplList.find((t: any) => t.id === cfgForm.template_id);
+            const tplKeys = ((tpl?.blocks) || []).map((b: any) => b.variable_key);
+            const cfgKeys = (cfgForm.block_configs || []).map((c: any) => c.key);
+            if (tplKeys.length !== cfgKeys.length || tplKeys.some((k: string) => !cfgKeys.includes(k))) {
+              enqueueSnackbar('内容块配置与模板不一致，请重新选择模板', { variant: 'error' }); return;
+            }
+            saveCfgMut.mutate(cfgForm);
+          }} saving={saveCfgMut.isPending}>
+            <Stack spacing={2}>
+              <TextField label="配置名称" size="small" fullWidth value={cfgForm.name || ''} onChange={e => setCfgForm({ ...cfgForm, name: e.target.value })} />
+              <Stack direction="row" spacing={2}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>报告范围</InputLabel>
+                  <Select value={cfgForm.scope || 'department'} onChange={e => setCfgForm({ ...cfgForm, scope: e.target.value })} label="报告范围">
+                    <MenuItem value="company">全公司</MenuItem>
+                    <MenuItem value="department">部门</MenuItem>
+                  </Select>
+                </FormControl>
+                {cfgForm.scope === 'department' && (
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>部门</InputLabel>
+                    <Select value={cfgForm.department_id || ''} onChange={e => setCfgForm({ ...cfgForm, department_id: e.target.value })} label="部门">
+                      {deptList.map((d: any) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                )}
+              </Stack>
+              <Stack direction="row" spacing={2}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>频率</InputLabel>
+                  <Select value={cfgForm.period || 'weekly'} onChange={e => setCfgForm({ ...cfgForm, period: e.target.value })} label="频率">
+                    <MenuItem value="daily">日报</MenuItem>
+                    <MenuItem value="weekly">周报</MenuItem>
+                    <MenuItem value="monthly">月报</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>选择模板</InputLabel>
+                  <Select value={cfgForm.template_id || ''} onChange={e => { const tid = e.target.value as string; setCfgForm({ ...cfgForm, template_id: tid, block_configs: syncBlockConfigsFromTemplate(tid, cfgForm.block_configs) }); }} label="选择模板">
+                    {tplList.map((t: any) => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Stack>
+              <TextField label="绑定 Agent ID" size="small" fullWidth value={cfgForm.agent_id || ''} onChange={e => setCfgForm({ ...cfgForm, agent_id: e.target.value })} helperText="Agent 工作流将产出结构化变量" />
+              <Divider />
+              {!cfgForm.template_id ? (
+                <Alert severity="info" sx={{ fontSize: 12 }}>请先在上方选择「报告模板」，变量映射将根据模板的内容块自动生成。</Alert>
+              ) : (
+                <>
+                  {/* 模板结构预览：显示模板包含哪些内容块以及对应的变量 key */}
+                  <Box sx={{ p: 1.5, border: '1px dashed rgba(100,120,140,0.35)', borderRadius: 1, bgcolor: 'rgba(100,120,140,0.05)' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>📐 模板结构预览 · {selectedTemplate?.name}</Typography>
+                    <Stack spacing={0.75}>
+                      {(selectedTemplate?.blocks || []).map((b: any, i: number) => (
+                        <Stack key={b.id || i} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                          <Typography sx={{ fontSize: 16, width: 22 }}>{BLOCK_TYPE_ICONS[b.type] || '📄'}</Typography>
+                          <Chip label={BLOCK_TYPE_LABELS[b.type] || b.type} size="small" variant="outlined" sx={{ height: 20, fontSize: 11 }} />
+                          <Typography variant="caption" sx={{ fontWeight: 600, flex: 1 }}>{b.title}</Typography>
+                          <Typography variant="caption" sx={{ color: 'primary.main', fontFamily: 'monospace' }}>{b.variable_key}</Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </Box>
+
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>内容块配置（每个块的展示、AI 指令与专属参数）</Typography>
+                  {(cfgForm.block_configs || []).map((bc: any, i: number) => {
+                    const tplBlock = (selectedTemplate?.blocks || []).find((b: any) => b.variable_key === bc.key);
+                    const blockType = tplBlock?.type || 'rich_text';
+                    return (
+                      <Card key={bc.key || i} variant="outlined" sx={{ p: 1.5, borderColor: 'rgba(100,120,140,0.3)' }}>
+                        {/* Header */}
+                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5, pb: 1, borderBottom: '1px dashed rgba(100,120,140,0.2)' }}>
+                          <Typography sx={{ fontSize: 18 }}>{BLOCK_TYPE_ICONS[blockType] || '📄'}</Typography>
+                          <Chip label={BLOCK_TYPE_LABELS[blockType] || blockType} size="small" variant="outlined" sx={{ height: 22, fontSize: 11 }} />
+                          <TextField size="small" label="展示标签" value={bc.label || ''} onChange={e => updateBlockCfg(i, { label: e.target.value })} sx={{ flex: 1 }} />
+                          <Typography variant="caption" sx={{ color: 'primary.main', fontFamily: 'monospace' }}>{bc.key}</Typography>
+                        </Stack>
+                        {/* 公共字段：说明 + AI 生成指令 */}
+                        <Stack spacing={1.5}>
+                          <TextField size="small" label="说明" value={bc.description || ''} onChange={e => updateBlockCfg(i, { description: e.target.value })} fullWidth />
+                          <TextField size="small" label="AI 生成指令 prompt" value={bc.prompt || ''} onChange={e => updateBlockCfg(i, { prompt: e.target.value })} fullWidth multiline minRows={2} helperText="告诉 Agent 该块应产出什么内容、聚焦什么维度" />
+
+                          {/* metrics_card：指标列表 */}
+                          {blockType === 'metrics_card' && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>📊 指标列表</Typography>
+                              {(bc.config?.metrics || []).map((m: any, mi: number) => (
+                                <Stack key={mi} direction="row" spacing={1} sx={{ mb: 0.75, alignItems: 'center' }}>
+                                  <TextField size="small" label="指标名" value={m.name || ''} onChange={e => { const arr = [...bc.config.metrics]; arr[mi] = { ...arr[mi], name: e.target.value }; updateBlockInnerCfg(i, { metrics: arr }); }} sx={{ flex: 1.2 }} />
+                                  <TextField size="small" label="单位" value={m.unit || ''} onChange={e => { const arr = [...bc.config.metrics]; arr[mi] = { ...arr[mi], unit: e.target.value }; updateBlockInnerCfg(i, { metrics: arr }); }} sx={{ width: 70 }} />
+                                  <TextField size="small" label="数据源" value={m.data_source || ''} onChange={e => { const arr = [...bc.config.metrics]; arr[mi] = { ...arr[mi], data_source: e.target.value }; updateBlockInnerCfg(i, { metrics: arr }); }} sx={{ flex: 1 }} />
+                                  <FormControl size="small" sx={{ width: 100 }}>
+                                    <Select value={m.format || 'integer'} onChange={e => { const arr = [...bc.config.metrics]; arr[mi] = { ...arr[mi], format: e.target.value }; updateBlockInnerCfg(i, { metrics: arr }); }}>
+                                      <MenuItem value="integer">整数</MenuItem>
+                                      <MenuItem value="float">小数</MenuItem>
+                                      <MenuItem value="percent">百分比</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                  <FormControl size="small" sx={{ width: 100 }}>
+                                    <Select value={m.trend || 'neutral'} onChange={e => { const arr = [...bc.config.metrics]; arr[mi] = { ...arr[mi], trend: e.target.value }; updateBlockInnerCfg(i, { metrics: arr }); }}>
+                                      <MenuItem value="higher_better">越高越好</MenuItem>
+                                      <MenuItem value="lower_better">越低越好</MenuItem>
+                                      <MenuItem value="neutral">中性</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                  <IconButton size="small" onClick={() => { const arr = [...bc.config.metrics]; arr.splice(mi, 1); updateBlockInnerCfg(i, { metrics: arr }); }} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                                </Stack>
+                              ))}
+                              <Button size="small" startIcon={<AddIcon />} onClick={() => { const arr = [...(bc.config?.metrics || []), { name: '', unit: '', data_source: '', format: 'integer', aggregation: 'sum', trend: 'higher_better' }]; updateBlockInnerCfg(i, { metrics: arr }); }}>添加指标</Button>
+                            </Box>
+                          )}
+
+                          {/* chart_image：图表元数据 */}
+                          {blockType === 'chart_image' && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>📈 图表参数</Typography>
+                              <Stack spacing={1}>
+                                <Stack direction="row" spacing={1}>
+                                  <TextField size="small" label="图表标题" value={bc.config?.chart_title || ''} onChange={e => updateBlockInnerCfg(i, { chart_title: e.target.value })} sx={{ flex: 1 }} />
+                                  <FormControl size="small" sx={{ width: 130 }}>
+                                    <InputLabel>图表类型</InputLabel>
+                                    <Select value={bc.config?.chart_type || 'line'} onChange={e => updateBlockInnerCfg(i, { chart_type: e.target.value })} label="图表类型">
+                                      <MenuItem value="line">折线图</MenuItem>
+                                      <MenuItem value="bar">柱状图</MenuItem>
+                                      <MenuItem value="area">面积图</MenuItem>
+                                      <MenuItem value="pie">饼图</MenuItem>
+                                      <MenuItem value="scatter">散点图</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                </Stack>
+                                <Stack direction="row" spacing={1}>
+                                  <TextField size="small" label="X 轴" value={bc.config?.x_axis || ''} onChange={e => updateBlockInnerCfg(i, { x_axis: e.target.value })} sx={{ flex: 1 }} />
+                                  <TextField size="small" label="Y 轴" value={bc.config?.y_axis || ''} onChange={e => updateBlockInnerCfg(i, { y_axis: e.target.value })} sx={{ flex: 1 }} />
+                                  <TextField size="small" label="数据源" value={bc.config?.data_source || ''} onChange={e => updateBlockInnerCfg(i, { data_source: e.target.value })} sx={{ flex: 1 }} />
+                                </Stack>
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {/* data_table：列定义 */}
+                          {blockType === 'data_table' && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>📋 表格列定义</Typography>
+                              {(bc.config?.columns || []).map((col: any, ci: number) => (
+                                <Stack key={ci} direction="row" spacing={1} sx={{ mb: 0.75, alignItems: 'center' }}>
+                                  <TextField size="small" label="字段 key" value={col.key || ''} onChange={e => { const arr = [...bc.config.columns]; arr[ci] = { ...arr[ci], key: e.target.value }; updateBlockInnerCfg(i, { columns: arr }); }} sx={{ flex: 1 }} />
+                                  <TextField size="small" label="表头" value={col.header || ''} onChange={e => { const arr = [...bc.config.columns]; arr[ci] = { ...arr[ci], header: e.target.value }; updateBlockInnerCfg(i, { columns: arr }); }} sx={{ flex: 1 }} />
+                                  <TextField size="small" label="宽" type="number" value={col.width ?? 120} onChange={e => { const arr = [...bc.config.columns]; arr[ci] = { ...arr[ci], width: +e.target.value }; updateBlockInnerCfg(i, { columns: arr }); }} sx={{ width: 80 }} />
+                                  <FormControl size="small" sx={{ width: 90 }}>
+                                    <Select value={col.align || 'left'} onChange={e => { const arr = [...bc.config.columns]; arr[ci] = { ...arr[ci], align: e.target.value }; updateBlockInnerCfg(i, { columns: arr }); }}>
+                                      <MenuItem value="left">左</MenuItem>
+                                      <MenuItem value="center">中</MenuItem>
+                                      <MenuItem value="right">右</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                  <IconButton size="small" onClick={() => { const arr = [...bc.config.columns]; arr.splice(ci, 1); updateBlockInnerCfg(i, { columns: arr }); }} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                                </Stack>
+                              ))}
+                              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                                <Button size="small" startIcon={<AddIcon />} onClick={() => { const arr = [...(bc.config?.columns || []), { key: '', header: '', width: 120, align: 'left' }]; updateBlockInnerCfg(i, { columns: arr }); }}>添加列</Button>
+                                <TextField size="small" label="数据源" value={bc.config?.data_source || ''} onChange={e => updateBlockInnerCfg(i, { data_source: e.target.value })} sx={{ flex: 1 }} />
+                                <TextField size="small" label="最大行数" type="number" value={bc.config?.max_rows ?? 20} onChange={e => updateBlockInnerCfg(i, { max_rows: +e.target.value })} sx={{ width: 100 }} />
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {/* rich_text：分析参数 */}
+                          {blockType === 'rich_text' && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>📝 文本参数</Typography>
+                              <Stack spacing={1}>
+                                <Stack direction="row" spacing={1}>
+                                  <TextField size="small" label="主题" value={bc.config?.topic || ''} onChange={e => updateBlockInnerCfg(i, { topic: e.target.value })} sx={{ flex: 1 }} />
+                                  <TextField size="small" label="分析角度" value={bc.config?.angle || ''} onChange={e => updateBlockInnerCfg(i, { angle: e.target.value })} sx={{ flex: 1 }} />
+                                </Stack>
+                                <Stack direction="row" spacing={1}>
+                                  <TextField size="small" label="字数上限" type="number" value={bc.config?.word_limit ?? 300} onChange={e => updateBlockInnerCfg(i, { word_limit: +e.target.value })} sx={{ width: 120 }} />
+                                  <FormControl size="small" sx={{ width: 150 }}>
+                                    <InputLabel>语气</InputLabel>
+                                    <Select value={bc.config?.tone || '专业简洁'} onChange={e => updateBlockInnerCfg(i, { tone: e.target.value })} label="语气">
+                                      <MenuItem value="专业简洁">专业简洁</MenuItem>
+                                      <MenuItem value="专业深入">专业深入</MenuItem>
+                                      <MenuItem value="简洁">简洁</MenuItem>
+                                      <MenuItem value="友好">友好</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                  <TextField size="small" label="必含要点" value={bc.config?.must_include || ''} onChange={e => updateBlockInnerCfg(i, { must_include: e.target.value })} sx={{ flex: 1 }} />
+                                </Stack>
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {/* bullet_list：列表参数 */}
+                          {blockType === 'bullet_list' && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>✅ 列表参数</Typography>
+                              <Stack direction="row" spacing={1}>
+                                <FormControl size="small" sx={{ width: 130 }}>
+                                  <InputLabel>列表类型</InputLabel>
+                                  <Select value={bc.config?.list_kind || 'highlight'} onChange={e => updateBlockInnerCfg(i, { list_kind: e.target.value })} label="列表类型">
+                                    <MenuItem value="highlight">亮点</MenuItem>
+                                    <MenuItem value="risk">风险</MenuItem>
+                                    <MenuItem value="plan">计划</MenuItem>
+                                    <MenuItem value="alert">告警</MenuItem>
+                                    <MenuItem value="item">通用条目</MenuItem>
+                                  </Select>
+                                </FormControl>
+                                <TextField size="small" label="最大数量" type="number" value={bc.config?.max_items ?? 5} onChange={e => updateBlockInnerCfg(i, { max_items: +e.target.value })} sx={{ width: 100 }} />
+                                <TextField size="small" label="分类标签" value={bc.config?.category || ''} onChange={e => updateBlockInnerCfg(i, { category: e.target.value })} sx={{ flex: 1 }} />
+                                <TextField size="small" label="生成风格" value={bc.config?.style || ''} onChange={e => updateBlockInnerCfg(i, { style: e.target.value })} sx={{ flex: 1 }} />
+                              </Stack>
+                            </Box>
+                          )}
+                        </Stack>
+                      </Card>
+                    );
+                  })}
+                  <Alert severity="success" sx={{ fontSize: 12 }}>共 {cfgForm.block_configs?.length || 0} 个内容块，Agent 将按每块的 prompt 与专属参数产出对应数据；如需增删块，请到「报告模板」中编辑对应模板。</Alert>
+                </>
+              )}
+              <Divider />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>生成时间调度</Typography>
+              <Stack direction="row" spacing={2}>
+                {cfgForm.period === 'weekly' && (
+                  <FormControl size="small" sx={{ minWidth: 100 }}>
+                    <InputLabel>星期</InputLabel>
+                    <Select value={cfgForm.schedule?.day ?? 5} onChange={e => setCfgForm({ ...cfgForm, schedule: { ...cfgForm.schedule, day: e.target.value } })} label="星期">
+                      {[1, 2, 3, 4, 5, 6, 7].map(d => <MenuItem key={d} value={d}>{['一', '二', '三', '四', '五', '六', '日'][d - 1]}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                )}
+                {cfgForm.period === 'monthly' && (
+                  <TextField size="small" label="每月几号" type="number" value={cfgForm.schedule?.date ?? 1} onChange={e => setCfgForm({ ...cfgForm, schedule: { ...cfgForm.schedule, date: +e.target.value } })} sx={{ width: 100 }} />
+                )}
+                <TextField size="small" label="时间" type="time" value={cfgForm.schedule?.time || '18:00'} onChange={e => setCfgForm({ ...cfgForm, schedule: { ...cfgForm.schedule, time: e.target.value } })} sx={{ width: 130 }} />
+              </Stack>
+              <Stack direction="row" spacing={2}>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  发布到门户 <Switch size="small" checked={!!cfgForm.publish_to_portal} onChange={e => setCfgForm({ ...cfgForm, publish_to_portal: e.target.checked })} />
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  通知相关人员 <Switch size="small" checked={!!cfgForm.notify_users} onChange={e => setCfgForm({ ...cfgForm, notify_users: e.target.checked })} />
+                </Typography>
+              </Stack>
+            </Stack>
+          </CrudDialog>
+        </Box>
+      )}
+
+      {/* ====== Tab 2: 报告模板 ====== */}
+      {tab === 2 && (
+        <Box>
+          {templatesLoading ? <LoadingState /> : (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+                <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={openNewTpl}>新建模板</Button>
+              </Box>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    {['模板名称', '适用范围', '适用频率', '内容块数', '使用中', '操作'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.2)', textAlign: 'left', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tplList.map((t: any) => {
+                    const usedBy = cfgList.filter((c: any) => c.template_id === t.id).length;
+                    return (
+                      <tr key={t.id}>
+                        <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{t.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{t.description}</Typography>
+                        </td>
+                        <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}><Chip label={SCOPE_LABELS[t.scope_type] || t.scope_type} size="small" /></td>
+                        <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}><Chip label={PERIOD_LABELS[t.period_type] || t.period_type} size="small" color="info" /></td>
+                        <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>{t.blocks?.length || 0}块</td>
+                        <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>{usedBy}个配置</td>
+                        <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(100,110,120,0.1)' }}>
+                          <Stack direction="row" spacing={0.5}>
+                            <Tooltip title="编辑"><IconButton size="small" onClick={() => openEditTpl(t)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                            <Tooltip title="删除"><IconButton size="small" onClick={() => deleteTplMut.mutate(t.id)} color="error"><DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                          </Stack>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* 模板编辑弹窗 */}
+          <CrudDialog open={tplOpen} onClose={() => setTplOpen(false)} title={tplIsNew ? '新建报告模板' : '编辑报告模板'} onSave={() => saveTplMut.mutate(tplForm)} saving={saveTplMut.isPending}>
+            <Stack spacing={2}>
+              <TextField label="模板名称" size="small" fullWidth value={tplForm.name || ''} onChange={e => setTplForm({ ...tplForm, name: e.target.value })} />
+              <TextField label="描述" size="small" fullWidth value={tplForm.description || ''} onChange={e => setTplForm({ ...tplForm, description: e.target.value })} />
+              <Stack direction="row" spacing={2}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>适用范围</InputLabel>
+                  <Select value={tplForm.scope_type || 'department'} onChange={e => setTplForm({ ...tplForm, scope_type: e.target.value })} label="适用范围">
+                    <MenuItem value="company">全公司</MenuItem>
+                    <MenuItem value="department">部门</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>适用频率</InputLabel>
+                  <Select value={tplForm.period_type || 'weekly'} onChange={e => setTplForm({ ...tplForm, period_type: e.target.value })} label="适用频率">
+                    <MenuItem value="daily">日报</MenuItem>
+                    <MenuItem value="weekly">周报</MenuItem>
+                    <MenuItem value="monthly">月报</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+              <Divider />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>内容块编排（拖拽排序）</Typography>
+              {(tplForm.blocks || []).map((block: any, idx: number) => (
+                <Card key={idx} variant="outlined" sx={{ p: 1.5 }}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <DragIcon sx={{ color: 'rgba(150,160,170,0.5)', cursor: 'grab' }} />
+                    <Typography sx={{ fontSize: 18 }}>{BLOCK_TYPE_ICONS[block.type] || '📄'}</Typography>
+                    <FormControl size="small" sx={{ minWidth: 110 }}>
+                      <Select value={block.type} onChange={e => updateBlock(idx, 'type', e.target.value)}>
+                        {Object.entries(BLOCK_TYPE_LABELS).map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                    <TextField size="small" label="标题" value={block.title || ''} onChange={e => updateBlock(idx, 'title', e.target.value)} sx={{ flex: 1 }} />
+                    <TextField size="small" label="变量key" value={block.variable_key || ''} onChange={e => updateBlock(idx, 'variable_key', e.target.value)} sx={{ width: 140 }} />
+                    <IconButton size="small" onClick={() => removeBlock(idx)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                  </Stack>
+                </Card>
+              ))}
+              <Button size="small" startIcon={<AddIcon />} onClick={addBlock} variant="outlined">添加内容块</Button>
+              <Alert severity="info" sx={{ fontSize: 12 }}>
+                可添加类型：指标卡片 · 图表图片 · 数据表格 · 富文本 · 列表。每个内容块绑定一个变量 key，Agent 产出对应数据后自动渲染。
+              </Alert>
+            </Stack>
+          </CrudDialog>
+        </Box>
+      )}
     </Box>
   );
 }

@@ -651,282 +651,340 @@ const matchingConflicts: Record<string, any[]> = {
   ],
 };
 
-// =================== 运营数据源（用于智能周报）====================
-// trend_direction: higher_better（越高越好）/ lower_better（越低越好）/ neutral（中性）
-const weeklyDataSources: any[] = [
-  { id: 'wds-1', name: '算力使用率',     unit: '%',   description: 'GPU/CPU平均利用率', trend_direction: 'neutral', department_ids: ['org-2', 'org-4'] },
-  { id: 'wds-2', name: '存储使用量',     unit: 'TB',  description: '对象存储与块存储总量', trend_direction: 'neutral', department_ids: ['org-2', 'org-4'] },
-  { id: 'wds-3', name: '任务完成数',     unit: '个',  description: '本周成功完成的任务数', trend_direction: 'higher_better', department_ids: ['org-2', 'org-4', 'org-5'] },
-  { id: 'wds-4', name: '任务排队时长',   unit: 'min', description: '平均排队等待时间', trend_direction: 'lower_better', department_ids: ['org-2', 'org-4'] },
-  { id: 'wds-5', name: '接口调用量',     unit: '次',  description: 'API调用总次数', trend_direction: 'higher_better', department_ids: ['org-4', 'org-5'] },
-  { id: 'wds-6', name: '接口错误率',     unit: '%',   description: 'API错误占比', trend_direction: 'lower_better', department_ids: ['org-4', 'org-5'] },
-  { id: 'wds-7', name: '新增客户数',     unit: '家',  description: '本周新增签约客户', trend_direction: 'higher_better', department_ids: ['org-3', 'org-6'] },
-  { id: 'wds-8', name: '销售额',         unit: '万元',description: '本周签约金额', trend_direction: 'higher_better', department_ids: ['org-3', 'org-6'] },
-  { id: 'wds-9', name: '客服会话量',     unit: '次',  description: '客服机器人会话次数', trend_direction: 'higher_better', department_ids: ['org-5'] },
-  { id: 'wds-10', name: '问题解决率',    unit: '%',   description: '机器人独立解决率', trend_direction: 'higher_better', department_ids: ['org-5'] },
-];
-
-// =================== 周报生成配置（用于智能周报）====================
-// 每条配置绑定一个 Agent，由 Agent 的 Workflow 负责数据拉取、AI 分析和周报生成
-const weeklyReportConfigs: any[] = [
+// =================== 智能报告：报告模板 ====================
+const reportTemplates: any[] = [
   {
-    id: 'wrc-1',
-    name: '技术研发部周报自动生成',
-    department_id: 'org-2',
-    department_name: '技术研发部',
-    agent_id: 'a-7',
-    agent_name: '技术研发部周报Agent',
-    type: 'department',
-    schedule_day: 5,
-    schedule_time: '18:00',
-    enabled: true,
-    last_generated_at: dayAgo(2),
-    next_generate_at: dayAgo(-5),
-    creator: '管理员',
-    created_at: dayAgo(14),
+    id: 'tpl-1', name: '部门标准周报模板', description: '适用于各部门的标准周报格式', scope_type: 'department', period_type: 'weekly',
+    blocks: [
+      { id: 'blk-1', type: 'metrics_card', title: '核心指标', variable_key: 'core_metrics', config: { columns: 4, show_trend: true } },
+      { id: 'blk-2', type: 'chart_image', title: '趋势图表', variable_key: 'trend_chart', config: { aspect_ratio: '16:9', caption: '本周趋势' } },
+      { id: 'blk-3', type: 'data_table', title: '明细数据', variable_key: 'detail_table', config: { sortable: true, max_rows: 20 } },
+      { id: 'blk-4', type: 'rich_text', title: 'AI 智能分析', variable_key: 'ai_summary', config: {} },
+      { id: 'blk-5', type: 'bullet_list', title: '本周亮点', variable_key: 'highlights', config: { icon: 'success', max_items: 5 } },
+      { id: 'blk-6', type: 'bullet_list', title: '风险与问题', variable_key: 'risks', config: { icon: 'warning', max_items: 5 } },
+      { id: 'blk-7', type: 'bullet_list', title: '下周计划', variable_key: 'next_plan', config: { icon: 'plan', max_items: 5 } },
+    ],
+    created_at: dayAgo(30), updated_at: dayAgo(5),
   },
   {
-    id: 'wrc-2',
-    name: 'AI平台组周报自动生成',
-    department_id: 'org-4',
-    department_name: 'AI平台组',
-    agent_id: 'a-8',
-    agent_name: 'AI平台组周报Agent',
-    type: 'department',
-    schedule_day: 5,
-    schedule_time: '18:00',
-    enabled: true,
-    last_generated_at: dayAgo(2),
-    next_generate_at: dayAgo(-5),
-    creator: '管理员',
-    created_at: dayAgo(14),
+    id: 'tpl-2', name: '公司日报精简模板', description: '适用于全公司的每日精简汇报', scope_type: 'company', period_type: 'daily',
+    blocks: [
+      { id: 'blk-11', type: 'metrics_card', title: '今日指标', variable_key: 'core_metrics', config: { columns: 4, show_trend: true } },
+      { id: 'blk-12', type: 'rich_text', title: 'AI 摘要', variable_key: 'ai_summary', config: {} },
+      { id: 'blk-13', type: 'bullet_list', title: '告警事项', variable_key: 'alerts', config: { icon: 'warning', max_items: 10 } },
+    ],
+    created_at: dayAgo(20), updated_at: dayAgo(3),
   },
   {
-    id: 'wrc-3',
-    name: '销售部周报自动生成',
-    department_id: 'org-3',
-    department_name: '销售部',
-    agent_id: 'a-9',
-    agent_name: '销售部周报Agent',
-    type: 'department',
-    schedule_day: 5,
-    schedule_time: '18:00',
-    enabled: true,
-    last_generated_at: dayAgo(2),
-    next_generate_at: dayAgo(-5),
-    creator: '管理员',
-    created_at: dayAgo(14),
+    id: 'tpl-3', name: '公司运营周报模板', description: '适用于全公司级别的完整周报', scope_type: 'company', period_type: 'weekly',
+    blocks: [
+      { id: 'blk-21', type: 'metrics_card', title: '公司核心指标', variable_key: 'core_metrics', config: { columns: 4, show_trend: true } },
+      { id: 'blk-22', type: 'chart_image', title: '各部门趋势对比', variable_key: 'trend_chart', config: { aspect_ratio: '16:9', caption: '部门对比' } },
+      { id: 'blk-23', type: 'data_table', title: '部门排行', variable_key: 'dept_ranking', config: { sortable: true, max_rows: 10 } },
+      { id: 'blk-24', type: 'rich_text', title: 'AI 综合分析', variable_key: 'ai_summary', config: {} },
+      { id: 'blk-25', type: 'bullet_list', title: '本周亮点', variable_key: 'highlights', config: { icon: 'success', max_items: 8 } },
+      { id: 'blk-26', type: 'bullet_list', title: '风险与问题', variable_key: 'risks', config: { icon: 'warning', max_items: 5 } },
+    ],
+    created_at: dayAgo(25), updated_at: dayAgo(4),
   },
   {
-    id: 'wrc-4',
-    name: '智慧客服项目周报自动生成',
-    department_id: 'org-5',
-    department_name: '智慧客服项目',
-    agent_id: 'a-10',
-    agent_name: '智慧客服项目周报Agent',
-    type: 'department',
-    schedule_day: 5,
-    schedule_time: '18:00',
-    enabled: true,
-    last_generated_at: dayAgo(2),
-    next_generate_at: dayAgo(-5),
-    creator: '管理员',
-    created_at: dayAgo(14),
-  },
-  {
-    id: 'wrc-5',
-    name: '运营汇总周报自动生成',
-    department_id: '',
-    department_name: '运营汇总',
-    agent_id: 'a-11',
-    agent_name: '运营汇总周报Agent',
-    type: 'operation',
-    schedule_day: 5,
-    schedule_time: '20:00',
-    enabled: true,
-    last_generated_at: dayAgo(2),
-    next_generate_at: dayAgo(-5),
-    creator: '管理员',
-    created_at: dayAgo(14),
+    id: 'tpl-4', name: '销售月度报告模板', description: '适用于销售部门月度总结', scope_type: 'department', period_type: 'monthly',
+    blocks: [
+      { id: 'blk-31', type: 'metrics_card', title: '月度KPI', variable_key: 'core_metrics', config: { columns: 4, show_trend: true } },
+      { id: 'blk-32', type: 'chart_image', title: '月度趋势', variable_key: 'trend_chart', config: { aspect_ratio: '16:9', caption: '月度走势' } },
+      { id: 'blk-33', type: 'data_table', title: '客户成交明细', variable_key: 'deal_table', config: { sortable: true, max_rows: 30 } },
+      { id: 'blk-34', type: 'data_table', title: '销售排行', variable_key: 'sales_ranking', config: { sortable: true, max_rows: 10 } },
+      { id: 'blk-35', type: 'rich_text', title: 'AI 分析', variable_key: 'ai_summary', config: {} },
+      { id: 'blk-36', type: 'bullet_list', title: '下月计划', variable_key: 'next_plan', config: { icon: 'plan', max_items: 5 } },
+    ],
+    created_at: dayAgo(15), updated_at: dayAgo(2),
   },
 ];
 
-// =================== 周报（用于智能周报）====================
-const currentWeek = getWeekInfo();
-const weeklyReports: any[] = [
+// =================== 智能报告：生成配置 ====================
+// block_configs 结构：每个元素对应模板的一个 block，key/type 来自模板（只读），
+// prompt 与 config 为本配置专属，Agent 生成时按此指令产出对应数据。
+const reportConfigs: any[] = [
   {
-    id: 'wr-1',
-    year: currentWeek.year,
-    week: currentWeek.week,
-    week_start: currentWeek.week_start,
-    week_end: currentWeek.week_end,
-    title: '技术研发部第' + currentWeek.week + '周周报',
-    department_id: 'org-2',
-    department_name: '技术研发部',
-    agent_id: 'a-7',
-    agent_name: '技术研发部周报Agent',
-    type: 'department',
-    status: 'published',
-    creator: '王五',
-    created_at: dayAgo(1),
-    metrics: [
-      { source_id: 'wds-1', name: '算力使用率', value: 78.5, unit: '%', week_over_week: 3.2, trend_direction: 'neutral' },
-      { source_id: 'wds-2', name: '存储使用量', value: 342.6, unit: 'TB', week_over_week: 12.8, trend_direction: 'neutral' },
-      { source_id: 'wds-3', name: '任务完成数', value: 15234, unit: '个', week_over_week: -2.1, trend_direction: 'higher_better' },
-      { source_id: 'wds-4', name: '任务排队时长', value: 4.3, unit: 'min', week_over_week: -0.8, trend_direction: 'lower_better' },
+    id: 'rc-1', name: '技术研发部周报', scope: 'department', department_id: 'org-2', department_name: '技术研发部',
+    period: 'weekly', template_id: 'tpl-1', template_name: '部门标准周报模板',
+    agent_id: 'a-7', agent_name: '技术研发部周报Agent',
+    block_configs: [
+      { key: 'core_metrics', type: 'metrics', label: '核心指标', description: '部门KPI指标数组', prompt: '按本周研发数据汇总核心指标，每项含数值、单位、环比变化', config: { metrics: [
+        { name: '接口调用量', unit: '次', data_source: 'gateway_logs', format: 'integer', aggregation: 'sum', trend: 'higher_better' },
+        { name: '平均响应时长', unit: 'ms', data_source: 'apm', format: 'float', aggregation: 'avg', trend: 'lower_better' },
+        { name: '服务可用率', unit: '%', data_source: 'uptime', format: 'percent', aggregation: 'avg', trend: 'higher_better' },
+        { name: '错误率', unit: '%', data_source: 'error_logs', format: 'percent', aggregation: 'avg', trend: 'lower_better' },
+      ] } },
+      { key: 'trend_chart', type: 'image', label: '趋势图表', description: 'Agent渲染的图表图片', prompt: '绘制本周接口调用量 7 日趋势折线图', config: {
+        chart_title: '接口调用量 7 日趋势', chart_type: 'line', x_axis: '日期', y_axis: '调用量（次）', data_source: 'gateway_logs', color_theme: 'cyber',
+      } },
+      { key: 'detail_table', type: 'table', label: '明细数据', description: 'API 接口明细表', prompt: '列出本周 TOP20 API 的调用明细', config: {
+        columns: [
+          { key: 'api', header: '接口名称', width: 200, align: 'left' },
+          { key: 'calls', header: '调用量', width: 100, align: 'right' },
+          { key: 'avg_rt', header: '平均响应', width: 100, align: 'right' },
+          { key: 'error_rate', header: '错误率', width: 100, align: 'right' },
+        ], data_source: 'gateway_logs', default_sort: 'calls_desc', max_rows: 20,
+      } },
+      { key: 'ai_summary', type: 'text', label: 'AI分析', description: '智能分析总结', prompt: '基于指标与明细表输出 AI 总结，含亮点、异常、建议', config: {
+        topic: '技术研发部周度运营分析', angle: '性能/稳定性/业务价值', word_limit: 300, tone: '专业简洁', must_include: '核心指标环比变化',
+      } },
+      { key: 'highlights', type: 'list', label: '亮点', description: '本周亮点列表', prompt: '提炼本周 3~5 项实质性亮点，每项一句', config: {
+        list_kind: 'highlight', max_items: 5, category: '技术', style: '简洁中性',
+      } },
+      { key: 'risks', type: 'list', label: '风险', description: '风险列表', prompt: '列出本周需重点关注的风险与问题', config: {
+        list_kind: 'risk', max_items: 5, category: '技术', style: '客观直白',
+      } },
+      { key: 'next_plan', type: 'list', label: '下周计划', description: '计划列表', prompt: '列出下周重点工作项', config: {
+        list_kind: 'plan', max_items: 5, category: '技术', style: '可行动',
+      } },
     ],
-    summary: '本周算力使用率稳定在78.5%，存储用量环比增长12.8TB，主要受新上模型训练任务影响。任务排队时长下降至4.3分钟，整体运行平稳。',
-    highlights: [
-      '完成集群扩容，新增32张A100 GPU卡',
-      '优化任务调度算法，排队时长下降15%',
-      '处理存储冷数据归档策略异常1起',
-    ],
-    risks: [
-      '下周预计有大模型训练高峰，需提前预留算力缓冲',
-      '某节点磁盘故障率略有上升，已安排巡检',
-    ],
-    next_week_plan: [
-      '完成第二批GPU节点上线',
-      '推进存储分层方案落地',
-      '输出资源成本分摊报表',
-    ],
+    schedule: { type: 'weekly', day: 5, time: '18:00', date: null },
+    publish_to_portal: true, notify_users: true, enabled: true,
+    last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
-    id: 'wr-2',
-    year: currentWeek.year,
-    week: currentWeek.week,
-    week_start: currentWeek.week_start,
-    week_end: currentWeek.week_end,
-    title: 'AI平台组第' + currentWeek.week + '周周报',
-    department_id: 'org-4',
-    department_name: 'AI平台组',
-    agent_id: 'a-8',
-    agent_name: 'AI平台组周报Agent',
-    type: 'department',
-    status: 'published',
-    creator: '孙八',
-    created_at: dayAgo(1),
-    metrics: [
-      { source_id: 'wds-1', name: '算力使用率', value: 76.2, unit: '%', week_over_week: 1.5, trend_direction: 'neutral' },
-      { source_id: 'wds-5', name: '接口调用量', value: 892100, unit: '次', week_over_week: 8.4, trend_direction: 'higher_better' },
-      { source_id: 'wds-6', name: '接口错误率', value: 0.32, unit: '%', week_over_week: -0.15, trend_direction: 'lower_better' },
-      { source_id: 'wds-3', name: '任务完成数', value: 4521, unit: '个', week_over_week: 5.2, trend_direction: 'higher_better' },
+    id: 'rc-2', name: 'AI平台组周报', scope: 'department', department_id: 'org-4', department_name: 'AI平台组',
+    period: 'weekly', template_id: 'tpl-1', template_name: '部门标准周报模板',
+    agent_id: 'a-8', agent_name: 'AI平台组周报Agent',
+    block_configs: [
+      { key: 'core_metrics', type: 'metrics', label: '核心指标', description: 'AI平台KPI', prompt: '汇总 AI 平台本周运行核心指标', config: { metrics: [
+        { name: '模型调用次数', unit: '万次', data_source: 'model_gateway', format: 'integer', aggregation: 'sum', trend: 'higher_better' },
+        { name: 'Token 消耗', unit: 'K', data_source: 'model_gateway', format: 'integer', aggregation: 'sum', trend: 'neutral' },
+        { name: '平均错误率', unit: '%', data_source: 'error_logs', format: 'percent', aggregation: 'avg', trend: 'lower_better' },
+        { name: '平均时延', unit: 'ms', data_source: 'apm', format: 'float', aggregation: 'avg', trend: 'lower_better' },
+      ] } },
+      { key: 'trend_chart', type: 'image', label: '趋势图表', description: '调用量与 Token 趋势', prompt: '绘制本周模型调用与 Token 双轴图', config: {
+        chart_title: '模型调用与 Token 趋势', chart_type: 'line', x_axis: '日期', y_axis: '调用/Token', data_source: 'model_gateway', color_theme: 'cyber',
+      } },
+      { key: 'detail_table', type: 'table', label: '模型明细', description: '各模型调用汇总', prompt: '列出 TOP20 模型的调用量与成本', config: {
+        columns: [
+          { key: 'model', header: '模型', width: 180, align: 'left' },
+          { key: 'calls', header: '调用量', width: 100, align: 'right' },
+          { key: 'tokens', header: 'Token', width: 100, align: 'right' },
+          { key: 'cost', header: '成本', width: 100, align: 'right' },
+        ], data_source: 'model_gateway', default_sort: 'calls_desc', max_rows: 20,
+      } },
+      { key: 'ai_summary', type: 'text', label: 'AI分析', description: '周报总结', prompt: '基于模型调用数据输出周度总结', config: {
+        topic: 'AI 平台周度运行分析', angle: '使用量/成本/性能', word_limit: 300, tone: '专业简洁', must_include: '成本优化建议',
+      } },
+      { key: 'highlights', type: 'list', label: '亮点', description: '本周亮点', prompt: '提炼本周 AI 平台亮点', config: { list_kind: 'highlight', max_items: 5, category: 'AI', style: '简洁中性' } },
+      { key: 'risks', type: 'list', label: '风险', description: '风险列表', prompt: '本周需关注的风险', config: { list_kind: 'risk', max_items: 5, category: 'AI', style: '客观直白' } },
+      { key: 'next_plan', type: 'list', label: '下周计划', description: '计划', prompt: '下周重点工作', config: { list_kind: 'plan', max_items: 5, category: 'AI', style: '可行动' } },
     ],
-    summary: '本周AI平台接口调用量突破89万次，错误率保持在0.32%低位。模型部署效率提升，平均启动时间缩短至45秒。',
-    highlights: [
-      '新版模型策略上线，响应延迟降低20%',
-      '完成3个大模型的灰度发布',
-    ],
-    risks: [
-      '高并发场景下偶现限流，需评估扩容',
-    ],
-    next_week_plan: [
-      '上线模型版本回滚能力',
-      '完善调用链路监控',
-    ],
+    schedule: { type: 'weekly', day: 5, time: '18:00', date: null },
+    publish_to_portal: true, notify_users: true, enabled: true,
+    last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
-    id: 'wr-3',
-    year: currentWeek.year,
-    week: currentWeek.week,
-    week_start: currentWeek.week_start,
-    week_end: currentWeek.week_end,
-    title: '销售部第' + currentWeek.week + '周周报',
-    department_id: 'org-3',
-    department_name: '销售部',
-    agent_id: 'a-9',
-    agent_name: '销售部周报Agent',
-    type: 'department',
-    status: 'published',
-    creator: '李思',
-    created_at: dayAgo(1),
-    metrics: [
-      { source_id: 'wds-7', name: '新增客户数', value: 7, unit: '家', week_over_week: 2, trend_direction: 'higher_better' },
-      { source_id: 'wds-8', name: '销售额', value: 286.5, unit: '万元', week_over_week: 15.3, trend_direction: 'higher_better' },
+    id: 'rc-3', name: '全公司日报', scope: 'company', department_id: '', department_name: '',
+    period: 'daily', template_id: 'tpl-2', template_name: '公司日报精简模板',
+    agent_id: 'a-11', agent_name: '运营汇总周报Agent',
+    block_configs: [
+      { key: 'core_metrics', type: 'metrics', label: '今日指标', description: '公司级KPI', prompt: '今日全公司核心指标汇总', config: { metrics: [
+        { name: '当日活跃用户', unit: '人', data_source: 'user_activity', format: 'integer', aggregation: 'count_distinct', trend: 'higher_better' },
+        { name: '当日总调用', unit: '次', data_source: 'gateway_logs', format: 'integer', aggregation: 'sum', trend: 'higher_better' },
+        { name: '当日成本', unit: '元', data_source: 'billing', format: 'float', aggregation: 'sum', trend: 'lower_better' },
+      ] } },
+      { key: 'ai_summary', type: 'text', label: 'AI摘要', description: '一句话总结', prompt: '一句话总结今日运营情况', config: {
+        topic: '今日运营一句话总结', angle: '整体', word_limit: 60, tone: '简洁', must_include: '核心数字',
+      } },
+      { key: 'alerts', type: 'list', label: '告警事项', description: '告警列表', prompt: '列出今日需关注的告警', config: { list_kind: 'alert', max_items: 10, category: '全局', style: '紧急直白' } },
     ],
-    summary: '本周销售签约金额286.5万元，环比增长15.3%，新增7家客户。重点客户续约推进顺利。',
-    highlights: [
-      '与某制造业龙头达成年度框架合作',
-      '完成华东大区客户拜访计划',
-    ],
-    risks: [
-      'Q3部分客户预算收紧，需加强回款跟进',
-    ],
-    next_week_plan: [
-      '跟进3个POC项目验收',
-      '准备半年度客户成功复盘会',
-    ],
+    schedule: { type: 'daily', day: null, time: '20:00', date: null },
+    publish_to_portal: true, notify_users: false, enabled: true,
+    last_generated_at: dayAgo(0), created_at: dayAgo(10), updated_at: dayAgo(0),
   },
   {
-    id: 'wr-5',
-    year: currentWeek.year,
-    week: currentWeek.week,
-    week_start: currentWeek.week_start,
-    week_end: currentWeek.week_end,
-    title: '智慧客服项目第' + currentWeek.week + '周周报',
-    department_id: 'org-5',
-    department_name: '智慧客服项目',
-    agent_id: 'a-10',
-    agent_name: '智慧客服项目周报Agent',
-    type: 'department',
-    status: 'published',
-    creator: '赵六',
-    created_at: dayAgo(1),
-    metrics: [
-      { source_id: 'wds-5', name: '接口调用量', value: 45200, unit: '次', week_over_week: 3.1, trend_direction: 'higher_better' },
-      { source_id: 'wds-6', name: '接口错误率', value: 0.18, unit: '%', week_over_week: -0.08, trend_direction: 'lower_better' },
-      { source_id: 'wds-9', name: '客服会话量', value: 12340, unit: '次', week_over_week: -1.2, trend_direction: 'higher_better' },
-      { source_id: 'wds-10', name: '问题解决率', value: 92.5, unit: '%', week_over_week: 1.8, trend_direction: 'higher_better' },
+    id: 'rc-4', name: '全公司运营周报', scope: 'company', department_id: '', department_name: '',
+    period: 'weekly', template_id: 'tpl-3', template_name: '公司运营周报模板',
+    agent_id: 'a-11', agent_name: '运营汇总周报Agent',
+    block_configs: [
+      { key: 'core_metrics', type: 'metrics', label: '公司核心指标', description: '跨部门汇总', prompt: '本周全公司 KPI 汇总', config: { metrics: [
+        { name: '周活跃用户', unit: '人', data_source: 'user_activity', format: 'integer', aggregation: 'count_distinct', trend: 'higher_better' },
+        { name: '周 API 调用', unit: '万次', data_source: 'gateway_logs', format: 'integer', aggregation: 'sum', trend: 'higher_better' },
+        { name: '周成本', unit: '元', data_source: 'billing', format: 'float', aggregation: 'sum', trend: 'lower_better' },
+        { name: '可用率', unit: '%', data_source: 'uptime', format: 'percent', aggregation: 'avg', trend: 'higher_better' },
+      ] } },
+      { key: 'trend_chart', type: 'image', label: '部门趋势', description: '各部门对比图', prompt: '绘制各部门本周贡献对比柱状图', config: {
+        chart_title: '各部门本周运营贡献', chart_type: 'bar', x_axis: '部门', y_axis: '贡献值', data_source: 'department_stats', color_theme: 'cyber',
+      } },
+      { key: 'dept_ranking', type: 'table', label: '部门排行', description: '部门排行表', prompt: '输出本周部门运营排行', config: {
+        columns: [
+          { key: 'dept', header: '部门', width: 150, align: 'left' },
+          { key: 'score', header: '综合得分', width: 120, align: 'right' },
+          { key: 'delta', header: '环比', width: 100, align: 'right' },
+        ], data_source: 'department_stats', default_sort: 'score_desc', max_rows: 10,
+      } },
+      { key: 'ai_summary', type: 'text', label: 'AI综合分析', description: '全局分析', prompt: '基于全部门数据输出周报全局分析', config: {
+        topic: '全公司周度运营分析', angle: '整体/异常/机会', word_limit: 500, tone: '专业深入', must_include: '部门对比/重点建议',
+      } },
+      { key: 'highlights', type: 'list', label: '亮点', description: '全公司亮点', prompt: '列出本周全公司亮点', config: { list_kind: 'highlight', max_items: 8, category: '全局', style: '专业简洁' } },
+      { key: 'risks', type: 'list', label: '风险', description: '全公司风险', prompt: '列出本周重点风险', config: { list_kind: 'risk', max_items: 5, category: '全局', style: '客观直白' } },
     ],
-    summary: '本周智慧客服项目会话量小幅回落，但问题解决率提升至92.5%，接口错误率继续下降。',
-    highlights: [
-      '客服机器人多轮对话准确率提升5%',
-      '完成2个重点客户POC交付',
-    ],
-    risks: [
-      '高峰时段客服排队有所增加',
-    ],
-    next_week_plan: [
-      '优化高峰时段分流策略',
-      '收集客户反馈迭代知识库',
-    ],
+    schedule: { type: 'weekly', day: 5, time: '20:00', date: null },
+    publish_to_portal: true, notify_users: true, enabled: true,
+    last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
-    id: 'wr-4',
-    year: currentWeek.year,
-    week: currentWeek.week,
-    week_start: currentWeek.week_start,
-    week_end: currentWeek.week_end,
-    title: '运营周报（第' + currentWeek.week + '周）',
-    department_id: '',
-    department_name: '运营汇总',
-    agent_id: 'a-11',
-    agent_name: '运营汇总周报Agent',
-    type: 'operation',
-    status: 'published',
-    creator: '运营助手',
-    created_at: dayAgo(1),
-    metrics: [
-      { source_id: 'wds-1', name: '算力使用率', value: 78.5, unit: '%', week_over_week: 3.2, trend_direction: 'neutral' },
-      { source_id: 'wds-5', name: '接口调用量', value: 892100, unit: '次', week_over_week: 8.4, trend_direction: 'higher_better' },
-      { source_id: 'wds-8', name: '销售额', value: 286.5, unit: '万元', week_over_week: 15.3, trend_direction: 'higher_better' },
-      { source_id: 'wds-9', name: '客服会话量', value: 12340, unit: '次', week_over_week: -1.2, trend_direction: 'higher_better' },
+    id: 'rc-5', name: '销售部月报', scope: 'department', department_id: 'org-3', department_name: '销售部',
+    period: 'monthly', template_id: 'tpl-4', template_name: '销售月度报告模板',
+    agent_id: 'a-9', agent_name: '销售部周报Agent',
+    block_configs: [
+      { key: 'core_metrics', type: 'metrics', label: '月度KPI', description: '销售月度指标', prompt: '汇总本月销售 KPI', config: { metrics: [
+        { name: '新增合同', unit: '个', data_source: 'crm_deals', format: 'integer', aggregation: 'count', trend: 'higher_better' },
+        { name: '新增 GMV', unit: '万元', data_source: 'crm_deals', format: 'float', aggregation: 'sum', trend: 'higher_better' },
+        { name: '客单价', unit: '元', data_source: 'crm_deals', format: 'float', aggregation: 'avg', trend: 'higher_better' },
+        { name: '回款率', unit: '%', data_source: 'finance', format: 'percent', aggregation: 'avg', trend: 'higher_better' },
+      ] } },
+      { key: 'trend_chart', type: 'image', label: '月度趋势', description: '月度走势图', prompt: '绘制本月 GMV 日度走势面积图', config: {
+        chart_title: '月度 GMV 走势', chart_type: 'area', x_axis: '日期', y_axis: 'GMV（万元）', data_source: 'crm_deals', color_theme: 'cyber',
+      } },
+      { key: 'deal_table', type: 'table', label: '成交明细', description: '客户成交表', prompt: '列出本月 TOP30 成交记录', config: {
+        columns: [
+          { key: 'customer', header: '客户', width: 200, align: 'left' },
+          { key: 'amount', header: '金额', width: 120, align: 'right' },
+          { key: 'stage', header: '阶段', width: 100, align: 'left' },
+          { key: 'owner', header: '负责人', width: 100, align: 'left' },
+        ], data_source: 'crm_deals', default_sort: 'amount_desc', max_rows: 30,
+      } },
+      { key: 'sales_ranking', type: 'table', label: '销售排行', description: '业绩排名', prompt: '本月销售 TOP10 排行', config: {
+        columns: [
+          { key: 'name', header: '销售', width: 120, align: 'left' },
+          { key: 'gmv', header: 'GMV', width: 120, align: 'right' },
+          { key: 'rate', header: '赢单率', width: 100, align: 'right' },
+        ], data_source: 'crm_deals', default_sort: 'gmv_desc', max_rows: 10,
+      } },
+      { key: 'ai_summary', type: 'text', label: 'AI分析', description: '月度分析', prompt: '基于本月销售数据输出月度分析', config: {
+        topic: '销售部月度业绩分析', angle: '完成度/客户质量/回款', word_limit: 500, tone: '专业深入', must_include: '目标完成度与下月预测',
+      } },
+      { key: 'next_plan', type: 'list', label: '下月计划', description: '计划列表', prompt: '列出下月重点工作与目标', config: { list_kind: 'plan', max_items: 5, category: '销售', style: '可行动' } },
     ],
-    summary: '第' + currentWeek.week + '周整体运营平稳。算力与AI平台调用量均有增长，销售签约表现亮眼，客服会话量小幅回落。需关注下周大模型训练高峰对资源的冲击。',
-    highlights: [
-      '技术研发部完成32卡GPU扩容',
-      'AI平台接口调用量创新高',
-      '销售签约金额环比增长15.3%',
+    schedule: { type: 'monthly', day: null, time: '18:00', date: 1 },
+    publish_to_portal: true, notify_users: true, enabled: true,
+    last_generated_at: dayAgo(15), created_at: dayAgo(30), updated_at: dayAgo(15),
+  },
+];
+
+// =================== 智能报告：报告实例 ====================
+const currentWeek2 = getWeekInfo();
+const reports: any[] = [
+
+  {
+    id: 'rpt-1', config_id: 'rc-1', template_id: 'tpl-1',
+    title: '技术研发部 ' + currentWeek2.year + '年第' + currentWeek2.week + '周周报',
+    scope: 'department', department_id: 'org-2', department_name: '技术研发部',
+    period: 'weekly', period_start: currentWeek2.week_start, period_end: currentWeek2.week_end,
+    agent_id: 'a-7', agent_name: '技术研发部周报Agent',
+    status: 'published', published_at: dayAgo(1),
+    blocks: [
+      { block_id: 'blk-1', type: 'metrics_card', title: '核心指标', data: [
+        { name: '算力使用率', value: 78.5, unit: '%', change: 3.2, trend: 'neutral' },
+        { name: '存储用量', value: 342.6, unit: 'TB', change: 12.8, trend: 'neutral' },
+        { name: '任务完成数', value: 15234, unit: '个', change: -2.1, trend: 'higher_better' },
+        { name: '排队时长', value: 4.3, unit: 'min', change: -0.8, trend: 'lower_better' },
+      ] },
+      { block_id: 'blk-2', type: 'chart_image', title: '趋势图表', data: { url: '/reports/rpt-1/charts/trend.png', alt: '7日调用趋势', caption: '本周调用量走势' } },
+      { block_id: 'blk-3', type: 'data_table', title: '明细数据', data: {
+        headers: ['模型', '调用次数', '平均延迟', '错误率', '费用'],
+        rows: [['GPT-4o', '5,240', '120ms', '0.1%', '¥680'], ['Claude 3.5', '3,890', '95ms', '0.2%', '¥420'], ['DeepSeek V3', '2,100', '68ms', '0.05%', '¥52']],
+      } },
+      { block_id: 'blk-4', type: 'rich_text', title: 'AI 智能分析', data: { content: '本周算力使用率稳定在78.5%，存储用量环比增长12.8TB，主要受新上模型训练任务影响。任务排队时长下降至4.3分钟，整体运行平稳。' } },
+      { block_id: 'blk-5', type: 'bullet_list', title: '本周亮点', data: { items: ['完成集群扩容，新增32张A100 GPU卡', '优化任务调度算法，排队时长下降15%', '处理存储冷数据归档策略异常1起'] } },
+      { block_id: 'blk-6', type: 'bullet_list', title: '风险与问题', data: { items: ['下周预计有大模型训练高峰，需提前预留算力缓冲', '某节点磁盘故障率略有上升'] } },
+      { block_id: 'blk-7', type: 'bullet_list', title: '下周计划', data: { items: ['完成第二批GPU节点上线', '推进存储分层方案落地', '输出资源成本分摊报表'] } },
     ],
-    risks: [
-      '下周算力需求预计激增',
-      '高并发限流风险需提前评估',
+    created_at: dayAgo(1), updated_at: dayAgo(1),
+  },
+  {
+    id: 'rpt-2', config_id: 'rc-2', template_id: 'tpl-1',
+    title: 'AI平台组 ' + currentWeek2.year + '年第' + currentWeek2.week + '周周报',
+    scope: 'department', department_id: 'org-4', department_name: 'AI平台组',
+    period: 'weekly', period_start: currentWeek2.week_start, period_end: currentWeek2.week_end,
+    agent_id: 'a-8', agent_name: 'AI平台组周报Agent',
+    status: 'published', published_at: dayAgo(1),
+    blocks: [
+      { block_id: 'blk-1', type: 'metrics_card', title: '核心指标', data: [
+        { name: '接口调用量', value: 892100, unit: '次', change: 8.4, trend: 'higher_better' },
+        { name: '接口错误率', value: 0.32, unit: '%', change: -0.15, trend: 'lower_better' },
+        { name: '任务完成数', value: 4521, unit: '个', change: 5.2, trend: 'higher_better' },
+        { name: '平均延迟', value: 145, unit: 'ms', change: -12, trend: 'lower_better' },
+      ] },
+      { block_id: 'blk-2', type: 'chart_image', title: '趋势图表', data: { url: '/reports/rpt-2/charts/trend.png', alt: 'API调用趋势', caption: '本周接口调用量走势' } },
+      { block_id: 'blk-3', type: 'data_table', title: '明细数据', data: {
+        headers: ['模型', '调用量', 'P90延迟', '错误率', '可用率'],
+        rows: [['GPT-4o', '340K', '125ms', '0.08%', '99.9%'], ['Claude 3.5', '280K', '98ms', '0.12%', '99.8%'], ['GLM-4', '150K', '180ms', '0.3%', '99.5%']],
+      } },
+      { block_id: 'blk-4', type: 'rich_text', title: 'AI 智能分析', data: { content: '本周AI平台接口调用量突砉89万次，错误率保持在0.32%低位。模型部署效率提升，平均启动时间缩短至45秒。' } },
+      { block_id: 'blk-5', type: 'bullet_list', title: '本周亮点', data: { items: ['新版模型策略上线，响应延迟降低20%', '完成3个大模型的灰度发布'] } },
+      { block_id: 'blk-6', type: 'bullet_list', title: '风险与问题', data: { items: ['高并发场景下偶现限流，需评估扩容'] } },
+      { block_id: 'blk-7', type: 'bullet_list', title: '下周计划', data: { items: ['上线模型版本回滚能力', '完善调用链路监控'] } },
     ],
-    next_week_plan: [
-      '各部门提交下周资源需求预测',
-      '运营侧发布成本分摊报表',
-      '组织跨部门资源协调会',
+    created_at: dayAgo(1), updated_at: dayAgo(1),
+  },
+  {
+    id: 'rpt-3', config_id: 'rc-3', template_id: 'tpl-2',
+    title: '全公司日报 ' + currentWeek2.year + '-06-15',
+    scope: 'company', department_id: '', department_name: '',
+    period: 'daily', period_start: dayAgo(0), period_end: dayAgo(0),
+    agent_id: 'a-11', agent_name: '运营汇总周报Agent',
+    status: 'published', published_at: dayAgo(0),
+    blocks: [
+      { block_id: 'blk-11', type: 'metrics_card', title: '今日指标', data: [
+        { name: '总调用量', value: 24500, unit: '次', change: 5.2, trend: 'higher_better' },
+        { name: '活跃用户', value: 128, unit: '人', change: 3, trend: 'higher_better' },
+        { name: '平台可用率', value: 99.9, unit: '%', change: 0, trend: 'neutral' },
+        { name: '待处理告警', value: 2, unit: '个', change: -1, trend: 'lower_better' },
+      ] },
+      { block_id: 'blk-12', type: 'rich_text', title: 'AI 摘要', data: { content: '今日平台运行正常，调用量24.5K，活跃用户128人。通义千问VL延迟偶有波动，已自动扩容恢复。' } },
+      { block_id: 'blk-13', type: 'bullet_list', title: '告警事项', data: { items: ['通义千问VL 延迟超过300ms × 2次，已自动恢复', 'GPU利用率达82%，接近阈值'] } },
     ],
+    created_at: dayAgo(0), updated_at: dayAgo(0),
+  },
+  {
+    id: 'rpt-4', config_id: 'rc-4', template_id: 'tpl-3',
+    title: '全公司运营周报（第' + currentWeek2.week + '周）',
+    scope: 'company', department_id: '', department_name: '',
+    period: 'weekly', period_start: currentWeek2.week_start, period_end: currentWeek2.week_end,
+    agent_id: 'a-11', agent_name: '运营汇总周报Agent',
+    status: 'published', published_at: dayAgo(1),
+    blocks: [
+      { block_id: 'blk-21', type: 'metrics_card', title: '公司核心指标', data: [
+        { name: '总调用量', value: 143900, unit: '次', change: 8.4, trend: 'higher_better' },
+        { name: '销售额', value: 286.5, unit: '万元', change: 15.3, trend: 'higher_better' },
+        { name: '客服解决率', value: 92.5, unit: '%', change: 1.8, trend: 'higher_better' },
+        { name: '平台可用率', value: 99.7, unit: '%', change: 0.1, trend: 'neutral' },
+      ] },
+      { block_id: 'blk-22', type: 'chart_image', title: '各部门趋势对比', data: { url: '/reports/rpt-4/charts/dept-compare.png', alt: '部门对比', caption: '各部门本周表现对比' } },
+      { block_id: 'blk-23', type: 'data_table', title: '部门排行', data: {
+        headers: ['部门', '调用量', '错误率', '满意度', '得分'],
+        rows: [['AI平台组', '892K', '0.32%', '98%', '95'], ['技术研发部', '245K', '0.1%', '96%', '92'], ['销售部', '-', '-', '94%', '88']],
+      } },
+      { block_id: 'blk-24', type: 'rich_text', title: 'AI 综合分析', data: { content: '第' + currentWeek2.week + '周整体运营平稳。AI平台调用量创新高，销售签约表现亮眼，客服解决率持续提升。需关注下周算力高峰影响。' } },
+      { block_id: 'blk-25', type: 'bullet_list', title: '本周亮点', data: { items: ['技术部完成32卡GPU扩容', 'AI平台接口调用量创新高', '销售签约金额环比增长15.3%'] } },
+      { block_id: 'blk-26', type: 'bullet_list', title: '风险与问题', data: { items: ['下周算力需求预计激增', '高并发限流风险需提前评估'] } },
+    ],
+    created_at: dayAgo(1), updated_at: dayAgo(1),
+  },
+  {
+    id: 'rpt-5', config_id: 'rc-3', template_id: 'tpl-2',
+    title: '全公司日报 ' + currentWeek2.year + '-06-14',
+    scope: 'company', department_id: '', department_name: '',
+    period: 'daily', period_start: dayAgo(1), period_end: dayAgo(1),
+    agent_id: 'a-11', agent_name: '运营汇总周报Agent',
+    status: 'published', published_at: dayAgo(1),
+    blocks: [
+      { block_id: 'blk-11', type: 'metrics_card', title: '今日指标', data: [
+        { name: '总调用量', value: 21800, unit: '次', change: 2.1, trend: 'higher_better' },
+        { name: '活跃用户', value: 115, unit: '人', change: -5, trend: 'higher_better' },
+        { name: '平台可用率', value: 99.8, unit: '%', change: 0, trend: 'neutral' },
+        { name: '待处理告警', value: 3, unit: '个', change: 1, trend: 'lower_better' },
+      ] },
+      { block_id: 'blk-12', type: 'rich_text', title: 'AI 摘要', data: { content: '昨日平台运行正常，调用量稳定在21.8K。GLM-4服务短暂中断5分钟已恢复。' } },
+      { block_id: 'blk-13', type: 'bullet_list', title: '告警事项', data: { items: ['GLM-4 服务中断 14:32-14:37，已自动恢复', 'GPU利用率达85%，建议扩容', 'Agent a-3 运行失败×1'] } },
+    ],
+    created_at: dayAgo(1), updated_at: dayAgo(1),
   },
 ];
 
@@ -1498,149 +1556,86 @@ const quotas: any[] = [
 ];
 
 // =================== Token 转售 ===================
-const tokenResaleOverview = {
-  total_tokens: 5000000,
-  allocated_tokens: 3150000,
-  available_tokens: 1850000,
-  total_transactions: 12,
-  total_revenue: 89600,
-};
+// 重构：以"模型源"为售卖粒度，通道拆分（自用/转售），三种分配模式。
+// 金额单位：cost_input/cost_output 为 分/1M tokens；售价 = 成本 × (1 + markup_rate/100)
+// mode: priority_self 优先自用 | priority_sell 优先转售 | fixed_split 固定拆分
 
-const tokenResalePackages = [
-  {
-    id: 'pkg-1', name: '入门体验包', tier: 'starter', description: '适合小型团队试用 AI 能力',
-    token_amount: 50000, price: 2980, total_quota: 500000, sold: 200000, popular: false, status: 'listed',
-    applicable_models: ['基础模型'], unit_price: '¥596 / 1M',
-    features: ['5万加权Token调用', '基础模型(Flash/mini/GLM-4)', '7×12 技术支持', '30天有效期'],
-  },
-  {
-    id: 'pkg-2', name: '标准业务包', tier: 'standard', description: '满足中型企业日常 AI 需求',
-    token_amount: 200000, price: 9800, total_quota: 800000, sold: 400000, popular: true, status: 'listed',
-    applicable_models: ['基础模型', '高级模型'], unit_price: '¥490 / 1M',
-    features: ['20万加权Token调用', '支持所有模型（含高级）', '7×24 技术支持', '90天有效期', '调用分析报表'],
-  },
-  {
-    id: 'pkg-3', name: '专业版套餐', tier: 'pro', description: '面向高频调用的专业团队',
-    token_amount: 500000, price: 19800, total_quota: 1000000, sold: 350000, popular: false, status: 'listed',
-    applicable_models: ['基础模型', '高级模型', '旗舰模型'], unit_price: '¥396 / 1M',
-    features: ['50万加权Token调用', '全模型无限制', '专属技术顾问', '180天有效期', '优先队列', 'SLA 99.9%'],
-  },
-  {
-    id: 'pkg-4', name: '企业定制包', tier: 'enterprise', description: '大型企业深度定制方案',
-    token_amount: 2000000, price: 59800, total_quota: 2000000, sold: 0, popular: false, status: 'unlisted',
-    applicable_models: ['全部模型'], unit_price: '¥299 / 1M',
-    features: ['200万加权Token调用', '私有化部署支持', '一对一架构咨询', '365天有效期', '专属API网关', '定制模型微调'],
-  },
+// 可售资源：每个模型源的转售配置
+const resaleSources: any[] = [
+  { source_id: 'ms-1', display_name: 'GPT-4o', provider: 'OpenAI', resale_enabled: true, mode: 'priority_self', total_channels: 8, self_channels: 5, resale_channels: 3, cost_input: 300, cost_output: 600, markup_rate: 30, status: 'active' },
+  { source_id: 'ms-2', display_name: 'GPT-4o Mini', provider: 'OpenAI', resale_enabled: true, mode: 'priority_sell', total_channels: 10, self_channels: 3, resale_channels: 7, cost_input: 100, cost_output: 200, markup_rate: 40, status: 'active' },
+  { source_id: 'ms-3', display_name: 'Claude 3.5 Sonnet', provider: 'Anthropic', resale_enabled: true, mode: 'fixed_split', total_channels: 6, self_channels: 3, resale_channels: 3, cost_input: 300, cost_output: 600, markup_rate: 35, status: 'active' },
+  { source_id: 'ms-4', display_name: '通义千问VL', provider: '阿里云', resale_enabled: false, mode: 'priority_self', total_channels: 4, self_channels: 4, resale_channels: 0, cost_input: 120, cost_output: 240, markup_rate: 30, status: 'active' },
+  { source_id: 'ms-5', display_name: 'GLM-4', provider: '智谱AI', resale_enabled: true, mode: 'fixed_split', total_channels: 5, self_channels: 2, resale_channels: 3, cost_input: 100, cost_output: 200, markup_rate: 25, status: 'active' },
 ];
 
-// 模型消耗系数：调用不同模型按系数折算加权 Token
-const tokenResaleModelWeights = [
-  { tier: '基础模型', models: 'DeepSeek Flash / GPT-4o-mini / GLM-4', weight: 1 },
-  { tier: '高级模型', models: 'GPT-4o / Claude 3.5 Sonnet / 通义千问VL', weight: 5 },
-  { tier: '旗舰模型', models: 'DeepSeek Pro / o4 / Claude Opus', weight: 12 },
+// 客户账户（买方）：余额/信用额度/各模型源通道借用分配
+const resaleBuyers: any[] = [
+  { id: 'by-1', name: '深圳星辰科技', contact: 'tech@starchen.com', status: 'active', balance: 2340, credit_limit: 10000, total_consumed: 3580, month_consumed: 1260, opened_at: dayAgo(20),
+    allocations: [ { source_id: 'ms-1', channels: 2, token_limit: 2000000, token_used: 860000 }, { source_id: 'ms-2', channels: 3, token_limit: 5000000, token_used: 2300000 } ] },
+  { id: 'by-2', name: '杭州数据智联', contact: 'ai@datazl.cn', status: 'active', balance: 4200, credit_limit: 10000, total_consumed: 2100, month_consumed: 890, opened_at: dayAgo(35),
+    allocations: [ { source_id: 'ms-3', channels: 2, token_limit: 1500000, token_used: 420000 }, { source_id: 'ms-5', channels: 2, token_limit: 3000000, token_used: 1800000 } ] },
+  { id: 'by-3', name: '北京云途信息', contact: 'dev@yuntu.io', status: 'suspended', balance: 0, credit_limit: 5000, total_consumed: 480, month_consumed: 0, opened_at: dayAgo(50),
+    allocations: [ { source_id: 'ms-2', channels: 1, token_limit: 1000000, token_used: 420000 } ] },
 ];
 
-const tokenResaleTransactions: any[] = [
-  { id: 'tx-001', buyer_name: '深圳星辰科技', buyer_contact: 'tech@starchen.com', package_id: 'pkg-2', package_name: '标准业务包', token_amount: 200000, price: 9800, status: 'completed', created_at: dayAgo(2) },
-  { id: 'tx-002', buyer_name: '杭州数据智联', buyer_contact: 'ai@datazl.cn', package_id: 'pkg-3', package_name: '专业版套餐', token_amount: 500000, price: 19800, status: 'completed', created_at: dayAgo(5) },
-  { id: 'tx-003', buyer_name: '北京云途信息', buyer_contact: 'dev@yuntu.io', package_id: 'pkg-1', package_name: '入门体验包', token_amount: 50000, price: 2980, status: 'completed', created_at: dayAgo(8) },
-  { id: 'tx-004', buyer_name: '上海微创网络', buyer_contact: 'api@weichuang.com', package_id: 'pkg-2', package_name: '标准业务包', token_amount: 200000, price: 9800, status: 'completed', created_at: dayAgo(12) },
-  { id: 'tx-005', buyer_name: '广州智行科技', buyer_contact: 'biz@zhixing.tech', package_id: 'pkg-1', package_name: '入门体验包', token_amount: 50000, price: 2980, status: 'pending', created_at: dayAgo(1) },
+// 用量明细（按买方 × 模型源聚合）；cost_amount/sell_amount 单位：元
+const resaleUsage: any[] = [
+  { id: 'ru-01', buyer_id: 'by-1', buyer_name: '深圳星辰科技', source_id: 'ms-1', source_name: 'GPT-4o', calls: 8600, input_tokens: 120000, output_tokens: 46000, cost_amount: 636, sell_amount: 827, settle_status: 'pending', created_at: dayAgo(1) },
+  { id: 'ru-02', buyer_id: 'by-1', buyer_name: '深圳星辰科技', source_id: 'ms-2', source_name: 'GPT-4o Mini', calls: 21000, input_tokens: 150000, output_tokens: 30000, cost_amount: 210, sell_amount: 294, settle_status: 'pending', created_at: dayAgo(1) },
+  { id: 'ru-03', buyer_id: 'by-2', buyer_name: '杭州数据智联', source_id: 'ms-3', source_name: 'Claude 3.5 Sonnet', calls: 5200, input_tokens: 92000, output_tokens: 38000, cost_amount: 504, sell_amount: 680, settle_status: 'settled', created_at: dayAgo(2) },
+  { id: 'ru-04', buyer_id: 'by-2', buyer_name: '杭州数据智联', source_id: 'ms-5', source_name: 'GLM-4', calls: 43200, input_tokens: 420000, output_tokens: 120000, cost_amount: 660, sell_amount: 825, settle_status: 'settled', created_at: dayAgo(3) },
+  { id: 'ru-05', buyer_id: 'by-3', buyer_name: '北京云途信息', source_id: 'ms-2', source_name: 'GPT-4o Mini', calls: 8600, input_tokens: 48000, output_tokens: 12000, cost_amount: 72, sell_amount: 101, settle_status: 'settled', created_at: dayAgo(4) },
 ];
 
-// 卖方（算力供应商）可售额度概览
-// listed/sold/available 为派生字段，由 recalcSupply() 依据 packages 与可编辑字段重算
-const tokenResaleSupply = {
-  card_model: 'NVIDIA H20 ×8 算力卡集群',
-  monthly_capacity: 5000000,   // 月产能加权 Token（可编辑）
-  self_reserved: 1200000,      // 自用预留（可编辑）
-  listed: 0,                   // 已挂售（派生 = Σ 已上架套餐剩余额度）
-  sold: 0,                     // 已售出（派生 = Σ 套餐 sold）
-  payg_pool: 0,                // 按量池预留产能（可编辑，独立分区）
-  available: 0,                // 可挂售余量（派生）
-  markup_rate: 30,             // 加价率 %（可编辑）
-  auto_pricing: true,          // 跟随官方价自动加价（可编辑）
-  month_revenue: 89600,        // 本月销售额（套餐+按量合计）
-  month_settled: 62300,        // 已结算
-  pending_settle: 27300,       // 待结算
-};
-
-// 派生联动：依据 packages 与 supply 可编辑字段重算 listed/sold/available，并同步 overview
-function recalcSupply() {
-  let listed = 0;
-  let sold = 0;
-  tokenResalePackages.forEach((pk: any) => {
-    sold += pk.sold || 0;
-    if (pk.status === 'listed') listed += Math.max(0, (pk.total_quota || 0) - (pk.sold || 0));
-  });
-  tokenResaleSupply.listed = listed;
-  tokenResaleSupply.sold = sold;
-  const paygPool = tokenResalePaygConfig.payg_pool_quota || 0;
-  tokenResaleSupply.payg_pool = paygPool;
-  tokenResaleSupply.available = Math.max(
-    0,
-    tokenResaleSupply.monthly_capacity - tokenResaleSupply.self_reserved - listed - sold - paygPool,
-  );
-  // 同步 overview（模块内闭环）；已分配含自用+已售+按量池
-  tokenResaleOverview.total_tokens = tokenResaleSupply.monthly_capacity;
-  tokenResaleOverview.allocated_tokens = tokenResaleSupply.self_reserved + sold + paygPool;
-  tokenResaleOverview.available_tokens = tokenResaleSupply.available;
-}
-
-// 模型等级定价表（单位：分 / 1M tokens）
-const tokenResalePricing = [
-  { id: 'pr-1', model_tier: '基础模型', cost_input_miss: 100, cost_output: 200, sell_input_miss: 180, sell_output: 350, enabled: true },
-  { id: 'pr-2', model_tier: '高级模型', cost_input_miss: 300, cost_output: 600, sell_input_miss: 550, sell_output: 1000, enabled: true },
-  { id: 'pr-3', model_tier: '旗舰模型', cost_input_miss: 800, cost_output: 1600, sell_input_miss: 1400, sell_output: 2800, enabled: false },
-];
-
-// 买方账单明细（按调用聚合）
-const tokenResaleBills = [
-  { id: 'bill-01', buyer_name: '深圳星辰科技', model_tier: '高级模型', calls: 12480, tokens_used: 186000, weighted_tokens: 930000, amount: 4560, date: dayAgo(1) },
-  { id: 'bill-02', buyer_name: '杭州数据智联', model_tier: '基础模型', calls: 43200, tokens_used: 420000, weighted_tokens: 420000, amount: 1470, date: dayAgo(2) },
-  { id: 'bill-03', buyer_name: '北京云途信息', model_tier: '基础模型', calls: 8600, tokens_used: 48000, weighted_tokens: 48000, amount: 168, date: dayAgo(3) },
-  { id: 'bill-04', buyer_name: '上海微创网络', model_tier: '高级模型', calls: 5200, tokens_used: 92000, weighted_tokens: 460000, amount: 2256, date: dayAgo(4) },
-];
-
-// 卖方结算记录
-const tokenResaleSettlements = [
+// 结算记录（单位：元）
+const resaleSettlements: any[] = [
   { id: 'st-01', period: '2026-06 上半月', gross: 46800, platform_fee: 7020, net: 39780, status: 'settled', settled_at: dayAgo(1) },
   { id: 'st-02', period: '2026-05 下半月', gross: 22500, platform_fee: 3375, net: 19125, status: 'settled', settled_at: dayAgo(16) },
   { id: 'st-03', period: '2026-06 下半月', gross: 27300, platform_fee: 4095, net: 23205, status: 'pending', settled_at: null },
 ];
 
-// ===== 按量计费（Pay-As-You-Go）=====
-// 全局配置：卖方设定（总开关/按量池产能/风控）
-const tokenResalePaygConfig = {
-  enabled: true,               // 总开关：是否开放按量售卖
-  payg_pool_quota: 800000,     // 按量池产能分配（加权 Token）
-  min_deposit: 500,            // 最低预充值金额（元）
-  buyer_credit_limit: 10000,   // 买方默认信用/消费上限（元）
-  settle_cycle: 'monthly',     // 结算周期 daily | weekly | monthly
-};
+// 派生：某模型源被买方借用的通道总数
+function borrowedChannels(sourceId: string) {
+  let n = 0;
+  resaleBuyers.forEach((b: any) => {
+    (b.allocations || []).forEach((a: any) => { if (a.source_id === sourceId) n += a.channels || 0; });
+  });
+  return n;
+}
 
-// 按量定价表（分 / 1M 加权 Token，每个模型等级独立开关）
-const tokenResalePaygRates = [
-  { id: 'payg-1', model_tier: '基础模型', cost_input: 100, cost_output: 200, sell_input: 180, sell_output: 350, enabled: true },
-  { id: 'payg-2', model_tier: '高级模型', cost_input: 300, cost_output: 600, sell_input: 550, sell_output: 1000, enabled: true },
-  { id: 'payg-3', model_tier: '旗舰模型', cost_input: 800, cost_output: 1600, sell_input: 1400, sell_output: 2800, enabled: false },
-];
+// 派生：模型源附加运行态字段（借用通道数、可分配余量、售价）
+function enrichSource(s: any) {
+  const borrowed = borrowedChannels(s.source_id);
+  return {
+    ...s,
+    borrowed_channels: borrowed,
+    free_resale_channels: Math.max(0, (s.resale_channels || 0) - borrowed),
+    sell_input: Math.round((s.cost_input || 0) * (1 + (s.markup_rate || 0) / 100)),
+    sell_output: Math.round((s.cost_output || 0) * (1 + (s.markup_rate || 0) / 100)),
+  };
+}
 
-// 买方按量账户
-const tokenResalePaygAccounts = [
-  { id: 'pa-1', buyer_name: '深圳星辰科技', buyer_contact: 'tech@starchen.com', balance: 2340, total_consumed: 3580, used_tokens: 230000, credit_limit: 10000, month_consumed: 1260, status: 'active', opened_at: dayAgo(20) },
-  { id: 'pa-2', buyer_name: '杭州数据智联', buyer_contact: 'ai@datazl.cn', balance: 4200, total_consumed: 2100, used_tokens: 180000, credit_limit: 10000, month_consumed: 890, status: 'active', opened_at: dayAgo(35) },
-  { id: 'pa-3', buyer_name: '北京云途信息', buyer_contact: 'dev@yuntu.io', balance: 0, total_consumed: 480, used_tokens: 42000, credit_limit: 5000, month_consumed: 0, status: 'suspended', opened_at: dayAgo(50) },
-];
-
-// 按量使用明细
-const tokenResalePaygUsage = [
-  { id: 'pu-01', buyer_name: '深圳星辰科技', model_tier: '高级模型', calls: 8600, input_tokens: 120000, output_tokens: 46000, weighted_tokens: 230000, unit_price: 550, amount: 1265, settle_status: 'pending', created_at: dayAgo(1) },
-  { id: 'pu-02', buyer_name: '杭州数据智联', model_tier: '基础模型', calls: 21000, input_tokens: 150000, output_tokens: 30000, weighted_tokens: 180000, unit_price: 180, amount: 315, settle_status: 'settled', created_at: dayAgo(2) },
-  { id: 'pu-03', buyer_name: '北京云途信息', model_tier: '基础模型', calls: 5200, input_tokens: 38000, output_tokens: 4000, weighted_tokens: 42000, unit_price: 180, amount: 76, settle_status: 'settled', created_at: dayAgo(4) },
-];
-
-recalcSupply();
+// 派生：转售总览
+function resaleOverview() {
+  const activeSources = resaleSources.filter((s: any) => s.resale_enabled).length;
+  const totalResaleChannels = resaleSources.reduce((n: number, s: any) => n + (s.resale_enabled ? (s.resale_channels || 0) : 0), 0);
+  const usedChannels = resaleSources.reduce((n: number, s: any) => n + borrowedChannels(s.source_id), 0);
+  const monthRevenue = resaleUsage.reduce((sum: number, u: any) => sum + (u.sell_amount || 0), 0);
+  const monthCost = resaleUsage.reduce((sum: number, u: any) => sum + (u.cost_amount || 0), 0);
+  const pendingSettle = resaleUsage.filter((u: any) => u.settle_status === 'pending').reduce((sum: number, u: any) => sum + (u.sell_amount || 0), 0);
+  return {
+    active_sources: activeSources,
+    total_resale_channels: totalResaleChannels,
+    used_channels: usedChannels,
+    free_channels: Math.max(0, totalResaleChannels - usedChannels),
+    buyers: resaleBuyers.length,
+    active_buyers: resaleBuyers.filter((b: any) => b.status === 'active').length,
+    month_revenue: monthRevenue,
+    month_profit: monthRevenue - monthCost,
+    pending_settle: pendingSettle,
+  };
+}
 
 
 // =================== 调用日志 ===================
@@ -2985,77 +2980,88 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok(agentsMdFiles[idx]);
   }
 
-  // Weekly Reports（智能周报）
-  // 部门直接来源于组织，排除总公司根节点
-  if (path === '/weekly/departments' && method === 'get') {
-    return ok(organizations.filter((o: any) => o.type !== 'company'));
+  // =================== 智能报告 ===================
+  // 报告模板 CRUD
+  if (path === '/reports/templates' && method === 'get') {
+    return ok(reportTemplates);
   }
-  if (path === '/weekly/data-sources' && method === 'get') return ok(weeklyDataSources);
+  if (path === '/reports/templates' && method === 'post') {
+    const tpl = { id: 'tpl-' + Date.now(), ...data, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    reportTemplates.unshift(tpl);
+    return ok(tpl);
+  }
+  if (/^\/reports\/templates\/[^/]+$/.test(path) && method === 'put') {
+    const tid = path.split('/').pop();
+    const idx = reportTemplates.findIndex((t: any) => t.id === tid);
+    if (idx < 0) return { code: 404, message: 'not found', data: null };
+    reportTemplates[idx] = { ...reportTemplates[idx], ...data, updated_at: new Date().toISOString() };
+    return ok(reportTemplates[idx]);
+  }
+  if (/^\/reports\/templates\/[^/]+$/.test(path) && method === 'delete') {
+    const tid = path.split('/').pop();
+    const idx = reportTemplates.findIndex((t: any) => t.id === tid);
+    if (idx >= 0) reportTemplates.splice(idx, 1);
+    return ok(null);
+  }
 
-  // ---- 周报生成配置 CRUD ----
-  if (path === '/weekly/configs' && method === 'get') {
-    return paginate(weeklyReportConfigs, p.page, p.page_size, p.search);
+  // 报告配置 CRUD
+  if (path === '/reports/configs' && method === 'get') {
+    return paginate(reportConfigs, p.page, p.page_size, p.search);
   }
-  if (path === '/weekly/configs' && method === 'post') {
+  if (path === '/reports/configs' && method === 'post') {
     const dept = organizations.find((o: any) => o.id === data.department_id);
     const agent = agents.find((a: any) => a.id === data.agent_id);
-    const newConfig = {
-      id: 'wrc-' + Date.now(),
-      ...data,
-      department_name: dept?.name || '运营汇总',
-      agent_name: agent?.name || data.agent_name || '',
-      type: data.department_id ? 'department' : 'operation',
-      enabled: data.enabled !== false,
+    const tpl = reportTemplates.find((t: any) => t.id === data.template_id);
+    const nc = {
+      id: 'rc-' + Date.now(), ...data,
+      department_name: dept?.name || '',
+      agent_name: agent?.name || '',
+      template_name: tpl?.name || '',
       last_generated_at: null,
-      creator: data.creator || '当前用户',
-      created_at: new Date().toISOString(),
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
-    weeklyReportConfigs.unshift(newConfig);
-    return ok(newConfig);
+    reportConfigs.unshift(nc);
+    return ok(nc);
   }
-  if (/^\/weekly\/configs\/[^/]+$/.test(path) && method === 'put') {
+  if (/^\/reports\/configs\/[^/]+$/.test(path) && method === 'put') {
     const cid = path.split('/').pop();
-    const idx = weeklyReportConfigs.findIndex((c: any) => c.id === cid);
+    const idx = reportConfigs.findIndex((c: any) => c.id === cid);
     if (idx < 0) return { code: 404, message: 'not found', data: null };
     const dept = organizations.find((o: any) => o.id === data.department_id);
     const agent = agents.find((a: any) => a.id === data.agent_id);
-    weeklyReportConfigs[idx] = {
-      ...weeklyReportConfigs[idx],
-      ...data,
-      department_name: dept?.name || data.department_name || '运营汇总',
-      agent_name: agent?.name || data.agent_name || weeklyReportConfigs[idx].agent_name,
-      type: data.department_id ? 'department' : 'operation',
+    const tpl = reportTemplates.find((t: any) => t.id === data.template_id);
+    reportConfigs[idx] = {
+      ...reportConfigs[idx], ...data,
+      department_name: dept?.name || data.department_name || '',
+      agent_name: agent?.name || data.agent_name || '',
+      template_name: tpl?.name || data.template_name || '',
+      updated_at: new Date().toISOString(),
     };
-    return ok(weeklyReportConfigs[idx]);
+    return ok(reportConfigs[idx]);
   }
-  if (/^\/weekly\/configs\/[^/]+$/.test(path) && method === 'delete') {
+  if (/^\/reports\/configs\/[^/]+$/.test(path) && method === 'delete') {
     const cid = path.split('/').pop();
-    const idx = weeklyReportConfigs.findIndex((c: any) => c.id === cid);
-    if (idx >= 0) weeklyReportConfigs.splice(idx, 1);
+    const idx = reportConfigs.findIndex((c: any) => c.id === cid);
+    if (idx >= 0) reportConfigs.splice(idx, 1);
     return ok(null);
   }
-  if (/^\/weekly\/configs\/[^/]+\/toggle$/.test(path) && method === 'post') {
+  if (/^\/reports\/configs\/[^/]+\/toggle$/.test(path) && method === 'post') {
     const cid = path.split('/')[3];
-    const config = weeklyReportConfigs.find((c: any) => c.id === cid);
+    const config = reportConfigs.find((c: any) => c.id === cid);
     if (config) config.enabled = !config.enabled;
     return ok(config || null);
   }
-  // 手动触发配置立即生成一次周报（模拟调用绑定的 Agent 执行）
-  if (/^\/weekly\/configs\/[^/]+\/trigger$/.test(path) && method === 'post') {
+  if (/^\/reports\/configs\/[^/]+\/trigger$/.test(path) && method === 'post') {
     const cid = path.split('/')[3];
-    const config = weeklyReportConfigs.find((c: any) => c.id === cid);
+    const config = reportConfigs.find((c: any) => c.id === cid);
     if (!config) return { code: 404, message: 'not found', data: null };
-
     // 模拟 Agent 执行记录
     const agent = agents.find((a: any) => a.id === config.agent_id);
     if (agent) {
       agent.last_run_at = new Date().toISOString();
       agentRuns.unshift({
-        id: 'ar-' + Date.now(),
-        agent_id: agent.id,
-        agent_name: agent.name,
-        trigger_type: 'manual',
-        status: 'completed',
+        id: 'ar-' + Date.now(), agent_id: agent.id, agent_name: agent.name,
+        trigger_type: 'manual', status: 'completed',
         duration_ms: Math.floor(Math.random() * 8000) + 3000,
         model_tokens: Math.floor(Math.random() * 3000) + 1000,
         input_tokens: Math.floor(Math.random() * 2000) + 500,
@@ -3064,152 +3070,99 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         created_at: new Date().toISOString(),
       });
     }
-
+    config.last_generated_at = new Date().toISOString();
+    // 生成新报告实例：按 block_configs 逐块生成对应类型的结构化数据
     const weekInfo = getWeekInfo();
     const dept = organizations.find((o: any) => o.id === config.department_id);
-    const title = config.type === 'operation'
-      ? `运营周报（第${weekInfo.week}周）`
-      : `${dept?.name || config.department_name}第${weekInfo.week}周周报`;
-    // 同周重复校验
-    const exists = weeklyReports.find((r: any) =>
-      r.year === weekInfo.year && r.week === weekInfo.week &&
-      (config.type === 'operation' ? r.type === 'operation' : r.department_id === config.department_id)
-    );
-    if (exists) {
-      // 更新已有周报内容
-      exists.status = 'published';
-      exists.created_at = new Date().toISOString();
-      if (config.type === 'department') {
-        exists.metrics = generateMetrics(weeklyDataSources, config.department_id);
-      } else {
-        const deptReports = weeklyReports.filter((r: any) => r.type === 'department');
-        exists.metrics = aggregateOperationMetrics(deptReports, weeklyDataSources);
-        const opSummary = buildOperationSummary(deptReports, weekInfo.week);
-        exists.summary = opSummary.summary;
-        exists.highlights = opSummary.highlights;
-        exists.risks = opSummary.risks;
-        exists.next_week_plan = opSummary.next_week_plan;
+    const tpl = reportTemplates.find((t: any) => t.id === config.template_id);
+    const tplBlocks = tpl?.blocks || [];
+    const cfgList = config.block_configs || [];
+    const blocks = tplBlocks.map((tb: any) => {
+      const bc = cfgList.find((c: any) => c.key === tb.variable_key) || { config: {} };
+      const bcCfg = bc.config || {};
+      const commonBlock: any = { block_id: tb.id, type: tb.type, title: tb.title };
+      if (tb.type === 'metrics_card') {
+        const metrics = (bcCfg.metrics || []).map((m: any) => {
+          const isPercent = m.format === 'percent';
+          const isFloat = m.format === 'float';
+          const base = isPercent ? 90 + Math.random() * 9 : (isFloat ? Math.random() * 500 : Math.floor(Math.random() * 90000) + 10000);
+          return { name: m.name, value: isPercent ? +base.toFixed(1) : (isFloat ? +base.toFixed(1) : Math.floor(base)), unit: m.unit, change: +(Math.random() * 10 - 3).toFixed(1), trend: m.trend || 'neutral' };
+        });
+        return { ...commonBlock, data: metrics };
       }
-      config.last_generated_at = new Date().toISOString();
-      return ok(exists);
-    }
-    let metrics: any[] = [];
-    let summary = '';
-    let highlights: string[] = [];
-    let risks: string[] = [];
-    let next_week_plan: string[] = [];
-    if (config.type === 'operation') {
-      const deptReports = weeklyReports.filter((r: any) => r.type === 'department');
-      metrics = aggregateOperationMetrics(deptReports, weeklyDataSources);
-      const opSummary = buildOperationSummary(deptReports, weekInfo.week);
-      summary = opSummary.summary;
-      highlights = opSummary.highlights;
-      risks = opSummary.risks;
-      next_week_plan = opSummary.next_week_plan;
-    } else {
-      metrics = generateMetrics(weeklyDataSources, config.department_id);
-      summary = `本周${dept?.name || config.department_name}整体运行平稳，核心指标表现符合预期。`;
-      highlights = ['完成本周核心目标', '关键指标保持稳定'];
-      risks = ['需持续关注资源使用趋势'];
-      next_week_plan = ['推进下周重点工作', '完成数据复盘'];
-    }
-    const newReport = {
-      id: 'wr-' + Date.now(),
-      title,
-      department_id: config.department_id,
-      department_name: dept?.name || '运营汇总',
-      agent_id: config.agent_id,
-      agent_name: config.agent_name,
-      type: config.type,
-      year: weekInfo.year,
-      week: weekInfo.week,
-      week_start: weekInfo.week_start,
-      week_end: weekInfo.week_end,
-      status: 'published',
-      creator: config.creator || '系统自动',
-      created_at: new Date().toISOString(),
-      summary,
-      highlights,
-      risks,
-      next_week_plan,
-      metrics,
+      if (tb.type === 'chart_image') {
+        return { ...commonBlock, data: { chart_title: bcCfg.chart_title || tb.title, chart_type: bcCfg.chart_type || 'line', caption: bcCfg.chart_title || tb.title, alt: bcCfg.chart_title || tb.title, image_url: '' } };
+      }
+      if (tb.type === 'data_table') {
+        const cols = bcCfg.columns || [];
+        const headers = cols.map((c: any) => c.header);
+        const rowCnt = Math.min(bcCfg.max_rows || 10, 8);
+        const rows: string[][] = [];
+        for (let i = 0; i < rowCnt; i++) {
+          rows.push(cols.map((c: any) => {
+            if (c.align === 'right') return String(Math.floor(Math.random() * 10000));
+            return `${c.header}-${i + 1}`;
+          }));
+        }
+        return { ...commonBlock, data: { headers, rows } };
+      }
+      if (tb.type === 'rich_text') {
+        const topic = bcCfg.topic || tb.title;
+        return { ...commonBlock, data: { content: `【${topic}】本期报告由 Agent 按配置指令自动生成，覆盖${bcCfg.angle || '整体'}角度，字数约 ${bcCfg.word_limit || 300} 字。核心指标整体表现${Math.random() > 0.5 ? '优于预期' : '符合预期'}，重点建议已提炼如下。` } };
+      }
+      if (tb.type === 'bullet_list') {
+        const cnt = Math.min(bcCfg.max_items || 5, 5);
+        const kind = bcCfg.list_kind || 'item';
+        const items = Array.from({ length: cnt }).map((_, i) => `${kind === 'risk' ? '风险' : kind === 'plan' ? '计划' : kind === 'alert' ? '告警' : '亮点'} ${i + 1}：${tb.title} 相关内容`);
+        return { ...commonBlock, data: { items } };
+      }
+      return { ...commonBlock, data: {} };
+    });
+    const newReport: any = {
+      id: 'rpt-' + Date.now(), config_id: config.id, template_id: config.template_id,
+      title: config.scope === 'company'
+        ? `全公司${config.period === 'daily' ? '日报' : config.period === 'weekly' ? '运营周报' : '月报'}（第${weekInfo.week}周）`
+        : `${dept?.name || config.department_name} ${weekInfo.year}年第${weekInfo.week}周${config.period === 'daily' ? '日报' : config.period === 'weekly' ? '周报' : '月报'}`,
+      scope: config.scope, department_id: config.department_id, department_name: dept?.name || config.department_name || '',
+      period: config.period, period_start: weekInfo.week_start, period_end: weekInfo.week_end,
+      agent_id: config.agent_id, agent_name: config.agent_name,
+      status: 'published', published_at: new Date().toISOString(),
+      blocks,
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     };
-    weeklyReports.unshift(newReport);
-    config.last_generated_at = new Date().toISOString();
+    reports.unshift(newReport);
     return ok(newReport);
   }
 
-  if (path === '/weekly/reports' && method === 'get') {
-    let filtered = weeklyReports;
+  // 报告实例查询
+  if (path === '/reports/list' && method === 'get') {
+    let filtered: any[] = [...reports];
+    if (p.scope) filtered = filtered.filter(r => r.scope === p.scope);
+    if (p.period) filtered = filtered.filter(r => r.period === p.period);
     if (p.department_id) filtered = filtered.filter(r => r.department_id === p.department_id);
-    if (p.type) filtered = filtered.filter(r => r.type === p.type);
-    if (p.user_org_id) {
-      // 非管理员只能看自己所属部门及下级的周报；运营周报始终可见
-      filtered = filtered.filter(r => r.type === 'operation' || r.department_id === p.user_org_id);
-    }
-    // 按创建时间倒序，最新的周报在前
-    filtered = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    if (p.status) filtered = filtered.filter(r => r.status === p.status);
+    filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return paginate(filtered, p.page, p.page_size, p.search);
   }
-  if (path === '/weekly/reports' && method === 'post') {
-    const dept = organizations.find((o: any) => o.id === data.department_id);
-    // 同部门同周报重校验
-    const exists = weeklyReports.find((r: any) =>
-      r.year === data.year && r.week === data.week &&
-      (data.type === 'operation' ? r.type === 'operation' : r.department_id === data.department_id)
-    );
-    if (exists) {
-      return { code: 409, message: '该周期周报已存在，如需更新请使用重新生成', data: exists };
-    }
-    const newReport = {
-      id: 'wr-' + Date.now(),
-      ...data,
-      status: 'published',
-      creator: data.creator || '当前用户',
-      created_at: new Date().toISOString(),
-      department_name: dept?.name || data.department_name || '运营汇总',
-    };
-    weeklyReports.unshift(newReport);
-    return ok(newReport);
-  }
-  if (/^\/weekly\/reports\/[^/]+$/.test(path) && method === 'get') {
+  if (/^\/reports\/[^/]+$/.test(path) && method === 'get' && !path.includes('/templates') && !path.includes('/configs') && !path.includes('/list')) {
     const rid = path.split('/').pop();
-    return ok(weeklyReports.find(r => r.id === rid) || null);
+    return ok(reports.find(r => r.id === rid) || null);
   }
-  if (/^\/weekly\/reports\/[^/]+\/generate$/.test(path) && method === 'post') {
-    const rid = path.split('/')[3];
-    const report = weeklyReports.find(r => r.id === rid);
-    if (report) {
-      report.status = 'published';
-      report.created_at = new Date().toISOString();
-      // 重新生成内容
-      if (report.type === 'operation') {
-        const deptReports = weeklyReports.filter((r: any) => r.type === 'department');
-        report.metrics = aggregateOperationMetrics(deptReports, weeklyDataSources);
-        const opSummary = buildOperationSummary(deptReports, report.week);
-        report.summary = opSummary.summary;
-        report.highlights = opSummary.highlights;
-        report.risks = opSummary.risks;
-        report.next_week_plan = opSummary.next_week_plan;
-      } else {
-        report.metrics = generateMetrics(weeklyDataSources, report.department_id);
-        report.summary = `本周${report.department_name}整体运行平稳，核心指标表现符合预期。`;
-        report.highlights = ['完成本周核心目标', '关键指标保持稳定'];
-        report.risks = ['需持续关注资源使用趋势'];
-        report.next_week_plan = ['推进下周重点工作', '完成数据复盘'];
-      }
-    }
-    return ok(report || null);
-  }
-  if (/^\/weekly\/reports\/[^/]+\/export$/.test(path) && method === 'get') {
-    const rid = path.split('/')[3];
-    const report = weeklyReports.find(r => r.id === rid);
+  if (/^\/reports\/[^/]+\/export$/.test(path) && method === 'get') {
+    const rid = path.split('/')[2];
+    const report = reports.find(r => r.id === rid);
     if (!report) return { code: 404, message: 'not found', data: null };
-    return ok({
-      format: 'markdown',
-      content: toMarkdown(report),
-      filename: `${report.title}.md`,
-    });
+    const md = report.blocks.map((b: any) => {
+      if (b.type === 'rich_text') return `## ${b.title}\n${b.data.content}`;
+      if (b.type === 'bullet_list') return `## ${b.title}\n${b.data.items.map((i: string) => `- ${i}`).join('\n')}`;
+      if (b.type === 'metrics_card') return `## ${b.title}\n${b.data.map((m: any) => `- ${m.name}: ${m.value}${m.unit} (环比${m.change >= 0 ? '+' : ''}${m.change})`).join('\n')}`;
+      return `## ${b.title}`;
+    }).join('\n\n');
+    return ok({ format: 'markdown', content: `# ${report.title}\n\n${md}`, filename: `${report.title}.md` });
+  }
+  // 部门列表（复用）
+  if (path === '/reports/departments' && method === 'get') {
+    return ok(organizations.filter((o: any) => o.type !== 'company'));
   }
 
   // =================== RAG 知识库 ===================
@@ -3399,151 +3352,112 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   }
 
   // =================== Token 转售 ===================
-  if (path === '/token-resale/overview' && method === 'get') return ok(tokenResaleOverview);
-  if (path === '/token-resale/packages' && method === 'get') {
-    // 卖方看板传 all=1 取全量；市场仅返回已上架
-    const list = p.all ? tokenResalePackages : tokenResalePackages.filter((pk: any) => pk.status === 'listed');
-    return ok(list);
-  }
-  if (path === '/token-resale/transactions' && method === 'get') {
-    return paginate(tokenResaleTransactions, p.page, p.page_size, p.search);
-  }
-  if (path === '/token-resale/purchase' && method === 'post') {
-    const pkg = tokenResalePackages.find(pk => pk.id === data.package_id);
-    if (!pkg) return { code: 404, message: 'package not found', data: null };
-    if ((pkg as any).status !== 'listed') return { code: 400, message: '该套餐已下架', data: null };
-    const remaining = (pkg.total_quota || 0) - (pkg.sold || 0);
-    if (pkg.token_amount > remaining) return { code: 400, message: '套餐剩余额度不足', data: null };
-    const tx = {
-      id: 'tx-' + String(Date.now()).slice(-6),
-      buyer_name: data.buyer_name,
-      buyer_contact: data.buyer_contact || '',
-      package_id: pkg.id,
-      package_name: pkg.name,
-      token_amount: pkg.token_amount,
-      price: pkg.price,
-      status: 'completed',
-      created_at: new Date().toISOString(),
-    };
-    tokenResaleTransactions.unshift(tx);
-    pkg.sold += pkg.token_amount;
-    tokenResaleSupply.month_revenue += pkg.price;
-    tokenResaleSupply.pending_settle += pkg.price;
-    tokenResaleOverview.total_transactions += 1;
-    tokenResaleOverview.total_revenue += pkg.price;
-    recalcSupply();
-    return ok(tx);
-  }
-  if (path === '/token-resale/supply' && method === 'put') {
-    const cap = Number(data.monthly_capacity ?? tokenResaleSupply.monthly_capacity);
-    const reserved = Number(data.self_reserved ?? tokenResaleSupply.self_reserved);
-    // 校验：自用预留 + 已挂售 + 已售出 不得超过月产能
-    if (reserved + tokenResaleSupply.listed + tokenResaleSupply.sold > cap) {
-      return { code: 400, message: '自用预留与已挂售/已售出之和超过月产能，请调高产能或降低自用', data: null };
-    }
-    tokenResaleSupply.monthly_capacity = cap;
-    tokenResaleSupply.self_reserved = reserved;
-    if (data.markup_rate !== undefined) tokenResaleSupply.markup_rate = Number(data.markup_rate);
-    if (data.auto_pricing !== undefined) tokenResaleSupply.auto_pricing = !!data.auto_pricing;
-    recalcSupply();
-    return ok(tokenResaleSupply);
-  }
-  if (/^\/token-resale\/packages\/[^/]+\/toggle$/.test(path) && method === 'post') {
-    const pid = path.split('/')[3];
-    const pkg: any = tokenResalePackages.find(pk => pk.id === pid);
-    if (!pkg) return { code: 404, message: 'package not found', data: null };
-    pkg.status = pkg.status === 'listed' ? 'unlisted' : 'listed';
-    recalcSupply();
-    return ok(pkg);
-  }
-  if (/^\/token-resale\/pricing\/[^/]+\/toggle$/.test(path) && method === 'post') {
-    const prid = path.split('/')[3];
-    const pr: any = tokenResalePricing.find(x => x.id === prid);
-    if (!pr) return { code: 404, message: 'pricing not found', data: null };
-    pr.enabled = !pr.enabled;
-    return ok(pr);
-  }
-  if (path === '/token-resale/model-weights' && method === 'get') return ok(tokenResaleModelWeights);
-  if (path === '/token-resale/supply' && method === 'get') return ok(tokenResaleSupply);
-  if (path === '/token-resale/pricing' && method === 'get') return ok(tokenResalePricing);
-  if (path === '/token-resale/bills' && method === 'get') {
-    return paginate(tokenResaleBills, p.page, p.page_size, p.search);
-  }
-  if (path === '/token-resale/settlements' && method === 'get') return ok(tokenResaleSettlements);
+  // 概览
+  if (path === '/token-resale/overview' && method === 'get') return ok(resaleOverview());
 
-  // ===== 按量计费 =====
-  if (path === '/token-resale/payg-config' && method === 'get') return ok(tokenResalePaygConfig);
-  if (path === '/token-resale/payg-config' && method === 'put') {
-    const cfg: any = tokenResalePaygConfig;
-    if (data.enabled !== undefined) cfg.enabled = !!data.enabled;
-    if (data.payg_pool_quota !== undefined) {
-      const pool = Number(data.payg_pool_quota);
-      // 校验：自用 + 已挂售 + 已售出 + 按量池 不得超过月产能；且不小于已消耗
-      const usedPayg = tokenResalePaygUsage.reduce((s, u) => s + (u.weighted_tokens || 0), 0);
-      if (pool < usedPayg) return { code: 400, message: '按量池不得小于已消耗量 ' + usedPayg, data: null };
-      if (tokenResaleSupply.self_reserved + tokenResaleSupply.listed + tokenResaleSupply.sold + pool > tokenResaleSupply.monthly_capacity) {
-        return { code: 400, message: '按量池与自用/挂售/已售之和超过月产能', data: null };
-      }
-      cfg.payg_pool_quota = pool;
+  // 可售资源（模型源转售配置）
+  if (path === '/token-resale/sources' && method === 'get') {
+    return ok(resaleSources.map(enrichSource));
+  }
+  if (/^\/token-resale\/sources\/[^/]+$/.test(path) && method === 'put') {
+    const sid = path.split('/')[3];
+    const s: any = resaleSources.find(x => x.source_id === sid);
+    if (!s) return { code: 404, message: 'source not found', data: null };
+    ['resale_enabled', 'mode', 'total_channels', 'self_channels', 'resale_channels', 'cost_input', 'cost_output', 'markup_rate', 'status'].forEach(k => {
+      if (data[k] !== undefined) s[k] = data[k];
+    });
+    // 校验：自用通道 + 转售通道 不得超过总通道
+    if ((s.self_channels || 0) + (s.resale_channels || 0) > (s.total_channels || 0)) {
+      return { code: 400, message: '自用通道 + 转售通道 不得超过总通道数', data: null };
     }
-    if (data.min_deposit !== undefined) cfg.min_deposit = Number(data.min_deposit);
-    if (data.buyer_credit_limit !== undefined) cfg.buyer_credit_limit = Number(data.buyer_credit_limit);
-    if (data.settle_cycle !== undefined) cfg.settle_cycle = data.settle_cycle;
-    recalcSupply();
-    return ok(cfg);
-  }
-  if (path === '/token-resale/payg-rates' && method === 'get') return ok(tokenResalePaygRates);
-  if (/^\/token-resale\/payg-rates\/[^/]+\/toggle$/.test(path) && method === 'post') {
-    const rid = path.split('/')[3];
-    const r: any = tokenResalePaygRates.find(x => x.id === rid);
-    if (!r) return { code: 404, message: 'rate not found', data: null };
-    r.enabled = !r.enabled;
-    return ok(r);
-  }
-  if (path === '/token-resale/payg-accounts' && method === 'get') {
-    return paginate(tokenResalePaygAccounts, p.page, p.page_size, p.search);
-  }
-  if (path === '/token-resale/payg-usage' && method === 'get') {
-    return paginate(tokenResalePaygUsage, p.page, p.page_size, p.search);
-  }
-  if (path === '/token-resale/payg-open' && method === 'post') {
-    if (!tokenResalePaygConfig.enabled) return { code: 400, message: '按量计费未开放', data: null };
-    const deposit = Number(data.deposit || 0);
-    if (deposit < tokenResalePaygConfig.min_deposit) {
-      return { code: 400, message: '首充金额不得低于 ' + tokenResalePaygConfig.min_deposit + ' 元', data: null };
+    // 校验：转售通道不得低于已借出
+    const borrowed = borrowedChannels(s.source_id);
+    if ((s.resale_channels || 0) < borrowed) {
+      return { code: 400, message: '转售通道不得低于已借出的 ' + borrowed + ' 个', data: null };
     }
-    const exist = tokenResalePaygAccounts.find(a => a.buyer_name === data.buyer_name);
-    if (exist) return { code: 400, message: '该买方已开通按量账户', data: null };
-    const acc = {
-      id: 'pa-' + String(Date.now()).slice(-6),
-      buyer_name: data.buyer_name,
-      buyer_contact: data.buyer_contact || '',
-      balance: deposit,
-      total_consumed: 0,
-      used_tokens: 0,
-      credit_limit: Number(data.credit_limit || tokenResalePaygConfig.buyer_credit_limit),
-      month_consumed: 0,
+    return ok(enrichSource(s));
+  }
+  if (/^\/token-resale\/sources\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const sid = path.split('/')[3];
+    const s: any = resaleSources.find(x => x.source_id === sid);
+    if (!s) return { code: 404, message: 'source not found', data: null };
+    s.resale_enabled = !s.resale_enabled;
+    return ok(enrichSource(s));
+  }
+
+  // 客户账户（买方）
+  if (path === '/token-resale/buyers' && method === 'get') {
+    return paginate(resaleBuyers, p.page, p.page_size, p.search);
+  }
+  if (path === '/token-resale/buyers' && method === 'post') {
+    const b = {
+      id: 'by-' + String(Date.now()).slice(-6),
+      name: data.name,
+      contact: data.contact || '',
       status: 'active',
+      balance: Number(data.balance || 0),
+      credit_limit: Number(data.credit_limit || 10000),
+      total_consumed: 0,
+      month_consumed: 0,
       opened_at: new Date().toISOString(),
+      allocations: data.allocations || [],
     };
-    tokenResalePaygAccounts.unshift(acc);
-    return ok(acc);
+    resaleBuyers.unshift(b);
+    return ok(b);
   }
-  if (/^\/token-resale\/payg-accounts\/[^/]+\/deposit$/.test(path) && method === 'post') {
-    const aid = path.split('/')[3];
-    const acc: any = tokenResalePaygAccounts.find(a => a.id === aid);
-    if (!acc) return { code: 404, message: 'account not found', data: null };
-    acc.balance += Number(data.amount || 0);
-    if (acc.status === 'suspended' && acc.balance > 0) acc.status = 'active';
-    return ok(acc);
+  if (/^\/token-resale\/buyers\/[^/]+$/.test(path) && method === 'put') {
+    const bid = path.split('/')[3];
+    const b: any = resaleBuyers.find(x => x.id === bid);
+    if (!b) return { code: 404, message: 'buyer not found', data: null };
+    const nextAllocations = data.allocations !== undefined ? data.allocations : b.allocations;
+    // 校验：更新后每个模型源被借用通道总数不得超过其转售通道
+    for (const a of (nextAllocations || [])) {
+      const s: any = resaleSources.find(x => x.source_id === a.source_id);
+      if (!s) return { code: 400, message: '模型源不存在：' + a.source_id, data: null };
+      let used = a.channels || 0;
+      resaleBuyers.forEach((other: any) => {
+        if (other.id === bid) return;
+        (other.allocations || []).forEach((oa: any) => { if (oa.source_id === a.source_id) used += oa.channels || 0; });
+      });
+      if (used > (s.resale_channels || 0)) {
+        return { code: 400, message: s.display_name + ' 转售通道不足（可用 ' + s.resale_channels + '，需 ' + used + '）', data: null };
+      }
+    }
+    ['name', 'contact', 'status', 'balance', 'credit_limit', 'allocations'].forEach(k => {
+      if (data[k] !== undefined) b[k] = data[k];
+    });
+    return ok(b);
   }
-  if (/^\/token-resale\/payg-accounts\/[^/]+\/toggle$/.test(path) && method === 'post') {
-    const aid = path.split('/')[3];
-    const acc: any = tokenResalePaygAccounts.find(a => a.id === aid);
-    if (!acc) return { code: 404, message: 'account not found', data: null };
-    acc.status = acc.status === 'active' ? 'suspended' : 'active';
-    return ok(acc);
+  if (/^\/token-resale\/buyers\/[^/]+$/.test(path) && method === 'delete') {
+    const bid = path.split('/')[3];
+    const i = resaleBuyers.findIndex(x => x.id === bid);
+    if (i >= 0) resaleBuyers.splice(i, 1);
+    return ok(null);
   }
+  if (/^\/token-resale\/buyers\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const bid = path.split('/')[3];
+    const b: any = resaleBuyers.find(x => x.id === bid);
+    if (!b) return { code: 404, message: 'buyer not found', data: null };
+    b.status = b.status === 'active' ? 'suspended' : 'active';
+    return ok(b);
+  }
+  if (/^\/token-resale\/buyers\/[^/]+\/deposit$/.test(path) && method === 'post') {
+    const bid = path.split('/')[3];
+    const b: any = resaleBuyers.find(x => x.id === bid);
+    if (!b) return { code: 404, message: 'buyer not found', data: null };
+    b.balance += Number(data.amount || 0);
+    if (b.status === 'suspended' && b.balance > 0) b.status = 'active';
+    return ok(b);
+  }
+
+  // 交易账单：用量明细 + 结算
+  if (path === '/token-resale/usage' && method === 'get') {
+    let list = resaleUsage;
+    if (p.buyer_id) list = list.filter((u: any) => u.buyer_id === p.buyer_id);
+    if (p.source_id) list = list.filter((u: any) => u.source_id === p.source_id);
+    return paginate(list, p.page, p.page_size, p.search);
+  }
+  if (path === '/token-resale/settlements' && method === 'get') return ok(resaleSettlements);
 
   // Default
   return ok([]);
