@@ -1,175 +1,287 @@
 ﻿import {
   Box, Grid, Card, CardContent, Typography, Chip, IconButton, Tooltip,
-  Table, TableHead, TableBody, TableRow, TableCell, LinearProgress, Button,
+  LinearProgress, Select, MenuItem, FormControl,
 } from '@mui/material';
-import { Refresh, OpenInNew } from '@mui/icons-material';
+import { Refresh, Storage } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { PageHeader, LoadingState, StatusBadge, DataTable } from '../../components/shared';
+import { PageHeader, LoadingState, StatusBadge } from '../../components/shared';
 import { k8sApi } from '../../api/client';
+import { useState } from 'react';
 
-function ResourceBar({ pct }: { pct: number }) {
-  const color = pct >= 90 ? 'error' : pct >= 70 ? 'warning' : 'success';
+// 环形进度圈组件
+function CircleProgress({ pct, color = '#1976d2' }: { pct: number; color?: string }) {
+  const r = 22;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <LinearProgress
-        variant="determinate" value={pct} color={color}
-        sx={{ flex: 1, height: 5, borderRadius: 3 }}
-      />
-      <Typography variant="caption" sx={{ fontFamily: 'monospace', minWidth: 36, textAlign: 'right' }}>
+    <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width={56} height={56}>
+        <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(0,212,255,0.12)" strokeWidth={4} />
+        <circle
+          cx={28} cy={28} r={r} fill="none" stroke={color} strokeWidth={4}
+          strokeDasharray={`${dash} ${circ - dash}`}
+          strokeLinecap="round"
+          transform="rotate(-90 28 28)"
+        />
+      </svg>
+      <Typography variant="caption" sx={{ position: 'absolute', fontWeight: 700, fontSize: 11 }}>
         {pct}%
       </Typography>
     </Box>
   );
 }
 
-export default function K8sStatusPage() {
-  const navigate = useNavigate();
+// 资源行组件
+function ResourceRow({ pct, label, used, total, unit = '' }: {
+  pct: number; label: string; used: number | string; total: number | string; unit?: string;
+}) {
+  const color = pct >= 90 ? '#FF3366' : pct >= 70 ? '#FFB800' : '#00D4FF';
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+      <CircleProgress pct={pct} color={color} />
+      <Box sx={{ minWidth: 80 }}>
+        <Typography variant="caption" color="text.secondary">{label}</Typography>
+      </Box>
+      <Box sx={{ flex: 1 }}>
+        <LinearProgress
+          variant="determinate"
+          value={pct}
+          sx={{
+            height: 6, borderRadius: 3,
+            bgcolor: 'rgba(0,212,255,0.08)',
+            '& .MuiLinearProgress-bar': { bgcolor: color },
+          }}
+        />
+      </Box>
+      <Box sx={{ minWidth: 120, textAlign: 'right' }}>
+        <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+          {used}{unit}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+          {' '}/{' '}{total}{unit}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
 
-  const { data: clustersData, isLoading, refetch } = useQuery({
+// 节点图标
+function NodeIcon() {
+  return (
+    <Box sx={{
+      width: 36, height: 32, bgcolor: 'rgba(0,255,136,0.1)', borderRadius: 1,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    }}>
+      <Storage sx={{ fontSize: 18, color: '#00FF88' }} />
+    </Box>
+  );
+}
+
+export default function K8sStatusPage() {
+  const [nodeSort, setNodeSort] = useState('cpu');
+
+  // 只有一个集群，直接取列表第一条
+  const { data: listData, isLoading, refetch } = useQuery({
     queryKey: ['k8s-clusters'],
     queryFn: () => k8sApi.clusters(),
     retry: false,
   });
 
-  const clusters: any[] = clustersData?.data?.data || [];
+  const clusters: any[] = listData?.data?.data || [];
+  const cluster = clusters[0];
 
-  const totalActive = clusters.filter(c => c.status === 'active').length;
-  const totalNodes = clusters.reduce((s: number, c: any) => s + (c.nodes?.length || 0), 0);
-  const totalPods = clusters.reduce((s: number, c: any) => s + (c.pod_used || 0), 0);
+  if (isLoading) {
+    return (
+      <Box>
+        <PageHeader
+          title="Kubernetes 状态"
+          subtitle=""
+          actions={<Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>}
+        />
+        <LoadingState />
+      </Box>
+    );
+  }
+
+  if (!cluster) {
+    return (
+      <Box>
+        <PageHeader
+          title="Kubernetes 状态"
+          subtitle=""
+          actions={<Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>}
+        />
+        <Typography color="text.secondary">暂无集群数据</Typography>
+      </Box>
+    );
+  }
+
+  const nodes: any[] = cluster.nodes || [];
+  const sortedNodes = [...nodes].sort((a, b) => {
+    if (nodeSort === 'cpu') return b.cpu_pct - a.cpu_pct;
+    if (nodeSort === 'memory') return b.memory_pct - a.memory_pct;
+    return b.pods - a.pods;
+  });
+  const topNodes = sortedNodes.slice(0, 5);
+
+  const cpuPct = Math.round((cluster.cpu_used / cluster.cpu_total) * 100);
+  const memPct = Math.round((cluster.memory_used / cluster.memory_total) * 100);
+  const podPct = Math.round((cluster.pod_used / cluster.pod_total) * 100);
+  const diskPct = Math.round((cluster.disk_used / cluster.disk_total) * 100);
 
   return (
     <Box>
       <PageHeader
-        title="Kubernetes 状态"
-        subtitle="集群资源总览"
+        title={`${cluster.name} — ${cluster.label}`}
+        subtitle={cluster.env}
         actions={
-          <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
+          <Tooltip title="刷新">
+            <IconButton onClick={() => refetch()}><Refresh /></IconButton>
+          </Tooltip>
         }
       />
+      {/* 集群标签行 */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <Chip label={cluster.env} size="small" color="warning" />
+        <StatusBadge status={cluster.status} label={cluster.status === 'active' ? '运行中' : '异常'} />
+      </Box>
 
-      {/* 汇总卡片 */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <Card>
-            <CardContent sx={{ py: 1.5 }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>{totalActive}</Typography>
-              <Typography variant="caption" color="text.secondary">集群（运行中）</Typography>
+      <Grid container spacing={2}>
+        {/* ===== 左栏 ===== */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          {/* 基本信息 */}
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>基本信息</Typography>
+              <Grid container spacing={2}>
+                <Grid size={6}>
+                  <Typography variant="caption" color="text.secondary">提供商</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{cluster.provider}</Typography>
+                </Grid>
+                <Grid size={6}>
+                  <Typography variant="caption" color="text.secondary">版本</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{cluster.k8s_version}</Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
+          {/* 资源用量 */}
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>资源用量</Typography>
+              <ResourceRow pct={cpuPct} label="CPU" used={`${cluster.cpu_used} cores`} total={`${cluster.cpu_total} cores`} />
+              <ResourceRow pct={memPct} label="内存" used={`${cluster.memory_used} Gi`} total={`${cluster.memory_total} Gi`} />
+              <ResourceRow pct={podPct} label="Pod 总数" used={cluster.pod_used} total={cluster.pod_total} />
+              <ResourceRow pct={diskPct} label="磁盘" used={`${cluster.disk_used} TB`} total={`${cluster.disk_total} TB`} />
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <Card>
-            <CardContent sx={{ py: 1.5 }}>
-              <Typography variant="h4" sx={{ fontWeight: 700 }}>{totalNodes}</Typography>
-              <Typography variant="caption" color="text.secondary">节点总数</Typography>
+
+        {/* ===== 右栏 ===== */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          {/* Kubernetes 状态 */}
+          <Card sx={{ mb: 2 }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>Kubernetes 状态</Typography>
+              <Grid container spacing={1}>
+                <Grid size={6}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    {cluster.api_rps.toFixed(3)} <Typography component="span" variant="caption">times/s</Typography>
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">每秒 API 请求数</Typography>
+                </Grid>
+                <Grid size={6}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    {cluster.api_latency_ms.toFixed(2)} <Typography component="span" variant="caption">ms</Typography>
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">API 请求延迟</Typography>
+                </Grid>
+                <Grid size={6} sx={{ mt: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{cluster.schedule_count.toLocaleString()}</Typography>
+                  <Typography variant="caption" color="text.secondary">调度次数</Typography>
+                </Grid>
+                <Grid size={6} sx={{ mt: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    {cluster.schedule_fail > 0
+                      ? <span style={{ color: '#FF3366' }}>{cluster.schedule_fail}</span>
+                      : '—'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">调度失败次数</Typography>
+                </Grid>
+              </Grid>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+
+          {/* 节点 */}
           <Card>
-            <CardContent sx={{ py: 1.5 }}>
-              <Typography variant="h4" sx={{ fontWeight: 700 }}>{totalPods}</Typography>
-              <Typography variant="caption" color="text.secondary">Pod 总数（运行中）</Typography>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>节点</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">资源用量 Top 5</Typography>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select
+                    value={nodeSort}
+                    onChange={e => setNodeSort(e.target.value)}
+                    sx={{ fontSize: 12, height: 30 }}
+                  >
+                    <MenuItem value="cpu">按 CPU 用量排行</MenuItem>
+                    <MenuItem value="memory">按内存用量排行</MenuItem>
+                    <MenuItem value="pods">按 Pod 数排行</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {topNodes.map((node: any) => {
+                const pct = nodeSort === 'memory' ? node.memory_pct : nodeSort === 'pods' ? 0 : node.cpu_pct;
+                const color = pct >= 80 ? '#FF3366' : pct >= 60 ? '#FFB800' : '#00FF88';
+                const pctLabel = nodeSort === 'pods'
+                  ? `${node.pods} Pods`
+                  : `${nodeSort === 'memory' ? node.memory_pct : node.cpu_pct}%`;
+                const sortLabel = nodeSort === 'cpu' ? 'CPU 用量' : nodeSort === 'memory' ? '内存用量' : 'Pod 数';
+                return (
+                  <Box
+                    key={node.id}
+                    sx={{
+                      display: 'flex', alignItems: 'center', gap: 1.5, py: 1,
+                      borderBottom: '1px solid', borderColor: 'divider',
+                      bgcolor: pct >= 75 ? 'rgba(232,245,233,0.5)' : 'transparent',
+                      '&:last-child': { borderBottom: 'none' },
+                    }}
+                  >
+                    <NodeIcon />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                        {node.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">{node.ip}</Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right', minWidth: 60 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color }}>
+                        {pctLabel}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">{sortLabel}</Typography>
+                    </Box>
+                  </Box>
+                );
+              })}
+
+              {nodes.length > 5 && (
+                <Box sx={{ textAlign: 'center', mt: 1.5 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'primary.main', cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  >
+                    查看更多（{nodes.length} 个节点）
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
-
-      {/* 集群列表 */}
-      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>集群列表</Typography>
-
-      {isLoading ? <LoadingState /> : (
-        <DataTable>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700 }}>集群名称</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>环境</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>提供商</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>版本</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>节点数</TableCell>
-              <TableCell sx={{ fontWeight: 700, minWidth: 130 }}>CPU</TableCell>
-              <TableCell sx={{ fontWeight: 700, minWidth: 130 }}>内存</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>容器组</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 80 }}>操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {clusters.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10}>
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-                    暂无集群数据
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : clusters.map((c: any) => {
-              const cpuPct = Math.round((c.cpu_used / c.cpu_total) * 100);
-              const memPct = Math.round((c.memory_used / c.memory_total) * 100);
-              const nodeCount = c.nodes?.length || 0;
-              const notReady = (c.nodes || []).filter((n: any) => n.status !== 'Ready').length;
-              return (
-                <TableRow
-                  key={c.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/resources/k8s/${c.id}`)}
-                >
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{c.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">{c.label}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={c.env} size="small" color="warning" sx={{ fontSize: 11, height: 22 }} />
-                  </TableCell>
-                  <TableCell sx={{ fontSize: 13 }}>{c.provider}</TableCell>
-                  <TableCell>
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{c.k8s_version}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={c.status} label={c.status === 'active' ? '运行中' : '异常'} />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {nodeCount}
-                      {notReady > 0 && (
-                        <Typography component="span" variant="caption" color="error.main" sx={{ ml: 0.5 }}>
-                          ({notReady} NotReady)
-                        </Typography>
-                      )}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 130 }}>
-                    <ResourceBar pct={cpuPct} />
-                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                      {c.cpu_used} / {c.cpu_total} cores
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 130 }}>
-                    <ResourceBar pct={memPct} />
-                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                      {c.memory_used} / {c.memory_total} Gi
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{c.pod_used} / {c.pod_total}</Typography>
-                  </TableCell>
-                  <TableCell onClick={e => e.stopPropagation()}>
-                    <Tooltip title="查看详情">
-                      <IconButton size="small" onClick={() => navigate(`/resources/k8s/${c.id}`)}>
-                        <OpenInNew fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </DataTable>
-      )}
     </Box>
   );
 }

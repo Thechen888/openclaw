@@ -118,6 +118,11 @@ export default function TokenResalePage() {
     mutationFn: (v: { id: string; amount: number }) => tokenResaleApi.depositBuyer(v.id, { amount: v.amount }),
     onSuccess: () => { enqueueSnackbar('充值成功', { variant: 'success' }); setDepositOpen(false); invalidate('tr-buyers'); },
   });
+  const settleMut = useMutation({
+    mutationFn: () => tokenResaleApi.settle(),
+    onSuccess: () => { enqueueSnackbar('结算完成，所有待结算用量已归集', { variant: 'success' }); invalidate('tr-usage', 'tr-settlements', 'tr-overview'); },
+    onError: (e: any) => enqueueSnackbar(e?.response?.data?.message || '结算失败', { variant: 'error' }),
+  });
 
   // ============ 弹窗控制 ============
   const openSourceEdit = (s: any) => { setSrcForm({ ...s }); setSrcOpen(true); };
@@ -376,6 +381,23 @@ export default function TokenResalePage() {
                 ))}
               </TableBody>
             </Table>
+            {/* 执行结算按钮 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2, pt: 2, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <Typography variant="caption" color="text.secondary">
+                当前待结算：<Box component="span" sx={{ color: '#ff9800', fontWeight: 700 }}>¥{fmt(overview.pending_settle)}</Box>
+                {' '}（{usage.filter((u: any) => u.settle_status === 'pending').length} 条用量记录）
+              </Typography>
+              <Button
+                variant="contained"
+                color="warning"
+                size="small"
+                startIcon={<AccountBalance />}
+                disabled={settleMut.isPending || !usage.some((u: any) => u.settle_status === 'pending')}
+                onClick={() => { if (confirm('确认执行结算？将把所有"待结算"用量归集并关闭当前周期。')) settleMut.mutate(); }}
+              >
+                {settleMut.isPending ? '结算中...' : '执行结算'}
+              </Button>
+            </Box>
           </SectionCard>
         </Box>
       )}
@@ -389,7 +411,7 @@ export default function TokenResalePage() {
         onSave={() => updateSourceMut.mutate(srcForm)}
       >
         {srcForm && (
-          <Stack spacing={2.5} sx={{ pt: 0.5 }}>
+          <Stack spacing={3} sx={{ pt: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography sx={{ fontWeight: 600 }}>开启转售</Typography>
               <Switch checked={!!srcForm.resale_enabled} onChange={(e) => setSrcForm({ ...srcForm, resale_enabled: e.target.checked })} />
@@ -410,13 +432,13 @@ export default function TokenResalePage() {
               自用 + 转售 = {(Number(srcForm.self_channels) || 0) + (Number(srcForm.resale_channels) || 0)} / 总 {srcForm.total_channels}；当前已借出 {srcForm.borrowed_channels ?? 0} 个
             </Typography>
             <Divider />
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField label="输入成本(分/1M)" type="number" size="small" fullWidth value={srcForm.cost_input}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField label="输入成本(分/1M)" type="number" fullWidth value={srcForm.cost_input}
                 onChange={(e) => setSrcForm({ ...srcForm, cost_input: Number(e.target.value) })} />
-              <TextField label="输出成本(分/1M)" type="number" size="small" fullWidth value={srcForm.cost_output}
+              <TextField label="输出成本(分/1M)" type="number" fullWidth value={srcForm.cost_output}
                 onChange={(e) => setSrcForm({ ...srcForm, cost_output: Number(e.target.value) })} />
             </Box>
-            <TextField label="加价率 (%)" type="number" size="small" fullWidth value={srcForm.markup_rate}
+            <TextField label="加价率 (%)" type="number" fullWidth value={srcForm.markup_rate}
               onChange={(e) => setSrcForm({ ...srcForm, markup_rate: Number(e.target.value) })} />
             <Alert severity="info" sx={{ py: 0.5 }}>
               预计售价：输入 {money(Math.round((srcForm.cost_input || 0) * (1 + (srcForm.markup_rate || 0) / 100)))} / 输出 {money(Math.round((srcForm.cost_output || 0) * (1 + (srcForm.markup_rate || 0) / 100)))}（每 1M tokens）

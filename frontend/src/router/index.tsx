@@ -41,6 +41,7 @@ import PythonPackagesPage from '../pages/resources/PythonPackagesPage';
 import NetworkAclPage from '../pages/resources/NetworkAclPage';
 import PodsPage from '../pages/resources/PodsPage';
 import PodDetailPage from '../pages/resources/PodDetailPage';
+import StackDetailPage from '../pages/resources/StackDetailPage';
 import AgentsMdPage from '../pages/resources/AgentsMdPage';
 import UsageStatsPage from '../pages/stats/UsageStatsPage';
 import AuditLogsPage from '../pages/stats/AuditLogsPage';
@@ -98,6 +99,7 @@ export const router = createBrowserRouter([
       { path: 'resources/k8s', element: <K8sStatusPage /> },
       { path: 'resources/k8s/:id', element: <K8sDetailPage /> },
       { path: 'resources/restart', element: <RestartPage /> },
+      { path: 'resources/restart/:id', element: <StackDetailPage /> },
       { path: 'resources/queues', element: <QueuesPage /> },
       { path: 'resources/python', element: <PythonPackagesPage /> },
       { path: 'resources/network-acl', element: <NetworkAclPage /> },

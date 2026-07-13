@@ -240,6 +240,21 @@ export const systemRestartApi = {
   restart: (service: string) => api.post(`/system/restart/${service}`),
 };
 
+// Compose Stacks（服务重启）
+export const stacksApi = {
+  list: (params?: { q?: string }) => api.get('/system/stacks', { params }),
+  detail: (id: string) => api.get(`/system/stacks/${id}`),
+  compose: (id: string) => api.get(`/system/stacks/${id}/compose`),
+  saveCompose: (id: string, yaml: string, validate = true) =>
+    api.put(`/system/stacks/${id}/compose`, { yaml, validate }),
+  logs: (id: string) => api.get(`/system/stacks/${id}/logs`),
+  restart: (id: string) => api.post(`/system/stacks/${id}/restart`),
+  start: (id: string) => api.post(`/system/stacks/${id}/start`),
+  stop: (id: string) => api.post(`/system/stacks/${id}/stop`),
+  pause: (id: string) => api.post(`/system/stacks/${id}/pause`),
+  pull: (id: string) => api.post(`/system/stacks/${id}/pull`),
+};
+
 export const systemApi = {
   health: () => api.get('/system/health'),
 };
@@ -319,4 +334,6 @@ export const tokenResaleApi = {
   // 交易账单
   usage: (params?: ListParams & { buyer_id?: string; source_id?: string }) => api.get('/token-resale/usage', { params }),
   settlements: () => api.get('/token-resale/settlements'),
+  // 执行结算：将当前周期 pending 用量归集并关闭
+  settle: () => api.post('/token-resale/settle'),
 };

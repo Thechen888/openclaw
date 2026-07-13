@@ -1760,9 +1760,9 @@ const k8sPods = [
 
 const k8sClusters: any[] = [
   {
-    id: 'cl-1', name: 'eu-product', label: '欧洲生产集群', env: '生产环境',
-    provider: 'Aliyun ACK', k8s_version: 'v1.21.5', kubesphere_version: 'v3.2.1',
-    visibility: '对部分企业空间可见', status: 'active',
+    id: 'cl-1', name: 'openclaw-prod', label: '主生产集群', env: '生产环境',
+    provider: 'Aliyun ACK', k8s_version: 'v1.24.8', kubesphere_version: 'v3.3.2',
+    visibility: '对所有企业空间可见', status: 'active',
     api_rps: 21.4, api_latency_ms: 2.47, schedule_count: 8572, schedule_fail: 0,
     cpu_used: 18.02, cpu_total: 42, memory_used: 122.46, memory_total: 229.18,
     pod_used: 199, pod_total: 880, disk_used: 9.46, disk_total: 13.24,
@@ -1773,33 +1773,6 @@ const k8sClusters: any[] = [
       { id: 'n-3', name: 'tsdb-245-36', ip: '172.29.245.36', status: 'Ready', cpu_pct: 61, memory_pct: 53, pods: 35, role: 'worker' },
       { id: 'n-4', name: 'eu-1', ip: '172.29.245.23', status: 'Ready', cpu_pct: 38, memory_pct: 41, pods: 28, role: 'master' },
       { id: 'n-5', name: 'eu-3', ip: '172.29.245.35', status: 'Ready', cpu_pct: 31, memory_pct: 30, pods: 22, role: 'worker' },
-    ],
-  },
-  {
-    id: 'cl-2', name: 'cn-prod', label: '华东生产集群', env: '生产环境',
-    provider: 'Aliyun ACK', k8s_version: 'v1.24.8', kubesphere_version: 'v3.3.2',
-    visibility: '对所有企业空间可见', status: 'active',
-    api_rps: 35.8, api_latency_ms: 1.85, schedule_count: 14320, schedule_fail: 2,
-    cpu_used: 24.5, cpu_total: 64, memory_used: 187.3, memory_total: 512,
-    pod_used: 320, pod_total: 1200, disk_used: 18.6, disk_total: 30,
-    components: ['Kubernetes', 'KubeSphere'],
-    nodes: [
-      { id: 'n-6', name: 'cn-node-1', ip: '10.0.1.10', status: 'Ready', cpu_pct: 55, memory_pct: 48, pods: 60, role: 'master' },
-      { id: 'n-7', name: 'cn-node-2', ip: '10.0.1.11', status: 'Ready', cpu_pct: 42, memory_pct: 35, pods: 48, role: 'worker' },
-      { id: 'n-8', name: 'cn-node-3', ip: '10.0.1.12', status: 'Ready', cpu_pct: 39, memory_pct: 32, pods: 45, role: 'worker' },
-    ],
-  },
-  {
-    id: 'cl-3', name: 'dev-cluster', label: '开发测试集群', env: '开发环境',
-    provider: 'Self-managed', k8s_version: 'v1.26.3', kubesphere_version: '-',
-    visibility: '仅开发团队可见', status: 'active',
-    api_rps: 5.2, api_latency_ms: 4.1, schedule_count: 2180, schedule_fail: 5,
-    cpu_used: 6.4, cpu_total: 16, memory_used: 28.7, memory_total: 64,
-    pod_used: 88, pod_total: 300, disk_used: 2.1, disk_total: 5,
-    components: ['Kubernetes', 'Monitoring'],
-    nodes: [
-      { id: 'n-9', name: 'dev-node-1', ip: '192.168.1.10', status: 'Ready', cpu_pct: 40, memory_pct: 45, pods: 44, role: 'master' },
-      { id: 'n-10', name: 'dev-node-2', ip: '192.168.1.11', status: 'NotReady', cpu_pct: 0, memory_pct: 0, pods: 0, role: 'worker' },
     ],
   },
 ];
@@ -1898,6 +1871,34 @@ const configBackups: any[] = [
     creator: '张伟',
     created_at: '2026-05-28T22:00:00',
   },
+];
+
+// 备份规则配置
+const backupRules: any[] = [
+  { id: 'rule-1', name: '主配置每日备份', execution_time: '04:00', config_directory: '/etc/openclaw/configs/', retention_days: 30, retention_count: 10, enabled: true, last_run_at: '2026-07-13T04:00:00', created_at: '2026-01-15T10:00:00' },
+  { id: 'rule-2', name: '数据库配置备份', execution_time: '02:30', config_directory: '/etc/openclaw/database/', retention_days: 60, retention_count: 20, enabled: true, last_run_at: '2026-07-13T02:30:00', created_at: '2026-03-20T09:00:00' },
+  { id: 'rule-3', name: 'Nginx配置备份', execution_time: '03:00', config_directory: '/etc/nginx/', retention_days: 15, retention_count: 5, enabled: false, last_run_at: '2026-07-10T03:00:00', created_at: '2026-05-10T14:00:00' },
+];
+
+// 备份文件列表
+const backupFiles: any[] = [
+  { id: 'bf-1', filename: 'openclaw-config-20260713-040000.tar.gz', size_mb: 2.4, created_at: '2026-07-13T04:01:56', source_rule_id: 'rule-1', storage_path: '/data/backups/openclaw-config-20260713-040000.tar.gz' },
+  { id: 'bf-2', filename: 'openclaw-config-20260712-040000.tar.gz', size_mb: 2.4, created_at: '2026-07-12T04:01:55', source_rule_id: 'rule-1', storage_path: '/data/backups/openclaw-config-20260712-040000.tar.gz' },
+  { id: 'bf-3', filename: 'openclaw-config-20260711-040000.tar.gz', size_mb: 2.3, created_at: '2026-07-11T04:01:57', source_rule_id: 'rule-1', storage_path: '/data/backups/openclaw-config-20260711-040000.tar.gz' },
+  { id: 'bf-4', filename: 'openclaw-config-20260710-070000.tar.gz', size_mb: 2.3, created_at: '2026-07-10T07:01:57', source_rule_id: 'rule-1', storage_path: '/data/backups/openclaw-config-20260710-070000.tar.gz' },
+  { id: 'bf-5', filename: 'openclaw-config-20260130-040000.tar.gz', size_mb: 2.1, created_at: '2026-01-30T04:00:22', source_rule_id: 'rule-1', storage_path: '/data/backups/openclaw-config-20260130-040000.tar.gz' },
+  { id: 'bf-6', filename: 'openclaw-config-20260129-040000.tar.gz', size_mb: 2.1, created_at: '2026-01-29T04:00:24', source_rule_id: 'rule-1', storage_path: '/data/backups/openclaw-config-20260129-040000.tar.gz' },
+  { id: 'bf-7', filename: 'openclaw-config-20260128-040000.tar.gz', size_mb: 2.0, created_at: '2026-01-28T04:00:25', source_rule_id: 'rule-1', storage_path: '/data/backups/openclaw-config-20260128-040000.tar.gz' },
+];
+
+// 备份记录
+const backupRecords: any[] = [
+  { id: 'br-1', task_name: 'mysql-backup-29492400', status: 'success', started_at: '2026-01-28T04:00:00', finished_at: '2026-01-28T04:00:25' },
+  { id: 'br-2', task_name: 'mysql-backup-29493840', status: 'success', started_at: '2026-01-29T04:00:00', finished_at: '2026-01-29T04:00:24' },
+  { id: 'br-3', task_name: 'mysql-backup-29495280', status: 'success', started_at: '2026-01-30T04:00:00', finished_at: '2026-01-30T04:00:22' },
+  { id: 'br-4', task_name: 'mysql-backup-all-29728740', status: 'success', started_at: '2026-07-11T07:00:00', finished_at: '2026-07-11T07:01:57' },
+  { id: 'br-5', task_name: 'mysql-backup-all-29730180', status: 'success', started_at: '2026-07-12T07:00:00', finished_at: '2026-07-12T07:01:55' },
+  { id: 'br-6', task_name: 'mysql-backup-all-29731620', status: 'success', started_at: '2026-07-13T07:00:00', finished_at: '2026-07-13T07:01:56' },
 ];
 
 const pythonPackages: any[] = [
@@ -1999,6 +2000,129 @@ function buildPodDetail(pod: any) {
       { id: 'ev-4', type: 'normal', reason: 'Started', age: '5 分钟前', source: 'kubelet', message: 'Started container agave-aging-america-uyjkm1' },
     ],
   };
+}
+
+// =================== Compose Stacks（服务重启） ===================
+const monitorComposeYaml = `version: '3.8'
+
+services:
+
+  # ---- 指标采集 & 存储 ----------------------------------------------
+  prometheus:
+    image: harbor.weiheng-tech.com/library/prom/prometheus:v2.53.0
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=5d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: harbor.weiheng-tech.com/library/grafana/grafana:11.1.0
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  node-exporter:
+    image: harbor.weiheng-tech.com/library/prom/node-exporter:v1.8.1
+    container_name: node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+
+volumes:
+  prometheus_data:
+  grafana_data:
+`;
+
+const openrestyComposeYaml = `version: '3.8'
+
+services:
+  openresty:
+    image: harbor.weiheng-tech.com/library/openresty/openresty:1.25.3.1-alpine
+    container_name: openresty
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs:/etc/nginx/certs:ro
+      - openresty_log:/var/log/nginx
+
+volumes:
+  openresty_log:
+`;
+
+const stackList: any[] = [
+  {
+    id: 'stack-monitor',
+    name: 'monitor',
+    directory: '/data/stack/monitor',
+    compose_file: '/data/stack/monitor/docker-compose.yaml',
+    health: 'unknown',
+    health_label: '未知',
+    is_platform_self: false,
+    running_count: 0,
+    total_count: 3,
+    services: [
+      { name: 'prometheus', image: 'harbor.weiheng-tech.com/library/prom/prometheus:v2.53.0', status: 'exited', status_label: '未运行', restart: 0, ports: '9090:9090', has_probe: false },
+      { name: 'grafana', image: 'harbor.weiheng-tech.com/library/grafana/grafana:11.1.0', status: 'exited', status_label: '未运行', restart: 0, ports: '3000:3000', has_probe: false },
+      { name: 'node-exporter', image: 'harbor.weiheng-tech.com/library/prom/node-exporter:v1.8.1', status: 'exited', status_label: '未运行', restart: 0, ports: '9100:9100', has_probe: false },
+    ],
+    compose_yaml: monitorComposeYaml,
+  },
+  {
+    id: 'stack-openresty',
+    name: 'openresty',
+    directory: '/data/stack/openresty',
+    compose_file: '/data/stack/openresty/docker-compose.yaml',
+    health: 'unknown',
+    health_label: '未知',
+    is_platform_self: false,
+    running_count: 0,
+    total_count: 1,
+    services: [
+      { name: 'openresty', image: 'harbor.weiheng-tech.com/library/openresty/openresty:1.25.3.1-alpine', status: 'exited', status_label: '未运行', restart: 0, ports: '80:80, 443:443', has_probe: false },
+    ],
+    compose_yaml: openrestyComposeYaml,
+  },
+];
+
+function buildStackDetail(stack: any) {
+  const containers = stack.services.map((s: any) => ({
+    name: s.name,
+    image: s.image,
+    status: s.status,
+    status_label: s.status_label,
+    restart: s.restart,
+    port: s.ports,
+    has_probe: s.has_probe,
+    metrics: {
+      cpu: genSeries(25, 0.35, 0.9, 2),
+      memory: genSeries(25, 48, 12, 0),
+      egress: genSeries(25, 0.9, 0.7, 2),
+      ingress: genSeries(25, 640, 220, 0),
+    },
+  }));
+  return { ...stack, containers };
 }
 
 // =================== Mock 用户 ===================
@@ -2829,6 +2953,45 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // Restart
   if (/^\/system\/restart\/[^/]+$/.test(path)) return ok(null);
 
+  // Compose Stacks（服务重启）
+  if (path === '/system/stacks' && method === 'get') {
+    const q = String(p.q || '').trim().toLowerCase();
+    let list = stackList.map((s: any) => ({
+      id: s.id, name: s.name, directory: s.directory,
+      compose_file: s.compose_file, health: s.health, health_label: s.health_label,
+      is_platform_self: s.is_platform_self,
+      running_count: s.running_count, total_count: s.total_count,
+    }));
+    if (q) list = list.filter((s: any) => s.name.toLowerCase().includes(q));
+    return ok(list);
+  }
+  const stackMatch = path.match(/^\/system\/stacks\/([^/]+)$/);
+  if (stackMatch && method === 'get') {
+    const st = stackList.find(s => s.id === stackMatch[1]);
+    return ok(st ? buildStackDetail(st) : null);
+  }
+  const stackYamlMatch = path.match(/^\/system\/stacks\/([^/]+)\/compose$/);
+  if (stackYamlMatch && method === 'get') {
+    const st = stackList.find(s => s.id === stackYamlMatch[1]);
+    return ok(st ? { compose_file: st.compose_file, yaml: st.compose_yaml } : null);
+  }
+  if (stackYamlMatch && method === 'put') {
+    const st = stackList.find(s => s.id === stackYamlMatch[1]);
+    if (st && data && typeof data.yaml === 'string') {
+      st.compose_yaml = data.yaml;
+    }
+    return ok(null);
+  }
+  const stackLogMatch = path.match(/^\/system\/stacks\/([^/]+)\/logs$/);
+  if (stackLogMatch && method === 'get') {
+    const st = stackList.find(s => s.id === stackLogMatch[1]);
+    return ok({ stack_name: st?.name || '', log: '{"code":500,"msg":"操作失败"}' });
+  }
+  const stackActionMatch = path.match(/^\/system\/stacks\/([^/]+)\/(restart|start|stop|pause|pull)$/);
+  if (stackActionMatch && method === 'post') {
+    return ok(null);
+  }
+
   // Health
   if (path === '/system/health') return ok(systemHealth);
 
@@ -2842,7 +3005,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok(remoteManagement);
   }
 
-  // Config Backups
+  // Config Backups (legacy)
   if (path === '/system/config-backups' && method === 'get') return ok(configBackups);
   if (path === '/system/config-backups' && method === 'post') {
     const now = new Date().toISOString().replace('Z', '');
@@ -2861,6 +3024,49 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   }
   if (/^\/system\/config-backups\/[^/]+\/restore$/.test(path) && method === 'post') {
     return ok({ task_id: 'rt-' + Date.now() });
+  }
+
+  // Backup Rules CRUD
+  if (path === '/system/backup-rules' && method === 'get') return ok(backupRules);
+  if (path === '/system/backup-rules' && method === 'post') {
+    const newRule = { id: 'rule-' + Date.now(), ...data, enabled: true, last_run_at: null, created_at: new Date().toISOString() };
+    backupRules.push(newRule);
+    return ok(newRule);
+  }
+  if (/^\/system\/backup-rules\/[^/]+$/.test(path) && method === 'put') {
+    const rId = path.split('/').pop();
+    const rule = backupRules.find((r: any) => r.id === rId);
+    if (rule) { Object.assign(rule, data); return ok(rule); }
+    return [404, { code: 404, message: 'Not found' }];
+  }
+  if (/^\/system\/backup-rules\/[^/]+$/.test(path) && method === 'delete') {
+    const rId = path.split('/').pop();
+    const idx = backupRules.findIndex((r: any) => r.id === rId);
+    if (idx >= 0) { backupRules.splice(idx, 1); return ok(null); }
+    return [404, { code: 404, message: 'Not found' }];
+  }
+
+  // Backup Files
+  if (path === '/system/backup-files' && method === 'get') return ok(backupFiles);
+
+  // Backup Records
+  if (path === '/system/backup-records' && method === 'get') return ok(backupRecords);
+  if (/^\/system\/backup-records\/[^/]+\/rerun$/.test(path) && method === 'post') {
+    const recordId = path.split('/')[3];
+    const record = backupRecords.find((r: any) => r.id === recordId);
+    if (record) {
+      const now = new Date();
+      const newRecord = {
+        id: 'br-' + Date.now(),
+        task_name: record.task_name + '-rerun',
+        status: 'success',
+        started_at: now.toISOString(),
+        finished_at: new Date(now.getTime() + 22000).toISOString(),
+      };
+      backupRecords.unshift(newRecord);
+      return ok(newRecord);
+    }
+    return ok(null);
   }
 
   // Python Packages
@@ -3458,6 +3664,34 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return paginate(list, p.page, p.page_size, p.search);
   }
   if (path === '/token-resale/settlements' && method === 'get') return ok(resaleSettlements);
+
+  // 执行结算：将当前 pending 用量归集为 settled，并更新/创建结算记录
+  if (path === '/token-resale/settle' && method === 'post') {
+    const pendingItems = resaleUsage.filter((u: any) => u.settle_status === 'pending');
+    if (pendingItems.length === 0) return { data: { code: 400, message: '没有待结算的用量记录' } };
+    // 将所有 pending 用量标记为 settled
+    pendingItems.forEach((u: any) => { u.settle_status = 'settled'; });
+    // 汇总金额
+    const gross = pendingItems.reduce((s: number, u: any) => s + (u.sell_amount || 0), 0);
+    const platformFeeRate = 0.15;
+    const platformFee = Math.round(gross * platformFeeRate);
+    const net = gross - platformFee;
+    // 查找当前周期 pending 的结算记录并更新，或新建
+    const now = new Date();
+    const periodLabel = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')} ${now.getDate() <= 15 ? '上半月' : '下半月'}`;
+    let record = resaleSettlements.find((s: any) => s.status === 'pending');
+    if (record) {
+      record.gross = gross;
+      record.platform_fee = platformFee;
+      record.net = net;
+      record.status = 'settled';
+      record.settled_at = now.toISOString();
+    } else {
+      record = { id: `st-${Date.now()}`, period: periodLabel, gross, platform_fee: platformFee, net, status: 'settled', settled_at: now.toISOString() };
+      resaleSettlements.unshift(record);
+    }
+    return ok(record);
+  }
 
   // Default
   return ok([]);
