@@ -149,6 +149,17 @@ export interface ReportTab {
   departmentKey?: string;   // if set, this tab shows data for a specific dept
 }
 
+// 报告周期类型（同时决定调度频率与调度表单形态）
+export type ReportType = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+// 各类型对应的调度参数，按 type 判别
+export type ReportSchedule =
+  | { type: 'daily'; hour: number; minute: number }
+  | { type: 'weekly'; dayOfWeek: number; hour: number; minute: number }              // dayOfWeek: 1-7 (1=周一)
+  | { type: 'monthly'; dayOfMonth: number; hour: number; minute: number }            // dayOfMonth: 1-31
+  | { type: 'quarterly'; monthOfQuarter: number; dayOfMonth: number; hour: number; minute: number } // monthOfQuarter: 1-3
+  | { type: 'yearly'; month: number; dayOfMonth: number; hour: number; minute: number };            // month: 1-12
+
 export interface ReportDefinition {
   id: string;
   name: string;
@@ -161,6 +172,10 @@ export interface ReportDefinition {
   sections?: ReportSection[];   // for 'page' mode
   bindingFields: BindingField[];
   createdAt: string;
+  /** 报告类型（日/周/月/季/年），可选：老数据未设置时默认按 period 字面理解 */
+  reportType?: ReportType;
+  /** 生成调度配置，可选：与 reportType 联动 */
+  schedule?: ReportSchedule;
 }
 
 export interface ReportGroup {
@@ -168,6 +183,18 @@ export interface ReportGroup {
   name: string;
   icon?: string;
   reports: ReportDefinition[];
+}
+
+/**
+ * 报告数据快照：每一次数据“创建/刷新/编辑保存”都会归档为一条快照，
+ * 用于展示历史版本、取最新刷新时间。snapshots 以 dataKey 为单位分组存储。
+ */
+export interface ReportDataSnapshot {
+  id: string;
+  generatedAt: string;   // ISO
+  period: string;        // 归档时的报告周期标识，如 "2026-Q2"
+  data: AgentOutput;     // 该快照的完整数据
+  note?: string;         // 来源说明，如 "手动刷新" / "定时生成" / "编辑保存"
 }
 
 // ===== Sidebar Navigation =====

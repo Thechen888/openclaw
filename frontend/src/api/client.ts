@@ -289,18 +289,61 @@ export const reportsApi = {
 export const ragApi = {
   knowledgeBases: {
     list: (params?: ListParams) => api.get('/rag/knowledge-bases', { params }),
+    get: (id: string) => api.get(`/rag/knowledge-bases/${id}`),
     create: (data: any) => api.post('/rag/knowledge-bases', data),
     update: (id: string, data: any) => api.put(`/rag/knowledge-bases/${id}`, data),
     delete: (id: string) => api.delete(`/rag/knowledge-bases/${id}`),
+    analytics: (id: string) => api.get(`/rag/knowledge-bases/${id}/analytics`),
+    wiki: (id: string) => api.get(`/rag/knowledge-bases/${id}/wiki`),
+    // 协作者与权限
+    collaborators: (id: string) => api.get(`/rag/knowledge-bases/${id}/collaborators`),
+    addCollaborator: (id: string, data: any) => api.post(`/rag/knowledge-bases/${id}/collaborators`, data),
+    updateCollaborator: (id: string, principalId: string, data: any) => api.put(`/rag/knowledge-bases/${id}/collaborators/${principalId}`, data),
+    removeCollaborator: (id: string, principalId: string) => api.delete(`/rag/knowledge-bases/${id}/collaborators/${principalId}`),
   },
   documents: {
     list: (params?: ListParams) => api.get('/rag/documents', { params }),
     upload: (data: any) => api.post('/rag/documents', data),
+    uploadMarkdown: (data: { kb_id: string; title: string; content: string }) => api.post('/rag/documents/markdown', data),
     delete: (id: string) => api.delete(`/rag/documents/${id}`),
     chunks: (id: string) => api.get(`/rag/documents/${id}/chunks`),
+    detail: (id: string) => api.get(`/rag/documents/${id}/detail`),
+  },
+  faq: {
+    list: (params?: ListParams & { kb_id?: string }) => api.get('/rag/faq', { params }),
+    create: (data: any) => api.post('/rag/faq', data),
+    delete: (id: string) => api.delete(`/rag/faq/${id}`),
+  },
+  chat: {
+    send: (data: { kb_id: string; message: string; history?: Array<{ role: string; content: string }> }) =>
+      api.post('/rag/chat', data),
   },
   retrieve: (data: { query: string; kb_id: string; top_k?: number }) =>
     api.post('/rag/retrieve', data),
+};
+
+// 工作空间
+export const workspaceApi = {
+  members: {
+    list: (params?: ListParams) => api.get('/workspace/members', { params }),
+    update: (id: string, data: any) => api.put(`/workspace/members/${id}`, data),
+    delete: (id: string) => api.delete(`/workspace/members/${id}`),
+    invite: (data: any) => api.post('/workspace/members', data),
+  },
+  organizations: {
+    list: (params?: ListParams) => api.get('/workspace/organizations', { params }),
+    create: (data: any) => api.post('/workspace/organizations', data),
+    update: (id: string, data: any) => api.put(`/workspace/organizations/${id}`, data),
+    delete: (id: string) => api.delete(`/workspace/organizations/${id}`),
+  },
+  apiKeys: {
+    list: (params?: ListParams) => api.get('/workspace/api-keys', { params }),
+    create: (data: any) => api.post('/workspace/api-keys', data),
+    delete: (id: string) => api.delete(`/workspace/api-keys/${id}`),
+  },
+  auditLogs: {
+    list: (params?: ListParams) => api.get('/workspace/audit-logs', { params }),
+  },
 };
 
 // AI 对话

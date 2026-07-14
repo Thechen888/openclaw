@@ -47,8 +47,11 @@ import UsageStatsPage from '../pages/stats/UsageStatsPage';
 import AuditLogsPage from '../pages/stats/AuditLogsPage';
 import ReportsPage from '../pages/weekly/WeeklyReportsPage';
 import KnowledgeBasesPage from '../pages/rag/KnowledgeBasesPage';
-import DocumentsPage from '../pages/rag/DocumentsPage';
-import RetrievalTestPage from '../pages/rag/RetrievalTestPage';
+import KnowledgeBaseWorkbenchPage from '../pages/rag/KnowledgeBaseWorkbenchPage';
+import KBDetailPage from '../pages/rag/KBDetailPage';
+import DocumentDetailPage from '../pages/rag/DocumentDetailPage';
+import WikiPage from '../pages/rag/WikiPage';
+import WorkspacePage from '../pages/workspace/WorkspacePage';
 import ChatPage from '../pages/chat/ChatPage';
 
 export const router = createBrowserRouter([
@@ -112,9 +115,13 @@ export const router = createBrowserRouter([
       // Reports
       { path: 'reports', element: <ReportsPage /> },
       // RAG
+      { path: 'rag/workbench', element: <KnowledgeBaseWorkbenchPage /> },
       { path: 'rag/knowledge-bases', element: <KnowledgeBasesPage /> },
-      { path: 'rag/documents', element: <DocumentsPage /> },
-      { path: 'rag/retrieval-test', element: <RetrievalTestPage /> },
+      { path: 'rag/knowledge-bases/:id', element: <KBDetailPage /> },
+      { path: 'rag/knowledge-bases/:kbId/documents/:docId', element: <DocumentDetailPage /> },
+      { path: 'rag/knowledge-bases/:kbId/wiki', element: <WikiPage /> },
+      // Workspace
+      { path: 'workspace', element: <WorkspacePage /> },
       // Chat
       { path: 'chat', element: <ChatPage /> },
       // Catch all

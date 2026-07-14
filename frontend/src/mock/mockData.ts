@@ -2274,24 +2274,39 @@ description: Agent 启动入口模板
 // =================== RAG 知识库 ===================
 const knowledgeBases: any[] = [
   {
-    id: 'kb-1', name: '技术研发知识库', description: '技术规范、API文档、架构设计文档',
-    embedding_model: 'text-embedding-3-large', chunk_strategy: 'fixed', chunk_size: 500, chunk_overlap: 50,
-    doc_count: 6, vector_count: 142, status: 'active', creator: '管理员', created_at: dayAgo(30),
+    id: 'kb-1', name: '储能产品与运维', description: 'PCS、BMS、EMS、液冷系统的产品手册、告警说明、维护规程与故障案例。',
+    type: 'document', tags: ['产品手册', '故障排查'], favorite: true,
+    embedding_model: 'bge-m3', chunk_strategy: 'hierarchical', chunk_size: 1200, chunk_overlap: 200,
+    doc_count: 428, vector_count: 8642, status: 'active', creator: '管理员', created_at: dayAgo(30),
+    today_retrievals: 316, last_sync: ago(14), knowledge_graph_enabled: true,
   },
   {
-    id: 'kb-2', name: '产品文档库', description: 'PRD、需求文档、产品规划文档',
+    id: 'kb-2', name: '项目交付规范', description: '涵盖项目前期勘察、施工、调试、并网验收和移交的标准流程与模板。',
+    type: 'document', tags: ['并网验收', '施工SOP', '模板'], favorite: false,
+    embedding_model: 'bge-m3', chunk_strategy: 'hierarchical', chunk_size: 1200, chunk_overlap: 200,
+    doc_count: 236, vector_count: 4310, status: 'active', creator: '管理员', created_at: dayAgo(25),
+    today_retrievals: 128, last_sync: ago(60), knowledge_graph_enabled: false,
+  },
+  {
+    id: 'kb-5', name: '售前解决方案库', description: '行业方案、典型项目、选型原则、客户需求澄清与投标技术材料。',
+    type: 'document', tags: ['售前', '解决方案', '共享'], favorite: false,
     embedding_model: 'text-embedding-3-large', chunk_strategy: 'paragraph', chunk_size: 800, chunk_overlap: 100,
-    doc_count: 4, vector_count: 89, status: 'active', creator: '管理员', created_at: dayAgo(25),
+    doc_count: 194, vector_count: 3862, status: 'active', creator: '管理员', created_at: dayAgo(18),
+    today_retrievals: 67, last_sync: ago(180),
   },
   {
-    id: 'kb-3', name: '运维手册库', description: '部署文档、故障处理SOP、监控告警手册',
-    embedding_model: 'bge-large-zh', chunk_strategy: 'sentence', chunk_size: 300, chunk_overlap: 30,
-    doc_count: 3, vector_count: 56, status: 'active', creator: '运维管理员', created_at: dayAgo(20),
+    id: 'kb-6', name: '能源政策与市场规则', description: '电力市场、辅助服务、容量补偿及各省储能相关政策的自动同步资料。',
+    type: 'document', tags: ['政策', 'RSS同步'], favorite: false,
+    embedding_model: 'bge-m3', chunk_strategy: 'sentence', chunk_size: 300, chunk_overlap: 30,
+    doc_count: 162, vector_count: 2206, status: 'active', creator: '管理员', created_at: dayAgo(12),
+    today_retrievals: 45, last_sync: ago(5), pending_docs: 4,
   },
   {
-    id: 'kb-4', name: '客服FAQ库', description: '常见问题、标准话术、产品FAQ',
-    embedding_model: 'bge-large-zh', chunk_strategy: 'fixed', chunk_size: 400, chunk_overlap: 40,
-    doc_count: 5, vector_count: 178, status: 'active', creator: '客服主管', created_at: dayAgo(15),
+    id: 'kb-9', name: '研发设计规范', description: '软硬件设计规范、接口说明、测试标准和研发流程文档。',
+    type: 'document', tags: ['研发', '接口', '仅内部'], favorite: false,
+    embedding_model: 'text-embedding-3-large', chunk_strategy: 'fixed', chunk_size: 500, chunk_overlap: 50,
+    doc_count: 312, vector_count: 7195, status: 'active', creator: '研发总监', created_at: dayAgo(6),
+    today_retrievals: 98, last_sync: ago(90),
   },
 ];
 
@@ -2322,6 +2337,126 @@ const docChunks: any[] = [
   { id: 'chk-3', doc_id: 'doc-1', kb_id: 'kb-1', chunk_index: 2, content: '## 错误码定义\n\n- 200: 成功\n- 400: 请求参数错误\n- 401: 未认证或Token过期\n- 403: 无权限访问\n- 404: 资源不存在\n- 409: 资源冲突\n- 429: 请求频率超限\n- 500: 服务器内部错误', token_count: 72, score: 0 },
   { id: 'chk-4', doc_id: 'doc-2', kb_id: 'kb-1', chunk_index: 0, content: '## 微服务拆分原则\n\n1. 单一职责：每个服务只负责一个业务领域。\n2. 独立部署：服务可独立构建、部署、扩展。\n3. 数据隔离：每个服务拥有独立数据库，通过API通信。\n4. 容错设计：使用熔断器模式，避免级联故障。\n5. 服务发现：通过注册中心实现服务自动发现和负载均衡。', token_count: 115, score: 0 },
   { id: 'chk-5', doc_id: 'doc-3', kb_id: 'kb-1', chunk_index: 0, content: '## 代码规范\n\n- 命名：变量用驼峰，常量用大写下划线，类型用帕斯卡\n- 注释：公开API必须有文档注释，复杂逻辑需行内注释\n- 错误处理：不可忽略error返回值，必须显式处理\n- 测试：核心逻辑单元测试覆盖率不低于80%', token_count: 98, score: 0 },
+];
+
+// =================== KB FAQ 条目 ===================
+const kbFaqItems: any[] = [
+  { id: 'faq-1', kb_id: 'kb-1', question: '储能系统出现电池簇压差过大告警时，应该如何处理？', answer: '先核对告警发生时的 SOC、温度和单体电压数据，再检查采样线束及均衡状态。若压差持续扩大，应按停机流程隔离对应电池簇并联系技术支持。', status: 'published', tags: ['高频问题'], created_at: dayAgo(10) },
+  { id: 'faq-2', kb_id: 'kb-1', question: '液冷机组入口温度超过阈值，会对系统产生什么影响？', answer: '入口温度过高会降低电芯散热能力，触发降功率运行，极端情况下可能引发系统保护停机。应依次检查冷却液液位、泵运行状态、过滤器和换热环境。', status: 'published', tags: ['液冷系统'], created_at: dayAgo(8) },
+  { id: 'faq-3', kb_id: 'kb-1', question: 'EMS 远程升级前需要确认哪些条件？', answer: '需确认站端通信稳定、配置已备份、设备处于允许升级状态，同时准备对应版本的回退包和升级窗口。', status: 'pending', tags: ['软件升级'], created_at: dayAgo(5) },
+];
+
+// =================== KB 检索分析 ===================
+const kbAnalytics: Record<string, any> = {
+  'kb-1': {
+    metrics: { monthly_retrievals: 8931, avg_latency_ms: 420, hit_rate: 96.2, no_match_rate: 3.8 },
+    topics: [
+      { topic: 'PCS 告警代码', count: 1826, hit_rate: 96.4, suggestion: '充足' },
+      { topic: '液冷系统维护', count: 1104, hit_rate: 91.8, suggestion: '充足' },
+      { topic: '海外认证要求', count: 438, hit_rate: 64.2, suggestion: '建议补充' },
+      { topic: 'BMS 巡检流程', count: 312, hit_rate: 88.5, suggestion: '充足' },
+    ],
+  },
+};
+
+// =================== 文档详情（解析时间线 + 自动生成问题） ===================
+const docDetailData: Record<string, any> = {
+  'doc-1': {
+    title: 'API设计规范v2.pdf',
+    content_sections: [
+      { heading: '4.2 日常巡检要求', body: '运维人员应根据站点运行环境和设备负荷制定巡检计划。常规巡检至少包括系统运行状态、关键温度、绝缘状态、消防系统、液冷回路以及通信状态。' },
+      { heading: '4.3 告警处置原则', body: '告警处置应遵循"确认影响范围、保存现场数据、按级别隔离、完成原因闭环"的顺序。禁止在未确认系统状态前直接清除告警或强制复位。' },
+    ],
+    chunks_with_content: [
+      { id: 'chk-d1-1', chunk_index: 87, relevance: 0.92, content: '检查液冷机组运行状态，确认供液温度、回液温度、压力及流量处于规定范围。观察管路接头、阀门及换热器是否存在渗漏，检查膨胀罐液位是否正常。当入口温度连续 10 分钟高于 30℃ 时，应检查外部换热条件、过滤器堵塞情况和循环泵工作状态。' },
+      { id: 'chk-d1-2', chunk_index: 94, relevance: 0.89, content: '出现电池簇压差过大告警时，应首先核对告警发生时刻的 SOC、最高及最低单体电压、温度和电流数据。检查采样线束连接和均衡状态。若静置后压差仍超过设定阈值，应停止对应簇充放电并联系技术支持评估。' },
+      { id: 'chk-d1-3', chunk_index: 101, relevance: 0.84, content: '软件升级前必须完成当前配置、策略参数和关键运行数据的备份。升级期间保持辅助电源稳定，不得执行其他远程控制操作。升级结束后应核对版本、参数和通信状态，并保留回退包至少 90 天。' },
+    ],
+    timeline: [
+      { step: '文件接收与安全检查', status: 'done', detail: '完成 · 0.4 秒' },
+      { step: 'PDF 结构解析', status: 'done', detail: '识别 126 页、38 张图片 · 18.6 秒' },
+      { step: '自适应父子分块', status: 'done', detail: '生成 386 个文本分块 · 2.1 秒' },
+      { step: '多模态图片描述', status: 'done', detail: '完成 32/38，6 张已跳过 · 42.8 秒' },
+      { step: 'Embedding 与索引', status: 'processing', detail: '已完成 302/386 · 正在处理' },
+    ],
+    parse_config: { engine: 'DocReader Auto', chunk_strategy: '父子分块 1200/400', embedding: 'BGE-M3 · 1024 维' },
+    auto_questions: [
+      { question: '液冷机组入口温度过高时如何排查？', chunk_ref: 'Chunk 087' },
+      { question: '电池簇压差过大告警怎么处理？', chunk_ref: 'Chunk 094' },
+      { question: 'EMS 升级前需要备份哪些内容？', chunk_ref: 'Chunk 101' },
+    ],
+    meta: { version: 'V2.3', publish_date: '2026-05-18', pages: 126, total_chunks: 386 },
+  },
+};
+
+// =================== Wiki 数据 ===================
+const wikiData: Record<string, any> = {
+  'kb-1': {
+    tree: [
+      { id: 'w-1', label: '系统概览', level: 0, children: ['w-2', 'w-3'] },
+      { id: 'w-2', label: '系统组成', level: 1 },
+      { id: 'w-3', label: '安全边界', level: 1 },
+      { id: 'w-4', label: '项目交付', level: 0, children: ['w-5', 'w-6', 'w-7', 'w-8'] },
+      { id: 'w-5', label: '前期勘察', level: 1 },
+      { id: 'w-6', label: '施工安装', level: 1 },
+      { id: 'w-7', label: '系统调试', level: 1 },
+      { id: 'w-8', label: '并网验收', level: 1 },
+      { id: 'w-9', label: '运行与维护', level: 0 },
+      { id: 'w-10', label: '故障处理', level: 0 },
+      { id: 'w-11', label: '附录与模板', level: 0 },
+    ],
+    content: {
+      title: '液冷储能系统交付与运维概览',
+      badges: ['自动生成', '12 条可靠引用', '更新于 2 小时前'],
+      intro: '本页面汇总液冷储能系统从项目勘察、设备安装、系统调试到并网验收和运行维护的关键知识。内容来源于企业内部产品手册、交付规范和现场案例，并保留可追溯引用。',
+      sections: [
+        { heading: '系统组成', body: '典型储能系统由电池系统、功率变换系统、能量管理系统、液冷系统、消防系统和站级监控组成。各子系统通过统一通信协议交换运行状态、告警和控制指令。', items: ['电池系统：由电芯、模组、电池簇、BMS 与高压箱构成。', 'PCS：负责直流与交流之间的双向能量转换。', 'EMS：执行功率调度、运行策略和站级协调控制。', '温控与消防：维持设备运行环境并提供安全保护。'] },
+        { heading: '安全边界', body: '所有交付和运维活动均应以设备安全状态为前提。涉及高压回路、消防联动、软件升级和保护参数修改的操作，必须经过授权并保留完整记录。', citations: ['运维手册 V2.3', '并网调试规范 V4.0', '现场安全操作规程'] },
+      ],
+    },
+    graph_nodes: [
+      { id: 'g-main', label: '液冷储能系统', is_main: true },
+      { id: 'g-1', label: '电池系统' }, { id: 'g-2', label: 'PCS' },
+      { id: 'g-3', label: '液冷系统' }, { id: 'g-4', label: 'EMS' },
+      { id: 'g-5', label: '消防系统' }, { id: 'g-6', label: '并网验收' },
+    ],
+  },
+};
+
+// =================== 工作空间 ===================
+const workspaceMembers: any[] = [
+  { id: 'wm-1', name: 'Ryan Zhang', email: 'ryan.zhang@whes.com', avatar: 'RZ', role: 'Owner', department: 'AI 平台', last_active: '在线', status: 'active' },
+  { id: 'wm-2', name: '李静', email: 'li.jing@whes.com', avatar: 'LJ', role: 'Admin', department: '售后运维', last_active: '12 分钟前', status: 'active' },
+  { id: 'wm-3', name: '王宇', email: 'wang.yu@whes.com', avatar: 'WY', role: 'Contributor', department: '项目交付', last_active: '1 小时前', status: 'active' },
+  { id: 'wm-4', name: '陈楠', email: 'chen.nan@whes.com', avatar: 'CN', role: 'Contributor', department: '市场与售前', last_active: '昨天', status: 'active' },
+  { id: 'wm-5', name: '周鑫', email: 'zhou.xin@whes.com', avatar: 'ZX', role: 'Viewer', department: '财务', last_active: '5 天前', status: 'invited' },
+];
+
+const workspaceOrgs: any[] = [
+  { id: 'wo-1', name: '市场与售前中心', icon: '售', permission: 'editable', description: '共享售前方案库、政策研究助手和典型项目案例。', member_count: 18, resource_count: 7 },
+  { id: 'wo-2', name: '全球售后运维', icon: '运', permission: 'admin', description: '共享产品运维知识、故障案例和储能运维专家。', member_count: 36, resource_count: 12 },
+  { id: 'wo-3', name: '项目交付中心', icon: '交', permission: 'readonly', description: '交付规范、Wiki、项目模板与区域验收资料。', member_count: 22, resource_count: 9 },
+];
+
+const workspaceApiKeys: any[] = [
+  { id: 'wak-1', name: 'Codex 知识检索', prefix: 'sk-wn-8a2…', scope: 'retrieve', kb_scope: '3 个知识库', last_used: '刚刚', status: 'active' },
+  { id: 'wak-2', name: '文档同步服务', prefix: 'sk-wn-4f9…', scope: 'ingest', kb_scope: '项目交付规范', last_used: '14 分钟前', status: 'active' },
+  { id: 'wak-3', name: '历史测试脚本', prefix: 'sk-wn-19c…', scope: 'full_access', kb_scope: '全部', last_used: '92 天前', status: 'disabled' },
+];
+
+const workspaceAuditLogs: any[] = [
+  { id: 'wal-1', avatar: 'LJ', operator: '李静', action_type: 'kb_perm', target: '储能产品与运维', detail: '将王宇的角色从可编辑改为仅查看', ip: '10.23.18.16', created_at: '2026-07-10 14:32:18' },
+  { id: 'wal-2', avatar: 'WY', operator: '王宇', action_type: 'doc_upload', target: '项目交付规范库', detail: '批量上传 14 份项目文档，解析完成 12 份', ip: '10.23.21.44', created_at: '2026-07-10 13:15:07' },
+  { id: 'wal-3', avatar: 'RZ', operator: 'Ryan Zhang', action_type: 'kb_create', target: '售后标准问答库', detail: '创建知识库，配置 bge-m3 向量模型', ip: '10.23.12.8', created_at: '2026-07-09 16:42:33' },
+  { id: 'wal-4', avatar: 'CN', operator: '陈楠', action_type: 'faq_create', target: '售后标准问答库', detail: '创建 FAQ「如何处理客户投诉」', ip: '10.23.15.22', created_at: '2026-07-09 11:20:05' },
+  { id: 'wal-5', avatar: 'LJ', operator: '李静', action_type: 'doc_delete', target: '储能产品与运维', detail: '删除文档 old_manual_v1.pdf（3 个分块）', ip: '10.23.18.16', created_at: '2026-07-09 09:15:41' },
+  { id: 'wal-6', avatar: 'SYS', operator: '系统', action_type: 'doc_parse', target: '能源政策与市场规则', detail: 'RSS 自动同步完成，新增 28 篇，更新 9 篇', ip: '127.0.0.1', created_at: '2026-07-09 03:00:00' },
+  { id: 'wal-7', avatar: 'WY', operator: '王宇', action_type: 'kb_update', target: '项目交付规范库', detail: '修改知识库描述与标签', ip: '10.23.21.44', created_at: '2026-07-08 17:30:22' },
+  { id: 'wal-8', avatar: 'RZ', operator: 'Ryan Zhang', action_type: 'setting_change', target: '储能产品与运维', detail: '开启 FAQ 自动生成，每文档生成 5 条', ip: '10.23.12.8', created_at: '2026-07-08 14:10:55' },
+  { id: 'wal-9', avatar: 'CN', operator: '陈楠', action_type: 'chat_query', target: '售后标准问答库', detail: '发起知识库问答：「退货流程是什么」', ip: '10.23.15.22', created_at: '2026-07-08 10:05:18' },
+  { id: 'wal-10', avatar: 'LJ', operator: '李静', action_type: 'wiki_edit', target: '项目交付规范库', detail: '编辑 Wiki 页面「并网验收流程」', ip: '10.23.18.16', created_at: '2026-07-07 16:45:30' },
+  { id: 'wal-11', avatar: 'WY', operator: '王宇', action_type: 'faq_update', target: '售后标准问答库', detail: '编辑 FAQ「如何处理客户投诉」，更新标准口径', ip: '10.23.21.44', created_at: '2026-07-07 11:22:08' },
+  { id: 'wal-12', avatar: 'RZ', operator: 'Ryan Zhang', action_type: 'kb_delete', target: '临时测试库', detail: '删除知识库及其全部 23 个文档', ip: '10.23.12.8', created_at: '2026-07-06 09:30:15' },
 ];
 
 // =================== AI 对话 ===================
@@ -3501,6 +3636,156 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     }
     return ok({ query, kb_id, total: results.length, results });
   }
+
+  // =================== KB 详情 / FAQ / 分析 / Wiki / 文档详情 ===================
+  // 获取单个知识库详情
+  if (/^\/rag\/knowledge-bases\/[^/]+$/.test(path) && method === 'get') {
+    const kbId = path.split('/')[3];
+    return ok(knowledgeBases.find(k => k.id === kbId) || null);
+  }
+  // FAQ 列表
+  if (path === '/rag/faq' && method === 'get') {
+    let filtered = kbFaqItems;
+    if (p.kb_id) filtered = filtered.filter(f => f.kb_id === p.kb_id);
+    return paginate(filtered, p.page, p.page_size, p.search);
+  }
+  // FAQ 新增
+  if (path === '/rag/faq' && method === 'post') {
+    const newFaq = { id: `faq-${Date.now()}`, kb_id: data.kb_id, question: data.question, answer: data.answer, status: 'published', tags: data.tags || [], created_at: new Date().toISOString() };
+    kbFaqItems.push(newFaq);
+    return ok(newFaq);
+  }
+  // FAQ 删除
+  if (/^\/rag\/faq\/[^/]+$/.test(path) && method === 'delete') {
+    const faqId = path.split('/')[3];
+    const idx = kbFaqItems.findIndex(f => f.id === faqId);
+    if (idx >= 0) kbFaqItems.splice(idx, 1);
+    return ok({ success: true });
+  }
+  // 检索分析
+  if (/^\/rag\/knowledge-bases\/[^/]+\/analytics$/.test(path) && method === 'get') {
+    const kbId = path.split('/')[3];
+    return ok(kbAnalytics[kbId] || { metrics: { monthly_retrievals: 0, avg_latency_ms: 0, hit_rate: 0, no_match_rate: 0 }, topics: [] });
+  }
+  // 文档详情（含分块、时间线、自动问题）
+  if (/^\/rag\/documents\/[^/]+\/detail$/.test(path) && method === 'get') {
+    const docId = path.split('/')[3];
+    const detail = docDetailData[docId];
+    if (detail) return ok(detail);
+    // 为没有详细数据的文档生成默认数据
+    const doc = ragDocuments.find(d => d.id === docId);
+    if (!doc) return ok(null);
+    return ok({
+      title: doc.name, content_sections: [{ heading: '文档内容', body: '这是文档《' + doc.name + '》的内容预览。' }],
+      chunks_with_content: docChunks.filter(c => c.doc_id === docId).map((c, i) => ({ id: c.id, chunk_index: c.chunk_index, relevance: 0.9 - i * 0.05, content: c.content })),
+      timeline: [
+        { step: '文件接收', status: 'done', detail: '完成' },
+        { step: '文本解析', status: 'done', detail: '完成' },
+        { step: '分块处理', status: 'done', detail: `生成 ${doc.chunk_count || 10} 个分块` },
+        { step: '向量化', status: doc.status === 'completed' ? 'done' : 'processing', detail: doc.status === 'completed' ? '完成' : '处理中' },
+      ],
+      parse_config: { engine: 'DocReader Auto', chunk_strategy: '固定大小 500/50', embedding: 'BGE-M3 · 1024 维' },
+      auto_questions: [], meta: { pages: 0, total_chunks: doc.chunk_count || 0 },
+    });
+  }
+  // Wiki 数据
+  if (/^\/rag\/knowledge-bases\/[^/]+\/wiki$/.test(path) && method === 'get') {
+    const kbId = path.split('/')[3];
+    return ok(wikiData[kbId] || null);
+  }
+  // Markdown 上传
+  if (path === '/rag/documents/markdown' && method === 'post') {
+    const newDoc = {
+      id: 'doc-md-' + Date.now(), kb_id: data.kb_id, name: data.title + '.md',
+      type: 'markdown', size: data.content.length, chunk_count: 0, vector_count: 0,
+      status: 'processing', uploaded_by: '当前用户', uploaded_at: new Date().toISOString(),
+    };
+    ragDocuments.unshift(newDoc);
+    const kb = knowledgeBases.find(k => k.id === data.kb_id);
+    if (kb) kb.doc_count = ragDocuments.filter(d => d.kb_id === data.kb_id).length;
+    setTimeout(() => {
+      const doc = ragDocuments.find(d => d.id === newDoc.id);
+      if (doc) {
+        doc.status = 'completed';
+        doc.chunk_count = Math.max(1, Math.floor(data.content.split('\n').length / 5));
+        doc.vector_count = doc.chunk_count;
+        if (kb) kb.vector_count = ragDocuments
+          .filter(d => d.kb_id === data.kb_id && d.status === 'completed')
+          .reduce((sum: number, d: any) => sum + d.vector_count, 0);
+      }
+    }, 2000);
+    return ok(newDoc);
+  }
+  // KB 聊天
+  if (path === '/rag/chat' && method === 'post') {
+    const responses = [
+      '根据知识库中的文档，PCS（储能控制系统）的主要功能包括：电池状态监控、充放电管理、温度控制和安全告警。系统采用分布式架构，支持多机并联运行。',
+      '关于液冷系统的维护规程：建议每季度检查一次冷却液液位，每半年更换一次冷却液，每年对管路进行一次全面检查。常见故障包括泵体异响、管路泄漏和温度异常。',
+      'BMS（电池管理系统）的告警代码说明：E001 表示电池过压，E002 表示电池欠压，E003 表示温度过高，E004 表示通信故障。处理方法请参考产品手册第 3 章。',
+      '根据 EMS（能量管理系统）文档，系统支持多种运行模式：削峰填谷、需量控制、动态增容和虚拟电厂模式。各模式的切换策略和参数配置详见操作手册。',
+    ];
+    const reply = responses[Math.floor(Math.random() * responses.length)];
+    return ok({ message: reply, sources: [{ doc_name: 'PCS产品手册v2.pdf', chunk_index: 1, relevance: 0.92 }, { doc_name: '液冷系统维护规程.docx', chunk_index: 3, relevance: 0.85 }] });
+  }
+
+  // =================== 知识库协作者（权限）===================
+  const kbCollaborators: Record<string, any[]> = {
+    'kb-1': [
+      { principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' },
+      { principal_type: 'user', user_id: 'u-2', name: '李娜', role: 'admin' },
+      { principal_type: 'user', user_id: 'u-4', name: '赵敏', role: 'editor' },
+      { principal_type: 'user', user_id: 'u-5', name: '孙丽', role: 'viewer' },
+      { principal_type: 'department', dept_id: 'pg-1', name: '技术部', member_count: 12, role: 'viewer' },
+    ],
+    'kb-2': [
+      { principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' },
+      { principal_type: 'user', user_id: 'u-3', name: '王强', role: 'admin' },
+    ],
+  };
+  const getKbCollaborators = (id: string) => kbCollaborators[id] || [{ principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' }];
+
+  if (/^\/rag\/knowledge-bases\/[^/]+\/collaborators$/.test(path) && method === 'get') {
+    const id = path.split('/')[3];
+    return ok(getKbCollaborators(id));
+  }
+  if (/^\/rag\/knowledge-bases\/[^/]+\/collaborators$/.test(path) && method === 'post') {
+    const id = path.split('/')[3];
+    const list = kbCollaborators[id] || (kbCollaborators[id] = getKbCollaborators(id).slice());
+    if (data?.principal_type === 'department') {
+      list.push({ principal_type: 'department', dept_id: data?.dept_id, name: data?.name, member_count: data?.member_count || 0, role: data?.role || 'viewer' });
+    } else {
+      list.push({ principal_type: 'user', user_id: data?.user_id, name: data?.name, role: data?.role || 'viewer' });
+    }
+    return ok(list);
+  }
+  if (/^\/rag\/knowledge-bases\/[^/]+\/collaborators\/[^/]+$/.test(path) && method === 'put') {
+    const id = path.split('/')[3];
+    const pid = path.split('/')[5];
+    const list = kbCollaborators[id] || (kbCollaborators[id] = getKbCollaborators(id).slice());
+    const c = list.find((x: any) => x.user_id === pid || x.dept_id === pid);
+    if (c) c.role = data?.role;
+    return ok(list);
+  }
+  if (/^\/rag\/knowledge-bases\/[^/]+\/collaborators\/[^/]+$/.test(path) && method === 'delete') {
+    const id = path.split('/')[3];
+    const pid = path.split('/')[5];
+    kbCollaborators[id] = (kbCollaborators[id] || getKbCollaborators(id)).filter((x: any) => x.user_id !== pid && x.dept_id !== pid);
+    return ok(kbCollaborators[id]);
+  }
+
+  // =================== 工作空间 ===================
+  if (path === '/workspace/members' && method === 'get') return paginate(workspaceMembers, p.page, p.page_size, p.search);
+  if (path === '/workspace/members' && method === 'post') return ok({ id: 'wm-' + Date.now(), ...data });
+  if (/^\/workspace\/members\/[^/]+$/.test(path) && method === 'put') return ok(data);
+  if (/^\/workspace\/members\/[^/]+$/.test(path) && method === 'delete') return ok(null);
+  if (path === '/workspace/organizations' && method === 'get') return paginate(workspaceOrgs, p.page, p.page_size, p.search);
+  if (path === '/workspace/organizations' && method === 'post') return ok({ id: 'wo-' + Date.now(), ...data });
+  if (/^\/workspace\/organizations\/[^/]+$/.test(path) && method === 'put') return ok(data);
+  if (/^\/workspace\/organizations\/[^/]+$/.test(path) && method === 'delete') return ok(null);
+  if (path === '/workspace/api-keys' && method === 'get') return paginate(workspaceApiKeys, p.page, p.page_size, p.search);
+  if (path === '/workspace/api-keys' && method === 'post') return ok({ id: 'wak-' + Date.now(), ...data });
+  if (/^\/workspace\/api-keys\/[^/]+$/.test(path) && method === 'delete') return ok(null);
+  if (path === '/workspace/audit-logs' && method === 'get') return paginate(workspaceAuditLogs, p.page, p.page_size, p.search);
 
   // =================== AI 对话 ===================
   if (path === '/chat/sessions' && method === 'get') {

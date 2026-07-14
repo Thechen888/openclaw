@@ -1,6 +1,7 @@
 import type {
-  ReportDefinition, ReportGroup, AgentOutput, SidebarItem,
+  ReportDefinition, ReportGroup, AgentOutput, SidebarItem, ReportDataSnapshot,
 } from '../report-engine/types';
+import { COMPANY_SCOPE_KEY, createReportDataKey } from '../report-engine/reportStore';
 import { v4 as uuidv4 } from 'uuid';
 
 // ============================================================
@@ -246,6 +247,9 @@ export const DEPT_QUARTERLY_REPORT: ReportDefinition = {
   icon: 'building2',
   description: '各部门季度经营数据汇总',
   viewMode: 'tab',
+  // 每季度第 1 个月 10 号 09:00 生成
+  reportType: 'quarterly',
+  schedule: { type: 'quarterly', monthOfQuarter: 1, dayOfMonth: 10, hour: 9, minute: 0 },
   tabs: DEPARTMENTS.map(dept => ({
     id: `tab-${dept}`,
     label: dept,
@@ -333,6 +337,9 @@ export const COMPANY_OVERVIEW_REPORT: ReportDefinition = {
   icon: 'globe',
   description: '全公司经营总览与各部门对比',
   viewMode: 'page',
+  // 每季度第 1 个月 1 号 09:00 生成
+  reportType: 'quarterly',
+  schedule: { type: 'quarterly', monthOfQuarter: 1, dayOfMonth: 1, hour: 9, minute: 0 },
   sections: [
     {
       type: 'kpi-cards' as const,
@@ -409,6 +416,9 @@ export const BUDGET_REPORT: ReportDefinition = {
   icon: 'wallet',
   description: '预算分配与执行情况',
   viewMode: 'tab',
+  // 每月 5 号 09:00 生成
+  reportType: 'monthly',
+  schedule: { type: 'monthly', dayOfMonth: 5, hour: 9, minute: 0 },
   tabs: [
     ...DEPARTMENTS.map(dept => ({
       id: `budget-${dept}`,
@@ -504,3 +514,65 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: 'builder', label: '模板构建器', icon: 'layout-grid', type: 'builder' as const },
   { id: 'agent-doc', label: 'Agent 数据协议', icon: 'bot', type: 'agent-doc' as const },
 ];
+
+// ============================================================
+// 预置历史快照（仅供原型演示，初始化时会 seed 到 store）
+// 覆盖两个典型场景：
+//   1. 公司级单页报告（company-overview / COMPANY_SCOPE）
+//   2. 部门级 tab 报告（dept-quarterly / 研发部）
+// ============================================================
+
+function daysAgo(n: number): string {
+  return new Date(Date.now() - n * 86_400_000).toISOString();
+}
+
+const RD_DATA = AGENT_OUTPUT_BY_DEPT['研发部'] as AgentOutput;
+
+export const INITIAL_REPORT_SNAPSHOTS: Record<string, ReportDataSnapshot[]> = {
+  [createReportDataKey('company-overview', '2026-Q2', COMPANY_SCOPE_KEY)]: [
+    {
+      id: 'seed-company-2026q1-a',
+      generatedAt: daysAgo(95),
+      period: '2026-Q1',
+      data: { ...COMPANY_AGENT_OUTPUT, total_headcount: 138 },
+      note: '定时生成',
+    },
+    {
+      id: 'seed-company-2026q2-mid',
+      generatedAt: daysAgo(25),
+      period: '2026-Q2',
+      data: { ...COMPANY_AGENT_OUTPUT, total_headcount: 142 },
+      note: '定时生成',
+    },
+    {
+      id: 'seed-company-2026q2-latest',
+      generatedAt: daysAgo(1),
+      period: '2026-Q2',
+      data: { ...COMPANY_AGENT_OUTPUT },
+      note: '定时生成',
+    },
+  ],
+  [createReportDataKey('dept-quarterly', '2026-Q2', '研发部')]: [
+    {
+      id: 'seed-rd-2026q1',
+      generatedAt: daysAgo(95),
+      period: '2026-Q1',
+      data: { ...RD_DATA, headcount: 42, budget_rate: '68.4%' },
+      note: '定时生成',
+    },
+    {
+      id: 'seed-rd-2026q2-mid',
+      generatedAt: daysAgo(20),
+      period: '2026-Q2',
+      data: { ...RD_DATA, headcount: 44 },
+      note: '定时生成',
+    },
+    {
+      id: 'seed-rd-2026q2-latest',
+      generatedAt: daysAgo(2),
+      period: '2026-Q2',
+      data: { ...RD_DATA },
+      note: '定时生成',
+    },
+  ],
+};

@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type {
   ReportDefinition, ReportViewMode, ReportSection, ChartType,
   BindingField, BindingValueType, CellStyle, ChartConfig,
+  ReportType, ReportSchedule,
 } from '../report-engine/types';
 import SectionRenderer from './SectionRenderer';
 import { COMPANY_AGENT_OUTPUT } from '../data/demoData';
@@ -28,6 +29,38 @@ const DEFAULT_CELL_STYLE: CellStyle = {
   borderColor: '#e5e7eb',
   fontSize: 14,
 };
+
+// 报告类型与调度相关常量
+const REPORT_TYPE_OPTIONS: { value: ReportType; label: string; frequency: string }[] = [
+  { value: 'daily',     label: '日报',   frequency: '每天' },
+  { value: 'weekly',    label: '周报',   frequency: '每周' },
+  { value: 'monthly',   label: '月报',   frequency: '每月' },
+  { value: 'quarterly', label: '季度报', frequency: '每季度' },
+  { value: 'yearly',    label: '年报',   frequency: '每年' },
+];
+const WEEK_DAY_OPTIONS = [
+  { value: 1, label: '周一' },
+  { value: 2, label: '周二' },
+  { value: 3, label: '周三' },
+  { value: 4, label: '周四' },
+  { value: 5, label: '周五' },
+  { value: 6, label: '周六' },
+  { value: 7, label: '周日' },
+];
+
+function defaultScheduleFor(type: ReportType): ReportSchedule {
+  switch (type) {
+    case 'daily':     return { type, hour: 9, minute: 0 };
+    case 'weekly':    return { type, dayOfWeek: 1, hour: 9, minute: 0 };
+    case 'monthly':   return { type, dayOfMonth: 1, hour: 9, minute: 0 };
+    case 'quarterly': return { type, monthOfQuarter: 1, dayOfMonth: 1, hour: 9, minute: 0 };
+    case 'yearly':    return { type, month: 1, dayOfMonth: 1, hour: 9, minute: 0 };
+  }
+}
+
+function pad2(n: number): string {
+  return n.toString().padStart(2, '0');
+}
 
 function migrateBindingPath(path: string, previousDataId: string, nextDataId: string): string {
   const previousPrefix = `${previousDataId}.`;
@@ -101,22 +134,84 @@ function migrateSectionDataId(
 interface Props {
   onCreate: (report: ReportDefinition) => void;
   onCancel: () => void;
+  // 传入时表单以该报告初始化，handleCreate 会保留原 id/createdAt（等同编辑模式）
+  initialReport?: ReportDefinition;
 }
 
-export default function NewReportCreator({ onCreate, onCancel }: Props) {
-  const [name, setName] = useState('新报告');
-  const [description, setDescription] = useState('');
-  const [period, setPeriod] = useState('2026-Q2');
-  const [dataId, setDataId] = useState('report_agent');
-  const [viewMode, setViewMode] = useState<ReportViewMode>('page');
+export default function NewReportCreator({ onCreate, onCancel, initialReport }: Props) {
+  const isEditing = !!initialReport;
+  const [name, setName] = useState(initialReport?.name ?? '新报告');
+  const [description, setDescription] = useState(initialReport?.description ?? '');
+  const [period, setPeriod] = useState(initialReport?.period ?? '2026-Q2');
+  const [dataId, setDataId] = useState(initialReport?.dataId ?? 'report_agent');
+  const [viewMode, setViewMode] = useState<ReportViewMode>(initialReport?.viewMode ?? 'page');
+  const [reportType, setReportType] = useState<ReportType>(initialReport?.reportType ?? 'weekly');
+  const [schedule, setSchedule] = useState<ReportSchedule>(
+    initialReport?.schedule ?? defaultScheduleFor(initialReport?.reportType ?? 'weekly'),
+  );
   const [headerStyle, setHeaderStyle] = useState<CellStyle>({ backgroundColor: '#1e40af', color: '#fff', fontWeight: 'bold', fontSize: 14, padding: 10, textAlign: 'center' });
-  const [sections, setSections] = useState<ReportSection[]>([]);
-  const [bindingFields, setBindingFields] = useState<BindingField[]>([]);
+  // tab 化数据结构：page 模式仅使用 tabList[0]，tab 模式可编辑多个 tab
+  const [tabList, setTabList] = useState<{ id: string; label: string; sections: ReportSection[] }[]>(
+    () => {
+      if (initialReport) {
+        if (initialReport.viewMode === 'tab' && initialReport.tabs && initialReport.tabs.length > 0) {
+          // 编辑已有 tab 报告：保留完整的 tab 字段（含 departmentKey 等）
+          return initialReport.tabs.map(t => ({ ...t }));
+        }
+        // 编辑 page 模式报告：包一层默认 tab
+        return [{ id: uuidv4(), label: '默认', sections: initialReport.sections ?? [] }];
+      }
+      return [{ id: uuidv4(), label: '默认', sections: [] }];
+    },
+  );
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  const activeTab = tabList[activeTabIdx] ?? tabList[0];
+  const sections = activeTab?.sections ?? [];
+  const setSections = (updater: (prev: ReportSection[]) => ReportSection[]) => {
+    setTabList(prev => prev.map((tab, i) => (
+      i !== activeTabIdx ? tab : { ...tab, sections: updater(tab.sections) }
+    )));
+  };
+  const [bindingFields, setBindingFields] = useState<BindingField[]>(initialReport?.bindingFields ?? []);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldType, setNewFieldType] = useState<BindingValueType>('single');
   const [creationIssues, setCreationIssues] = useState<ValidationIssue[]>([]);
+
+  // 切换报告类型时同步重置 schedule 为对应默认值
+  const changeReportType = (nextType: ReportType) => {
+    setReportType(nextType);
+    setSchedule(defaultScheduleFor(nextType));
+  };
+
+  // Tab 增删改名切换
+  const addTab = () => {
+    setTabList(prev => [...prev, { id: uuidv4(), label: `标签 ${prev.length + 1}`, sections: [] }]);
+    setActiveTabIdx(tabList.length);
+    setEditingIdx(null);
+  };
+  const removeTab = (idx: number) => {
+    if (tabList.length <= 1) {
+      toast.error('至少保留一个标签');
+      return;
+    }
+    setTabList(prev => prev.filter((_, i) => i !== idx));
+    setActiveTabIdx(prev => {
+      if (idx < prev) return prev - 1;
+      if (idx === prev) return Math.max(0, prev - 1);
+      return prev;
+    });
+    setEditingIdx(null);
+  };
+  const renameTab = (idx: number, label: string) => {
+    setTabList(prev => prev.map((tab, i) => (i === idx ? { ...tab, label } : tab)));
+  };
+
+  // 部分覆盖 schedule（字段可能只属于某个分支，依靠 UI 保证不在错误 type 下调用）
+  const patchSchedule = (patch: Record<string, number>) => {
+    setSchedule(s => ({ ...s, ...patch }) as ReportSchedule);
+  };
 
   const addBinding = () => {
     if (!newFieldName || !newFieldLabel) return;
@@ -200,18 +295,27 @@ export default function NewReportCreator({ onCreate, onCancel }: Props) {
   };
 
   const updateDataId = (nextDataId: string) => {
-    setSections(previous => previous.map(section => (
-      migrateSectionDataId(section, dataId, nextDataId)
-    )));
+    if (nextDataId === dataId) return;
+    setTabList(previous => previous.map(tab => ({
+      ...tab,
+      sections: tab.sections.map(section => migrateSectionDataId(section, dataId, nextDataId)),
+    })));
     setDataId(nextDataId);
   };
 
   const handleCreate = () => {
     const report: ReportDefinition = {
-      id: uuidv4(), name: name.trim(), period, dataId, description, icon: 'layout-grid', viewMode,
-      sections: viewMode === 'page' ? sections : undefined,
-      tabs: viewMode === 'tab' ? [{ id: uuidv4(), label: '默认', sections }] : undefined,
-      bindingFields, createdAt: new Date().toISOString(),
+      // 编辑模式下保留原 id 与 createdAt，确保 upsert 到同一条报告
+      id: initialReport?.id ?? uuidv4(),
+      name: name.trim(), period, dataId, description,
+      icon: initialReport?.icon ?? 'layout-grid',
+      viewMode,
+      reportType,
+      schedule,
+      sections: viewMode === 'page' ? (tabList[0]?.sections ?? []) : undefined,
+      tabs: viewMode === 'tab' ? tabList : undefined,
+      bindingFields,
+      createdAt: initialReport?.createdAt ?? new Date().toISOString(),
     };
     const validation = validateReportDefinition(report);
     const issues = [
@@ -224,7 +328,7 @@ export default function NewReportCreator({ onCreate, onCancel }: Props) {
       return;
     }
     onCreate(report);
-    toast.success('报告已创建');
+    toast.success(isEditing ? '报告已保存' : '报告已创建');
   };
 
   const renderSectionEditor = (section: ReportSection, idx: number) => {
@@ -404,8 +508,8 @@ export default function NewReportCreator({ onCreate, onCancel }: Props) {
       <div className="w-1/2 border-r border-gray-200 overflow-y-auto bg-white">
         <div className="p-5 space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-800">新建报告</h2>
-            <button onClick={onCancel} aria-label="取消新建报告" className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            <h2 className="text-lg font-bold text-gray-800">{isEditing ? '编辑报告' : '新建报告'}</h2>
+            <button onClick={onCancel} aria-label={isEditing ? '取消编辑' : '取消新建报告'} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
           </div>
 
           {/* Basic */}
@@ -440,6 +544,112 @@ export default function NewReportCreator({ onCreate, onCancel }: Props) {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Schedule */}
+          <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase">报告调度</h4>
+              <span className="text-[10px] text-gray-400">频率：{REPORT_TYPE_OPTIONS.find(t => t.value === reportType)?.frequency ?? ''}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label htmlFor="new-report-type" className="block text-xs text-gray-500 mb-1">报告类型</label>
+                <select id="new-report-type" value={reportType} onChange={e => changeReportType(e.target.value as ReportType)}
+                  className="w-full border border-gray-300 rounded px-2 py-1 text-xs">
+                  {REPORT_TYPE_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">生成时间</label>
+                <div className="flex items-center gap-1">
+                  <input type="number" min={0} max={23} value={schedule.hour}
+                    aria-label="小时"
+                    onChange={e => patchSchedule({ hour: Math.max(0, Math.min(23, Number(e.target.value) || 0)) })}
+                    className="w-14 border border-gray-300 rounded px-2 py-1 text-xs font-mono text-center" />
+                  <span className="text-xs text-gray-400">:</span>
+                  <input type="number" min={0} max={59} value={schedule.minute}
+                    aria-label="分钟"
+                    onChange={e => patchSchedule({ minute: Math.max(0, Math.min(59, Number(e.target.value) || 0)) })}
+                    className="w-14 border border-gray-300 rounded px-2 py-1 text-xs font-mono text-center" />
+                </div>
+              </div>
+            </div>
+
+            {schedule.type === 'weekly' && (
+              <div>
+                <label htmlFor="new-report-day-of-week" className="block text-xs text-gray-500 mb-1">每周几生成</label>
+                <select id="new-report-day-of-week" value={schedule.dayOfWeek}
+                  onChange={e => patchSchedule({ dayOfWeek: Number(e.target.value) })}
+                  className="w-full border border-gray-300 rounded px-2 py-1 text-xs">
+                  {WEEK_DAY_OPTIONS.map(d => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {schedule.type === 'monthly' && (
+              <div>
+                <label htmlFor="new-report-day-of-month" className="block text-xs text-gray-500 mb-1">每月几号生成</label>
+                <input id="new-report-day-of-month" type="number" min={1} max={31} value={schedule.dayOfMonth}
+                  onChange={e => patchSchedule({ dayOfMonth: Math.max(1, Math.min(31, Number(e.target.value) || 1)) })}
+                  className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-mono" />
+              </div>
+            )}
+
+            {schedule.type === 'quarterly' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label htmlFor="new-report-month-of-quarter" className="block text-xs text-gray-500 mb-1">季度中第几个月</label>
+                  <select id="new-report-month-of-quarter" value={schedule.monthOfQuarter}
+                    onChange={e => patchSchedule({ monthOfQuarter: Number(e.target.value) })}
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs">
+                    <option value={1}>第 1 个月</option>
+                    <option value={2}>第 2 个月</option>
+                    <option value={3}>第 3 个月</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="new-report-q-day" className="block text-xs text-gray-500 mb-1">几号</label>
+                  <input id="new-report-q-day" type="number" min={1} max={31} value={schedule.dayOfMonth}
+                    onChange={e => patchSchedule({ dayOfMonth: Math.max(1, Math.min(31, Number(e.target.value) || 1)) })}
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-mono" />
+                </div>
+              </div>
+            )}
+
+            {schedule.type === 'yearly' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label htmlFor="new-report-year-month" className="block text-xs text-gray-500 mb-1">月份</label>
+                  <select id="new-report-year-month" value={schedule.month}
+                    onChange={e => patchSchedule({ month: Number(e.target.value) })}
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>{m} 月</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="new-report-year-day" className="block text-xs text-gray-500 mb-1">几号</label>
+                  <input id="new-report-year-day" type="number" min={1} max={31} value={schedule.dayOfMonth}
+                    onChange={e => patchSchedule({ dayOfMonth: Math.max(1, Math.min(31, Number(e.target.value) || 1)) })}
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-mono" />
+                </div>
+              </div>
+            )}
+
+            <p className="text-[10px] text-gray-400">
+              预览：{REPORT_TYPE_OPTIONS.find(t => t.value === reportType)?.frequency ?? ''}
+              {schedule.type === 'weekly' && ` · ${WEEK_DAY_OPTIONS.find(d => d.value === schedule.dayOfWeek)?.label ?? ''}`}
+              {schedule.type === 'monthly' && ` · ${schedule.dayOfMonth} 号`}
+              {schedule.type === 'quarterly' && ` · 第 ${schedule.monthOfQuarter} 个月 ${schedule.dayOfMonth} 号`}
+              {schedule.type === 'yearly' && ` · ${schedule.month} 月 ${schedule.dayOfMonth} 号`}
+              {` · ${pad2(schedule.hour)}:${pad2(schedule.minute)}`}
+            </p>
           </div>
 
           {creationIssues.length > 0 && (
@@ -495,6 +705,50 @@ export default function NewReportCreator({ onCreate, onCancel }: Props) {
             </div>
           </div>
 
+          {/* Tabs config (tab 模式专属) */}
+          {viewMode === 'tab' && (
+            <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase">标签页配置</h4>
+                <button onClick={addTab} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-0.5">
+                  <Plus size={12} /> 添加标签
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {tabList.map((tab, i) => {
+                  const isActive = i === activeTabIdx;
+                  return (
+                    <div key={tab.id}
+                      className={`flex items-center gap-1.5 border rounded p-1.5 ${isActive ? 'border-blue-400 bg-blue-50/60' : 'border-gray-200 bg-white'}`}>
+                      <button
+                        onClick={() => { setActiveTabIdx(i); setEditingIdx(null); }}
+                        className={`w-5 h-5 flex items-center justify-center text-[10px] rounded ${isActive ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                        aria-label={`切换到标签 ${tab.label}`}
+                        title="点击切换编辑"
+                      >
+                        {i + 1}
+                      </button>
+                      <input
+                        type="text" value={tab.label}
+                        onChange={e => renameTab(i, e.target.value)}
+                        onFocus={() => { setActiveTabIdx(i); setEditingIdx(null); }}
+                        className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                        placeholder="标签名称"
+                        aria-label={`标签 ${i + 1} 名称`}
+                      />
+                      <span className="text-[10px] text-gray-400">{tab.sections.length} 区块</span>
+                      <button onClick={() => removeTab(i)}
+                        className="p-0.5 text-gray-400 hover:text-red-600" aria-label="删除标签">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-gray-400">正在编辑：<span className="font-semibold text-gray-600">{activeTab?.label ?? '默认'}</span>（下方“内容区块”仅展示当前标签）</p>
+            </div>
+          )}
+
           {/* Sections */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -543,7 +797,7 @@ export default function NewReportCreator({ onCreate, onCancel }: Props) {
           </div>
 
           <button onClick={handleCreate} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-            创建报告
+            {isEditing ? '保存修改' : '创建报告'}
           </button>
         </div>
       </div>

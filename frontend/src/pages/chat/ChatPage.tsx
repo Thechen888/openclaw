@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box, TextField, Button, IconButton, Typography, Paper, MenuItem,
   List, ListItemButton, Tooltip, Chip, Avatar, Collapse,
@@ -147,6 +148,7 @@ export default function ChatPage() {
   const [newKb, setNewKb] = useState('');
   const [newPolicy, setNewPolicy] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // 数据查询
   const { data: sessionsData, isLoading: sessionsLoading } = useQuery({
@@ -199,6 +201,25 @@ export default function ChatPage() {
       enqueueSnackbar('对话已删除', { variant: 'success' });
     },
   });
+
+  // 自动从 URL 参数创建知识库问答会话
+  useEffect(() => {
+    const kbId = searchParams.get('kb_id');
+    const kbName = searchParams.get('kb_name');
+    const mode = searchParams.get('mode');
+    if (kbId && kbName && mode === 'rag' && sessions.length > 0) {
+      createSessionMutation.mutate({
+        title: `${kbName} - 知识库问答`,
+        mode: 'rag',
+        model_policy_id: 'mp-1',
+        model_policy: '通用对话策略',
+        kb_id: kbId,
+        kb_name: kbName,
+      });
+      setSearchParams({});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions.length]);
 
   // 发送消息
   const handleSend = async () => {

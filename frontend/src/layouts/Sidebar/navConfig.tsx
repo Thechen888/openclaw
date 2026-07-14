@@ -38,6 +38,8 @@ import {
   Chat,
   FindInPage,
   Storefront,
+  Workspaces,
+  History as HistoryIcon,
 } from '@mui/icons-material';
 
 export interface NavItem {
@@ -69,8 +71,7 @@ export const frontNavConfig: NavSection[] = [
   {
     label: '知识库',
     items: [
-      { title: '文档管理', path: '/rag/documents', icon: <DescriptionIcon fontSize="small" /> },
-      { title: '检索测试', path: '/rag/retrieval-test', icon: <FindInPage fontSize="small" /> },
+      { title: '知识库列表', path: '/rag/knowledge-bases', icon: <MenuBook fontSize="small" /> },
     ],
   },
   {
@@ -129,7 +130,9 @@ export const adminNavConfig: NavSection[] = [
   {
     label: '知识库 (RAG)',
     items: [
+      { title: '知识库工作台', path: '/rag/workbench', icon: <Workspaces fontSize="small" /> },
       { title: '知识库管理', path: '/rag/knowledge-bases', icon: <MenuBook fontSize="small" /> },
+      { title: '知识库日志', path: '/workspace', icon: <HistoryIcon fontSize="small" /> },
     ],
   },
   {
