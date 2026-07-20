@@ -68,3 +68,56 @@ func (t *TokenUsageLog) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (TokenUsageLog) TableName() string { return "token_usage_logs" }
+
+// AdminTokenWhitelist defines who is authorized to create Agents that use admin tokens
+type AdminTokenWhitelist struct {
+	BaseModel
+	UserID    uuid.UUID  `json:"user_id" gorm:"type:char(36);uniqueIndex"`
+	GrantedBy uuid.UUID  `json:"granted_by" gorm:"type:char(36)"`
+	GrantedAt time.Time  `json:"granted_at"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	IsActive  bool       `json:"is_active" gorm:"default:true"`
+	Remark    string     `json:"remark" gorm:"type:varchar(256)"`
+}
+
+func (AdminTokenWhitelist) TableName() string { return "admin_token_whitelist" }
+
+// TokenQuota defines per-user token usage quota
+type TokenQuota struct {
+	BaseModel
+	UserID         uuid.UUID `json:"user_id" gorm:"type:char(36);uniqueIndex"`
+	DailyLimit     int64     `json:"daily_limit" gorm:"default:100000"`
+	MonthlyLimit   int64     `json:"monthly_limit" gorm:"default:3000000"`
+	DailyUsed      int64     `json:"daily_used" gorm:"default:0"`
+	MonthlyUsed    int64     `json:"monthly_used" gorm:"default:0"`
+	ResetDailyAt   time.Time `json:"reset_daily_at"`
+	ResetMonthlyAt time.Time `json:"reset_monthly_at"`
+	OveragePolicy  string    `json:"overage_policy" gorm:"type:varchar(16);default:block"` // block or downgrade
+	IsActive       bool      `json:"is_active" gorm:"default:true"`                        // false = user blocked from platform
+	Source         string    `json:"source" gorm:"type:varchar(32);default:platform"`      // platform / purchased / self
+	TotalRecharged int64     `json:"total_recharged" gorm:"default:0"`                     // cumulative manually added tokens
+	Remark         string    `json:"remark" gorm:"type:varchar(256)"`
+}
+
+func (TokenQuota) TableName() string { return "token_quotas" }
+
+// TokenTopUpLog records every manual token top-up by admin
+type TokenTopUpLog struct {
+	ID         uuid.UUID `json:"id" gorm:"type:char(36);primary_key"`
+	UserID     uuid.UUID `json:"user_id" gorm:"type:char(36);index"`
+	AdminID    uuid.UUID `json:"admin_id" gorm:"type:char(36)"`
+	Amount     int64     `json:"amount"`
+	Reason     string    `json:"reason" gorm:"type:varchar(256)"`
+	BeforeUsed int64     `json:"before_used"`
+	AfterUsed  int64     `json:"after_used"`
+	CreatedAt  time.Time `json:"created_at" gorm:"index"`
+}
+
+func (t *TokenTopUpLog) BeforeCreate(tx *gorm.DB) error {
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
+	return nil
+}
+
+func (TokenTopUpLog) TableName() string { return "token_top_up_logs" }

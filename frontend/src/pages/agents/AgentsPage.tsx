@@ -54,21 +54,23 @@ export default function AgentsPage() {
   };
 
   return (
-    <Box>
-      <PageHeader
-        title="智能体"
-        subtitle="创建对话与工作流两类 AI 智能体，支持编排、调试与协作授权"
-        actions={
-          <>
-            <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
-            <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/agents/create')}>
-              新建智能体
-            </Button>
-          </>
-        }
-      />
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
+      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
+        <PageHeader
+          title="智能体"
+          subtitle="创建对话与工作流两类 AI 智能体，支持编排、调试与协作授权"
+          actions={
+            <>
+              <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
+              <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/agents/create')}>
+                新建智能体
+              </Button>
+            </>
+          }
+        />
+      </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2.5 }}>
         <Tabs
           value={typeTab}
           onChange={(_, v) => setTypeTab(v)}
@@ -111,9 +113,9 @@ export default function AgentsPage() {
           action={<Button variant="contained" startIcon={<Add />} onClick={() => navigate('/agents/create')}>新建智能体</Button>}
         />
       ) : (
-        <Grid container spacing={2}>
+        <Grid container spacing={2} sx={{ flex: 1 }}>
           {items.map((agent) => (
-            <Grid key={agent.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+            <Grid key={agent.id} size={{ xs: 12, sm: 6, md: 4, xl: 3 }}>
               <AgentCard
                 agent={agent}
                 onClick={() => navigate(`/agents/${agent.id}`)}

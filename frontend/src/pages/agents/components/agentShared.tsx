@@ -105,30 +105,30 @@ export function AgentCard({
     <Card
       onClick={onClick}
       sx={{
-        p: 2, cursor: 'pointer', height: '100%', position: 'relative',
+        p: 2, cursor: 'pointer', minHeight: 148, position: 'relative',
         display: 'flex', flexDirection: 'column',
         border: '1px solid', borderColor: 'divider',
         transition: 'all 0.25s',
         '&:hover': {
           borderColor: meta.color,
-          transform: 'translateY(-3px)',
-          boxShadow: `0 10px 30px ${meta.color}22`,
+          transform: 'translateY(-2px)',
+          boxShadow: `0 8px 24px ${meta.color}18`,
           '& .card-menu-btn': { opacity: 1 },
         },
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1.5 }}>
-        <AgentAvatar agent={agent} />
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25, mb: 1 }}>
+        <AgentAvatar agent={agent} size={40} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {agent.name}
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.4 }}>
             <Chip
               size="small"
               label={meta.short}
               sx={{
-                height: 20, fontSize: 11, fontWeight: 600,
+                height: 18, fontSize: 10, fontWeight: 600,
                 color: meta.color, bgcolor: `${meta.color}1f`, border: `1px solid ${meta.color}55`,
               }}
             />
@@ -149,21 +149,21 @@ export function AgentCard({
         variant="body2"
         color="text.secondary"
         sx={{
-          flex: 1, mb: 1.5, fontSize: 13, lineHeight: 1.5,
+          flex: 1, mb: 1, fontSize: 12.5, lineHeight: 1.5,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}
       >
         {agent.description || '暂无描述'}
       </Typography>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, pt: 0.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-          <SmartToy sx={{ fontSize: 14, color: 'text.disabled' }} />
-          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <SmartToy sx={{ fontSize: 13, color: 'text.disabled' }} />
+          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 11 }}>
             {agent.owner_name || '—'} · {agent.owner_type === 'organization' ? '组织' : '个人'}
           </Typography>
         </Box>
-        <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: 'nowrap' }}>
+        <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: 'nowrap', fontSize: 11 }}>
           {relativeTime(agent.last_run_at)}
         </Typography>
       </Box>

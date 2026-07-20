@@ -153,6 +153,22 @@ export const tokensApi = {
   create: (data: any) => api.post('/tokens', data),
   update: (id: string, data: any) => api.put(`/tokens/${id}`, data),
   delete: (id: string) => api.delete(`/tokens/${id}`),
+  // 管理员 Token 白名单
+  whitelist: {
+    list: (params?: ListParams) => api.get('/tokens/whitelist', { params }),
+    add: (data: { user_id: string; remark?: string }) => api.post('/tokens/whitelist', data),
+    remove: (id: string) => api.delete(`/tokens/whitelist/${id}`),
+    check: (userId: string) => api.get(`/tokens/whitelist/check/${userId}`),
+  },
+  // Token 配额
+  quotas: {
+    list: (params?: ListParams) => api.get('/tokens/quotas', { params }),
+    get: (userId: string) => api.get(`/tokens/quotas/${userId}`),
+    update: (userId: string, data: any) => api.put(`/tokens/quotas/${userId}`, data),
+    topUp: (userId: string, data: { amount: number; reason?: string }) => api.post(`/tokens/quotas/${userId}/top-up`, data),
+    toggle: (userId: string) => api.post(`/tokens/quotas/${userId}/toggle`),
+    topUpLogs: (userId: string, params?: ListParams) => api.get(`/tokens/top-up-logs/${userId}`, { params }),
+  },
 };
 
 export const chatAccountsApi = {

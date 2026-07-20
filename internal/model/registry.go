@@ -19,6 +19,9 @@ func AllModels() []interface{} {
 		&Token{},
 		&TokenPermission{},
 		&TokenUsageLog{},
+		&AdminTokenWhitelist{},
+		&TokenQuota{},
+		&TokenTopUpLog{},
 		// SKILL
 		&Skill{},
 		&SkillVersion{},

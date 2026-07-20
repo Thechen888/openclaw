@@ -34,6 +34,9 @@ type Handler struct {
 	Stats       *service.StatsService
 	Approval    *service.ApprovalService
 	Quota       *service.QuotaService
+	Whitelist   *service.AdminTokenWhitelistService
+	TokenQuota  *service.TokenQuotaService
+	TopUpLog    *service.TokenTopUpLogService
 	Config      *config.Config
 	Gateway     *gateway.Gateway
 	AgentEngine *agent.Engine

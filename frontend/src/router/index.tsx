@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import DashboardLayout from '../layouts/DashboardLayout';
+import ModeRouter from '../layouts/ModeRouter';
 import LoginPage from '../pages/auth/LoginPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import ModelSourcesPage from '../pages/models/ModelSourcesPage';
@@ -26,7 +26,11 @@ import AgentWorkflowEditPage from '../pages/agents/AgentWorkflowEditPage';
 import AgentChatEditPage from '../pages/agents/AgentChatEditPage';
 import SkillsPage from '../pages/skills/SkillsPage';
 import MarketplacePage from '../pages/skills/MarketplacePage';
-import TokensPage from '../pages/tokens/TokensPage';
+import TokenAccountsPage from '../pages/tokens/TokenAccountsPage';
+import WhitelistPage from '../pages/tokens/WhitelistPage';
+import QuotaManagePage from '../pages/tokens/QuotaManagePage';
+import TokenUsagePage from '../pages/tokens/TokenUsagePage';
+import OveragePolicyPage from '../pages/tokens/OveragePolicyPage';
 import ApprovalsPage from '../pages/tokens/ApprovalsPage';
 import TokenResalePage from '../pages/tokens/TokenResalePage';
 import QuotasPage from '../pages/resources/QuotasPage';
@@ -53,12 +57,13 @@ import DocumentDetailPage from '../pages/rag/DocumentDetailPage';
 import WikiPage from '../pages/rag/WikiPage';
 import WorkspacePage from '../pages/workspace/WorkspacePage';
 import ChatPage from '../pages/chat/ChatPage';
+import ConversationPage from '../pages/chat/ConversationPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   {
     path: '/',
-    element: <DashboardLayout />,
+    element: <ModeRouter />,
     children: [
       { index: true, element: <DashboardPage /> },
       // Models
@@ -91,7 +96,12 @@ export const router = createBrowserRouter([
       { path: 'skills', element: <SkillsPage /> },
       { path: 'skills/marketplace', element: <MarketplacePage /> },
       // Tokens
-      { path: 'tokens', element: <TokensPage /> },
+      { path: 'tokens', element: <Navigate to="/tokens/accounts" /> },
+      { path: 'tokens/accounts', element: <TokenAccountsPage /> },
+      { path: 'tokens/whitelist', element: <WhitelistPage /> },
+      { path: 'tokens/quotas', element: <QuotaManagePage /> },
+      { path: 'tokens/usage', element: <TokenUsagePage /> },
+      { path: 'tokens/overage', element: <OveragePolicyPage /> },
       { path: 'tokens/approvals', element: <ApprovalsPage /> },
       { path: 'tokens/resale', element: <TokenResalePage /> },
       // Resources
@@ -124,6 +134,7 @@ export const router = createBrowserRouter([
       { path: 'workspace', element: <WorkspacePage /> },
       // Chat
       { path: 'chat', element: <ChatPage /> },
+      { path: 'chat/:sessionId', element: <ConversationPage /> },
       // Catch all
       { path: '*', element: <Navigate to="/" /> },
     ],

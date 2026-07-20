@@ -44,14 +44,16 @@ export default function AgentRunsPage() {
   };
 
   return (
-    <Box>
-      <PageHeader
-        title="智能体运行记录"
-        subtitle="执行历史与诊断信息"
-        actions={
-          <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
-        }
-      />
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
+      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
+        <PageHeader
+          title="智能体运行记录"
+          subtitle="执行历史与诊断信息"
+          actions={
+            <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
+          }
+        />
+      </Box>
 
       <FilterBar
         search={search}

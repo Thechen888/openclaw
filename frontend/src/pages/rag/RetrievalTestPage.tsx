@@ -57,8 +57,10 @@ export default function RetrievalTestPage() {
   };
 
   return (
-    <Box>
-      <PageHeader title="检索测试" subtitle="输入查询语句，测试知识库的向量检索效果" />
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
+      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
+        <PageHeader title="检索测试" subtitle="输入查询语句，测试知识库的向量检索效果" />
+      </Box>
 
       <Grid container spacing={2}>
         {/* 左侧：检索配置 */}

@@ -52,7 +52,7 @@ export default function KnowledgeBaseWorkbenchPage() {
   const navigate = useNavigate();
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, fontSize: 24, mb: 0.5 }}>

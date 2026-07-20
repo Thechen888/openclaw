@@ -10,22 +10,24 @@ import (
 // Agent represents a configurable automation unit
 type Agent struct {
 	BaseModel
-	Name            string           `json:"name" gorm:"type:varchar(128)"`
-	Description     string           `json:"description" gorm:"type:text"`
-	OwnerType       string           `json:"owner_type" gorm:"type:varchar(16);index"` // user or organization
-	OwnerID         uuid.UUID        `json:"owner_id" gorm:"type:char(36);index"`
-	Status          string           `json:"status" gorm:"type:varchar(16);default:draft;index"`
-	ModelPolicyID   *uuid.UUID       `json:"model_policy_id" gorm:"type:char(36)"`
-	TokenOwnerType  string           `json:"token_owner_type" gorm:"type:varchar(16)"`
-	TokenOwnerID    *uuid.UUID       `json:"token_owner_id" gorm:"type:char(36)"`
-	FailureStrategy string           `json:"failure_strategy" gorm:"type:text"` // JSON
-	ConfigVersion   int              `json:"config_version" gorm:"default:1"`
-	PublishedAt     *time.Time       `json:"published_at"`
-	LastRunAt       *time.Time       `json:"last_run_at"`
-	CreatedBy       uuid.UUID        `json:"created_by" gorm:"type:char(36)"`
-	Triggers        []AgentTrigger   `json:"triggers,omitempty" gorm:"foreignKey:AgentID"`
-	Conditions      []AgentCondition `json:"conditions,omitempty" gorm:"foreignKey:AgentID"`
-	Actions         []AgentAction    `json:"actions,omitempty" gorm:"foreignKey:AgentID"`
+	Name               string           `json:"name" gorm:"type:varchar(128)"`
+	Description        string           `json:"description" gorm:"type:text"`
+	OwnerType          string           `json:"owner_type" gorm:"type:varchar(16);index"` // user or organization
+	OwnerID            uuid.UUID        `json:"owner_id" gorm:"type:char(36);index"`
+	Status             string           `json:"status" gorm:"type:varchar(16);default:draft;index"`
+	ModelPolicyID      *uuid.UUID       `json:"model_policy_id" gorm:"type:char(36)"`
+	TokenOwnerType     string           `json:"token_owner_type" gorm:"type:varchar(16)"` // self or admin
+	TokenOwnerID       *uuid.UUID       `json:"token_owner_id" gorm:"type:char(36)"`
+	VisibilityScope    string           `json:"visibility_scope" gorm:"type:varchar(16);default:private"` // private, department, public
+	VisibilityTargetID *uuid.UUID       `json:"visibility_target_id" gorm:"type:char(36)"`                // org ID when visibility_scope=department
+	FailureStrategy    string           `json:"failure_strategy" gorm:"type:text"`                        // JSON
+	ConfigVersion      int              `json:"config_version" gorm:"default:1"`
+	PublishedAt        *time.Time       `json:"published_at"`
+	LastRunAt          *time.Time       `json:"last_run_at"`
+	CreatedBy          uuid.UUID        `json:"created_by" gorm:"type:char(36)"`
+	Triggers           []AgentTrigger   `json:"triggers,omitempty" gorm:"foreignKey:AgentID"`
+	Conditions         []AgentCondition `json:"conditions,omitempty" gorm:"foreignKey:AgentID"`
+	Actions            []AgentAction    `json:"actions,omitempty" gorm:"foreignKey:AgentID"`
 }
 
 // AgentTrigger defines how an agent is triggered

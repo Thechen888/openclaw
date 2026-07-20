@@ -3,7 +3,7 @@ import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
   Button, Tooltip, Typography, Switch, Drawer, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, List, ListItemButton,
-  ListItemText, ListItemIcon, Divider,
+  ListItemText, ListItemIcon, Divider, MenuItem,
 } from '@mui/material';
 import {
   Add, Refresh, Delete, Description, Settings, Article,
@@ -147,7 +147,7 @@ export default function SkillsPage() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsItem, setSettingsItem] = useState<any>(null);
-  const [settingsForm, setSettingsForm] = useState({ name: '', description: '' });
+  const [settingsForm, setSettingsForm] = useState({ name: '', description: '', visibility: 'personal' });
 
   const [drawerSkill, setDrawerSkill] = useState<any>(null);
   const [editFilePath, setEditFilePath] = useState<string>('');
@@ -223,7 +223,7 @@ export default function SkillsPage() {
 
   const handleOpenSettings = (item: any) => {
     setSettingsItem(item);
-    setSettingsForm({ name: item.name, description: item.description || '' });
+    setSettingsForm({ name: item.name, description: item.description || '', visibility: item.visibility || 'personal' });
     setSettingsOpen(true);
   };
 
@@ -231,7 +231,7 @@ export default function SkillsPage() {
     if (!settingsItem) return;
     updateMutation.mutate({
       id: settingsItem.id,
-      data: { name: settingsForm.name, description: settingsForm.description },
+      data: { name: settingsForm.name, description: settingsForm.description, visibility: settingsForm.visibility },
     }, {
       onSuccess: () => {
         setSettingsOpen(false);
@@ -403,6 +403,15 @@ export default function SkillsPage() {
                   value={settingsForm.description}
                   onChange={e => setSettingsForm({ ...settingsForm, description: e.target.value })}
                 />
+                <TextField
+                  fullWidth select size="small" label="可见范围" value={settingsForm.visibility}
+                  onChange={e => setSettingsForm({ ...settingsForm, visibility: e.target.value })}
+                  helperText="控制谁能看到和使用此技能"
+                >
+                  <MenuItem value="personal">个人（仅自己）</MenuItem>
+                  <MenuItem value="department">部门（绑定部门成员可用）</MenuItem>
+                  <MenuItem value="platform">平台公共（全员可用，管理员发布）</MenuItem>
+                </TextField>
               </Box>
             </Box>
 

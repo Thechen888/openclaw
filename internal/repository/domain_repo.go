@@ -466,3 +466,85 @@ func (r *ApprovalRepository) List(page, pageSize int, reqType, status string) ([
 	return items, total, err
 }
 func (r *ApprovalRepository) Update(a *model.ApprovalRequest) error { return r.db.Save(a).Error }
+
+// --- Admin Token Whitelist Repository ---
+type AdminTokenWhitelistRepository struct{ db *gorm.DB }
+
+func NewAdminTokenWhitelistRepository(db *gorm.DB) *AdminTokenWhitelistRepository {
+	return &AdminTokenWhitelistRepository{db: db}
+}
+
+func (r *AdminTokenWhitelistRepository) Create(w *model.AdminTokenWhitelist) error {
+	return r.db.Create(w).Error
+}
+func (r *AdminTokenWhitelistRepository) List(page, pageSize int) ([]model.AdminTokenWhitelist, int64, error) {
+	var items []model.AdminTokenWhitelist
+	var total int64
+	r.db.Model(&model.AdminTokenWhitelist{}).Count(&total)
+	err := r.db.Offset((page - 1) * pageSize).Limit(pageSize).Order("granted_at DESC").Find(&items).Error
+	return items, total, err
+}
+func (r *AdminTokenWhitelistRepository) GetByUserID(userID uuid.UUID) (*model.AdminTokenWhitelist, error) {
+	var w model.AdminTokenWhitelist
+	err := r.db.Where("user_id = ? AND is_active = ?", userID, true).First(&w).Error
+	return &w, err
+}
+func (r *AdminTokenWhitelistRepository) IsUserAuthorized(userID uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.AdminTokenWhitelist{}).Where("user_id = ? AND is_active = ?", userID, true).Count(&count).Error
+	return count > 0, err
+}
+func (r *AdminTokenWhitelistRepository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&model.AdminTokenWhitelist{}, "id = ?", id).Error
+}
+func (r *AdminTokenWhitelistRepository) Update(w *model.AdminTokenWhitelist) error {
+	return r.db.Save(w).Error
+}
+
+// --- Token Quota Repository ---
+type TokenQuotaRepository struct{ db *gorm.DB }
+
+func NewTokenQuotaRepository(db *gorm.DB) *TokenQuotaRepository {
+	return &TokenQuotaRepository{db: db}
+}
+
+func (r *TokenQuotaRepository) GetByUserID(userID uuid.UUID) (*model.TokenQuota, error) {
+	var q model.TokenQuota
+	err := r.db.Where("user_id = ?", userID).First(&q).Error
+	return &q, err
+}
+func (r *TokenQuotaRepository) Create(q *model.TokenQuota) error { return r.db.Create(q).Error }
+func (r *TokenQuotaRepository) Update(q *model.TokenQuota) error { return r.db.Save(q).Error }
+func (r *TokenQuotaRepository) List(page, pageSize int) ([]model.TokenQuota, int64, error) {
+	var items []model.TokenQuota
+	var total int64
+	r.db.Model(&model.TokenQuota{}).Count(&total)
+	err := r.db.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&items).Error
+	return items, total, err
+}
+func (r *TokenQuotaRepository) IncrementUsage(userID uuid.UUID, tokens int64) error {
+	return r.db.Model(&model.TokenQuota{}).Where("user_id = ?", userID).
+		Updates(map[string]interface{}{
+			"daily_used":   gorm.Expr("daily_used + ?", tokens),
+			"monthly_used": gorm.Expr("monthly_used + ?", tokens),
+		}).Error
+}
+
+// --- Token Top-Up Log Repository ---
+type TokenTopUpLogRepository struct{ db *gorm.DB }
+
+func NewTokenTopUpLogRepository(db *gorm.DB) *TokenTopUpLogRepository {
+	return &TokenTopUpLogRepository{db: db}
+}
+
+func (r *TokenTopUpLogRepository) Create(log *model.TokenTopUpLog) error {
+	return r.db.Create(log).Error
+}
+func (r *TokenTopUpLogRepository) List(userID uuid.UUID, page, pageSize int) ([]model.TokenTopUpLog, int64, error) {
+	var items []model.TokenTopUpLog
+	var total int64
+	q := r.db.Model(&model.TokenTopUpLog{}).Where("user_id = ?", userID)
+	q.Count(&total)
+	err := q.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&items).Error
+	return items, total, err
+}

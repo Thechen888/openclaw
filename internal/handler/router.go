@@ -88,6 +88,15 @@ func NewRouter(h *Handler, logger *zap.Logger) http.Handler {
 		r.Get("/api/v1/tokens", h.ListTokens)
 		r.Get("/api/v1/tokens/{id}", h.GetToken)
 
+		// Admin Token Whitelist
+		r.Get("/api/v1/tokens/whitelist", h.ListWhitelist)
+		r.Get("/api/v1/tokens/whitelist/check/{userId}", h.CheckWhitelist)
+
+		// Token Quotas
+		r.Get("/api/v1/tokens/quotas", h.ListTokenQuotas)
+		r.Get("/api/v1/tokens/quotas/{userId}", h.GetTokenQuota)
+		r.Get("/api/v1/tokens/top-up-logs/{userId}", h.ListTopUpLogs)
+
 		// Approvals
 		r.Get("/api/v1/approvals", h.ListApprovals)
 		r.Get("/api/v1/approvals/{id}", h.GetApproval)
@@ -154,6 +163,15 @@ func NewRouter(h *Handler, logger *zap.Logger) http.Handler {
 		// Tokens CRUD
 		r.Post("/api/v1/tokens", h.CreateToken)
 		r.Put("/api/v1/tokens/{id}", h.UpdateToken)
+
+		// Admin Token Whitelist
+		r.Post("/api/v1/tokens/whitelist", h.AddToWhitelist)
+		r.Delete("/api/v1/tokens/whitelist/{id}", h.RemoveFromWhitelist)
+
+		// Token Quotas
+		r.Put("/api/v1/tokens/quotas/{userId}", h.UpdateTokenQuota)
+		r.Post("/api/v1/tokens/quotas/{userId}/top-up", h.TopUpQuota)
+		r.Post("/api/v1/tokens/quotas/{userId}/toggle", h.ToggleQuotaActive)
 
 		// Quotas
 		r.Put("/api/v1/quotas/{userId}", h.UpdateQuota)

@@ -1,10 +1,12 @@
-﻿import {
+﻿import { useState } from 'react';
+import {
   Box, Grid, Card, CardContent, Typography, IconButton, Tooltip,
-  Table, TableHead, TableBody, TableRow, TableCell, Chip,
+  Table, TableHead, TableBody, TableRow, TableCell, Chip, Tabs, Tab,
+  LinearProgress, Avatar, Stack,
 } from '@mui/material';
 import {
   Refresh, TrendingUp, People, SmartToy, Extension,
-  Api, AttachMoney, Speed, CalendarMonth,
+  Api, AttachMoney, Speed, CalendarMonth, Person, Business,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { PageHeader, StatCard, LoadingState, DataTable, StatusBadge } from '../../components/shared';
@@ -17,6 +19,7 @@ export default function UsageStatsPage() {
   });
 
   const stats = data?.data?.data || {};
+  const [statTab, setStatTab] = useState(0);
 
   const statCards = [
     {
@@ -178,6 +181,164 @@ export default function UsageStatsPage() {
           </DataTable>
         </Grid>
       </Grid>
+
+      {/* Token 用量维度统计 */}
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Token 用量分布</Typography>
+        <Tabs value={statTab} onChange={(_, v) => setStatTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Tab label="按用户" icon={<Person />} iconPosition="start" />
+          <Tab label="按部门" icon={<Business />} iconPosition="start" />
+          <Tab label="按 Agent" icon={<SmartToy />} iconPosition="start" />
+        </Tabs>
+
+        {/* 按用户 */}
+        {statTab === 0 && (
+          <DataTable>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>用户</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">今日消耗</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">本月消耗</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">每日限额</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>使用率</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {mockUserUsage.map((u) => {
+                const pct = u.dailyLimit > 0 ? (u.dailyUsed / u.dailyLimit) * 100 : 0;
+                return (
+                  <TableRow key={u.name} hover>
+                    <TableCell>
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                        <Avatar sx={{ width: 28, height: 28, fontSize: 13, bgcolor: u.color }}>{u.name[0]}</Avatar>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>{u.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{u.dept}</Typography>
+                        </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{u.dailyUsed.toLocaleString()}</TableCell>
+                    <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{u.monthlyUsed.toLocaleString()}</TableCell>
+                    <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{u.dailyLimit.toLocaleString()}</TableCell>
+                    <TableCell sx={{ minWidth: 140 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress variant="determinate" value={Math.min(pct, 100)}
+                          color={pct >= 90 ? 'error' : pct >= 70 ? 'warning' : 'success'}
+                          sx={{ flex: 1, height: 5, borderRadius: 2 }} />
+                        <Typography variant="caption" sx={{ fontFamily: 'monospace', minWidth: 36 }}>{pct.toFixed(0)}%</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip size="small" label={u.blocked ? '已停用' : '正常'} color={u.blocked ? 'error' : 'success'} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </DataTable>
+        )}
+
+        {/* 按部门 */}
+        {statTab === 1 && (
+          <DataTable>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>部门</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">人数</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">今日消耗</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">本月消耗</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">本月费用</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>占比</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {mockDeptUsage.map((d) => (
+                <TableRow key={d.name} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{d.name}</TableCell>
+                  <TableCell align="right" sx={{ fontFamily: 'monospace' }}>{d.members}</TableCell>
+                  <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{d.dailyUsed.toLocaleString()}</TableCell>
+                  <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{d.monthlyUsed.toLocaleString()}</TableCell>
+                  <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>¥{d.monthlyCost.toLocaleString()}</TableCell>
+                  <TableCell sx={{ minWidth: 120 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LinearProgress variant="determinate" value={d.pct}
+                        color="primary" sx={{ flex: 1, height: 5, borderRadius: 2 }} />
+                      <Typography variant="caption" sx={{ fontFamily: 'monospace', minWidth: 32 }}>{d.pct}%</Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </DataTable>
+        )}
+
+        {/* 按 Agent */}
+        {statTab === 2 && (
+          <DataTable>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>Agent</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>归属</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">调用次数</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="right">Token 消耗</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>计费方式</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>占比</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {mockAgentUsage.map((a) => (
+                <TableRow key={a.name} hover>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{a.name}</Typography>
+                  </TableCell>
+                  <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{a.owner}</TableCell>
+                  <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{a.calls.toLocaleString()}</TableCell>
+                  <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{a.tokens.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Chip size="small" label={a.billing === 'admin' ? '管理员 Token' : '个人 Token'}
+                      color={a.billing === 'admin' ? 'warning' : 'default'} variant="outlined" sx={{ fontSize: 11 }} />
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 120 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LinearProgress variant="determinate" value={a.pct}
+                        color="secondary" sx={{ flex: 1, height: 5, borderRadius: 2 }} />
+                      <Typography variant="caption" sx={{ fontFamily: 'monospace', minWidth: 32 }}>{a.pct}%</Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </DataTable>
+        )}
+      </Box>
     </Box>
   );
 }
+
+// ---- Mock data ----
+const mockUserUsage = [
+  { name: '张三', dept: '研发部', dailyUsed: 82000, monthlyUsed: 1850000, dailyLimit: 100000, blocked: false, color: '#3b82f6' },
+  { name: '李四', dept: '研发部', dailyUsed: 95000, monthlyUsed: 2100000, dailyLimit: 100000, blocked: false, color: '#10b981' },
+  { name: '王五', dept: '市场部', dailyUsed: 100000, monthlyUsed: 2800000, dailyLimit: 100000, blocked: true, color: '#f59e0b' },
+  { name: '赵六', dept: '产品部', dailyUsed: 45000, monthlyUsed: 980000, dailyLimit: 100000, blocked: false, color: '#a855f7' },
+  { name: '孙七', dept: '运营部', dailyUsed: 67000, monthlyUsed: 1450000, dailyLimit: 100000, blocked: false, color: '#ef4444' },
+  { name: '周八', dept: '研发部', dailyUsed: 30000, monthlyUsed: 650000, dailyLimit: 100000, blocked: false, color: '#06b6d4' },
+];
+
+const mockDeptUsage = [
+  { name: '研发部', members: 12, dailyUsed: 207000, monthlyUsed: 4600000, monthlyCost: 460, pct: 38 },
+  { name: '市场部', members: 8, dailyUsed: 156000, monthlyUsed: 3400000, monthlyCost: 340, pct: 28 },
+  { name: '产品部', members: 5, dailyUsed: 78000, monthlyUsed: 1700000, monthlyCost: 170, pct: 14 },
+  { name: '运营部', members: 6, dailyUsed: 98000, monthlyUsed: 2200000, monthlyCost: 220, pct: 18 },
+  { name: '行政部', members: 3, dailyUsed: 12000, monthlyUsed: 260000, monthlyCost: 26, pct: 2 },
+];
+
+const mockAgentUsage = [
+  { name: '智能客服助手', owner: '研发部', calls: 3200, tokens: 890000, billing: 'admin', pct: 32 },
+  { name: '代码 Review', owner: '张三', calls: 1800, tokens: 520000, billing: 'self', pct: 19 },
+  { name: 'CRM 同步流程', owner: '市场部', calls: 2400, tokens: 680000, billing: 'admin', pct: 24 },
+  { name: '周报生成器', owner: '产品部', calls: 900, tokens: 250000, billing: 'self', pct: 9 },
+  { name: '数据分析助手', owner: '运营部', calls: 1500, tokens: 420000, billing: 'admin', pct: 15 },
+  { name: '文档翻译', owner: '李四', calls: 600, tokens: 170000, billing: 'self', pct: 6 },
+];

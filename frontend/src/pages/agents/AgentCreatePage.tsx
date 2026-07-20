@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
-  Box, Card, Typography, Grid, TextField, MenuItem, Button, Chip, Stack,
+  Box, Card, Typography, Grid, TextField, MenuItem, Button, Chip, Stack, Alert,
 } from '@mui/material';
-import { ArrowBack, ArrowForward, Check } from '@mui/icons-material';
-import { useMutation } from '@tanstack/react-query';
+import { ArrowBack, ArrowForward, Check, Security } from '@mui/icons-material';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/shared';
-import { agentsApi } from '../../api/client';
+import { agentsApi, tokensApi } from '../../api/client';
 import { AGENT_TYPE_META, type AgentType } from './components/agentShared';
 
 const COLOR_PRESETS = ['#00D4FF', '#7C3AED', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#06b6d4', '#ef4444'];
@@ -16,7 +16,15 @@ export default function AgentCreatePage() {
   const [type, setType] = useState<AgentType | ''>('');
   const [form, setForm] = useState({
     name: '', description: '', owner_type: 'personal', avatar_color: '#00D4FF',
+    visibility_scope: 'private', token_owner_type: 'self',
   });
+
+  // 检查当前用户是否有管理员 Token 权限
+  const { data: whitelistData } = useQuery({
+    queryKey: ['whitelist-check', 'me'],
+    queryFn: () => tokensApi.whitelist.check('me'),
+  });
+  const isAdminTokenAuthorized = whitelistData?.data?.data?.authorized || false;
 
   const createMutation = useMutation({
     mutationFn: (d: any) => agentsApi.create(d),
@@ -41,12 +49,14 @@ export default function AgentCreatePage() {
   };
 
   return (
-    <Box>
-      <PageHeader
-        title="新建智能体"
-        subtitle="先选择智能体类型，再填写基础信息"
-        actions={<Button startIcon={<ArrowBack />} onClick={() => navigate('/agents')}>返回列表</Button>}
-      />
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
+      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
+        <PageHeader
+          title="新建智能体"
+          subtitle="先选择智能体类型，再填写基础信息"
+          actions={<Button startIcon={<ArrowBack />} onClick={() => navigate('/agents')}>返回列表</Button>}
+        />
+      </Box>
 
       {/* Step 1: 选择类型 */}
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, color: 'text.secondary' }}>
@@ -128,6 +138,34 @@ export default function AgentCreatePage() {
                   <MenuItem value="personal">个人</MenuItem>
                   <MenuItem value="organization">组织</MenuItem>
                 </TextField>
+              </Grid>
+              <Grid size={6}>
+                <TextField
+                  fullWidth select label="可见范围" value={form.visibility_scope}
+                  onChange={(e) => setForm({ ...form, visibility_scope: e.target.value })}
+                  helperText="私有：仅自己；部门：绑定部门成员；公开：全员可见"
+                >
+                  <MenuItem value="private">私有（仅自己）</MenuItem>
+                  <MenuItem value="department">部门</MenuItem>
+                  <MenuItem value="public">公开</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  fullWidth select label="Token 计费方式" value={form.token_owner_type}
+                  onChange={(e) => setForm({ ...form, token_owner_type: e.target.value })}
+                  helperText="个人 Token：消耗自己的配额；管理员 Token：消耗平台公共额度（需授权）"
+                >
+                  <MenuItem value="self">个人 Token</MenuItem>
+                  <MenuItem value="admin" disabled={!isAdminTokenAuthorized}>
+                    管理员 Token {!isAdminTokenAuthorized && '（需授权）'}
+                  </MenuItem>
+                </TextField>
+                {form.token_owner_type === 'admin' && !isAdminTokenAuthorized && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    你尚未获得管理员 Token 使用权限，请联系管理员授权
+                  </Alert>
+                )}
               </Grid>
               <Grid size={6}>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>头像颜色</Typography>

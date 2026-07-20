@@ -55,12 +55,14 @@ export default function AgentDetailPage() {
   const goEdit = () => navigate(isChat ? `/agents/${id}/edit/chat` : `/agents/${id}/edit/workflow`);
 
   return (
-    <Box>
-      <PageHeader
-        title="智能体详情"
-        subtitle="查看配置概览、协作者与运行记录"
-        actions={<Button startIcon={<ArrowBack />} onClick={() => navigate('/agents')}>返回列表</Button>}
-      />
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
+      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
+        <PageHeader
+          title="智能体详情"
+          subtitle="查看配置概览、协作者与运行记录"
+          actions={<Button startIcon={<ArrowBack />} onClick={() => navigate('/agents')}>返回列表</Button>}
+        />
+      </Box>
 
       {/* 头部卡片 */}
       <Card sx={{ p: 2.5, mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>

@@ -249,3 +249,93 @@ func (s *QuotaService) List(page, pageSize int) ([]model.DiskQuota, int64, error
 }
 func (s *QuotaService) Create(q *model.DiskQuota) error { return s.repo.Create(q) }
 func (s *QuotaService) Update(q *model.DiskQuota) error { return s.repo.Update(q) }
+
+// --- Admin Token Whitelist Service ---
+type AdminTokenWhitelistService struct {
+	repo *repository.AdminTokenWhitelistRepository
+}
+
+func NewAdminTokenWhitelistService(repo *repository.AdminTokenWhitelistRepository) *AdminTokenWhitelistService {
+	return &AdminTokenWhitelistService{repo: repo}
+}
+
+func (s *AdminTokenWhitelistService) List(page, pageSize int) ([]model.AdminTokenWhitelist, int64, error) {
+	return s.repo.List(page, pageSize)
+}
+func (s *AdminTokenWhitelistService) Create(w *model.AdminTokenWhitelist) error {
+	return s.repo.Create(w)
+}
+func (s *AdminTokenWhitelistService) IsUserAuthorized(userID uuid.UUID) (bool, error) {
+	return s.repo.IsUserAuthorized(userID)
+}
+func (s *AdminTokenWhitelistService) Delete(id uuid.UUID) error {
+	return s.repo.Delete(id)
+}
+func (s *AdminTokenWhitelistService) Update(w *model.AdminTokenWhitelist) error {
+	return s.repo.Update(w)
+}
+
+// --- Token Quota Service ---
+type TokenQuotaService struct {
+	repo *repository.TokenQuotaRepository
+}
+
+func NewTokenQuotaService(repo *repository.TokenQuotaRepository) *TokenQuotaService {
+	return &TokenQuotaService{repo: repo}
+}
+
+func (s *TokenQuotaService) GetByUserID(userID uuid.UUID) (*model.TokenQuota, error) {
+	return s.repo.GetByUserID(userID)
+}
+func (s *TokenQuotaService) List(page, pageSize int) ([]model.TokenQuota, int64, error) {
+	return s.repo.List(page, pageSize)
+}
+func (s *TokenQuotaService) Create(q *model.TokenQuota) error { return s.repo.Create(q) }
+func (s *TokenQuotaService) Update(q *model.TokenQuota) error { return s.repo.Update(q) }
+func (s *TokenQuotaService) IncrementUsage(userID uuid.UUID, tokens int64) error {
+	return s.repo.IncrementUsage(userID, tokens)
+}
+
+// --- Token Top-Up Log Service ---
+type TokenTopUpLogService struct {
+	repo      *repository.TokenTopUpLogRepository
+	quotaRepo *repository.TokenQuotaRepository
+}
+
+func NewTokenTopUpLogService(repo *repository.TokenTopUpLogRepository, quotaRepo *repository.TokenQuotaRepository) *TokenTopUpLogService {
+	return &TokenTopUpLogService{repo: repo, quotaRepo: quotaRepo}
+}
+
+func (s *TokenTopUpLogService) TopUp(userID uuid.UUID, adminID uuid.UUID, amount int64, reason string) error {
+	quota, err := s.quotaRepo.GetByUserID(userID)
+	if err != nil {
+		return err
+	}
+	log := &model.TokenTopUpLog{
+		UserID:     userID,
+		AdminID:    adminID,
+		Amount:     amount,
+		Reason:     reason,
+		BeforeUsed: quota.DailyUsed,
+		AfterUsed:  quota.DailyUsed - amount,
+	}
+	if err := s.repo.Create(log); err != nil {
+		return err
+	}
+	// Reduce daily and monthly used (give back tokens)
+	quota.DailyUsed = quota.DailyUsed - amount
+	if quota.DailyUsed < 0 {
+		quota.DailyUsed = 0
+	}
+	quota.MonthlyUsed = quota.MonthlyUsed - amount
+	if quota.MonthlyUsed < 0 {
+		quota.MonthlyUsed = 0
+	}
+	quota.TotalRecharged = quota.TotalRecharged + amount
+	quota.IsActive = true // re-enable user
+	return s.quotaRepo.Update(quota)
+}
+
+func (s *TokenTopUpLogService) List(userID uuid.UUID, page, pageSize int) ([]model.TokenTopUpLog, int64, error) {
+	return s.repo.List(userID, page, pageSize)
+}

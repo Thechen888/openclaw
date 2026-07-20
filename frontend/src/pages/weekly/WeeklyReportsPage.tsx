@@ -83,7 +83,7 @@ export default function WeeklyReportsPage() {
   ];
 
   return (
-    <div className="h-[calc(100vh-64px)] flex bg-gray-50 text-gray-900 -m-6 -mt-4" style={{ colorScheme: 'light' }}>
+    <div className="flex flex-1 overflow-hidden bg-gray-50 text-gray-900" style={{ colorScheme: 'light' }}>
       <ReportSidebar items={sidebarItems} activeId={activeId} onSelect={handleSelect} />
 
       <main className="flex-1 flex flex-col overflow-hidden">

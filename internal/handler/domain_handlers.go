@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/openclaw/openclaw/internal/middleware"
 	"github.com/openclaw/openclaw/internal/model"
 	"github.com/openclaw/openclaw/internal/pkg/pagination"
 	"github.com/openclaw/openclaw/internal/pkg/response"
@@ -768,4 +769,194 @@ func (h *Handler) DashboardSummary(w http.ResponseWriter, r *http.Request) {
 		"pending_approvals":     0,
 		"pending_skill_reviews": 0,
 	})
+}
+
+// --- Admin Token Whitelist Handlers ---
+func (h *Handler) ListWhitelist(w http.ResponseWriter, r *http.Request) {
+	p := pagination.ParseParams(r)
+	items, total, err := h.Whitelist.List(p.Page, p.PageSize)
+	if err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.SuccessWithPagination(w, items, p.Page, p.PageSize, total)
+}
+
+func (h *Handler) AddToWhitelist(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		UserID    uuid.UUID `json:"user_id"`
+		ExpiresAt *string   `json:"expires_at"`
+		Remark    string    `json:"remark"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		response.Error(w, 400, "invalid request")
+		return
+	}
+	claims := middleware.GetClaims(r)
+	grantedBy := claims.UserID
+	w2 := &model.AdminTokenWhitelist{
+		UserID:    body.UserID,
+		GrantedBy: grantedBy,
+		GrantedAt: time.Now(),
+		IsActive:  true,
+		Remark:    body.Remark,
+	}
+	if err := h.Whitelist.Create(w2); err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.Created(w, w2)
+}
+
+func (h *Handler) RemoveFromWhitelist(w http.ResponseWriter, r *http.Request) {
+	id, err := parseUUID(chi.URLParam(r, "id"))
+	if err != nil {
+		response.Error(w, 400, "invalid id")
+		return
+	}
+	if err := h.Whitelist.Delete(id); err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.Success(w, map[string]string{"message": "removed"})
+}
+
+func (h *Handler) CheckWhitelist(w http.ResponseWriter, r *http.Request) {
+	userID, err := parseUUID(chi.URLParam(r, "userId"))
+	if err != nil {
+		response.Error(w, 400, "invalid user id")
+		return
+	}
+	authorized, err := h.Whitelist.IsUserAuthorized(userID)
+	if err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.Success(w, map[string]bool{"authorized": authorized})
+}
+
+// --- Token Quota Handlers ---
+func (h *Handler) ListTokenQuotas(w http.ResponseWriter, r *http.Request) {
+	p := pagination.ParseParams(r)
+	items, total, err := h.TokenQuota.List(p.Page, p.PageSize)
+	if err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.SuccessWithPagination(w, items, p.Page, p.PageSize, total)
+}
+
+func (h *Handler) GetTokenQuota(w http.ResponseWriter, r *http.Request) {
+	userID, err := parseUUID(chi.URLParam(r, "userId"))
+	if err != nil {
+		response.Error(w, 400, "invalid user id")
+		return
+	}
+	item, err := h.TokenQuota.GetByUserID(userID)
+	if err != nil {
+		response.Error(w, 404, "quota not found")
+		return
+	}
+	response.Success(w, item)
+}
+
+func (h *Handler) UpdateTokenQuota(w http.ResponseWriter, r *http.Request) {
+	userID, err := parseUUID(chi.URLParam(r, "userId"))
+	if err != nil {
+		response.Error(w, 400, "invalid user id")
+		return
+	}
+	item, err := h.TokenQuota.GetByUserID(userID)
+	if err != nil {
+		// Create new if not exists
+		item = &model.TokenQuota{UserID: userID}
+	}
+	var body struct {
+		DailyLimit    *int64  `json:"daily_limit"`
+		MonthlyLimit  *int64  `json:"monthly_limit"`
+		OveragePolicy *string `json:"overage_policy"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		response.Error(w, 400, "invalid request")
+		return
+	}
+	if body.DailyLimit != nil {
+		item.DailyLimit = *body.DailyLimit
+	}
+	if body.MonthlyLimit != nil {
+		item.MonthlyLimit = *body.MonthlyLimit
+	}
+	if body.OveragePolicy != nil {
+		item.OveragePolicy = *body.OveragePolicy
+	}
+	if item.ID == uuid.Nil {
+		if err := h.TokenQuota.Create(item); err != nil {
+			response.Error(w, 500, err.Error())
+			return
+		}
+	} else {
+		if err := h.TokenQuota.Update(item); err != nil {
+			response.Error(w, 500, err.Error())
+			return
+		}
+	}
+	response.Success(w, item)
+}
+
+// --- Token Top-Up Handler ---
+func (h *Handler) TopUpQuota(w http.ResponseWriter, r *http.Request) {
+	userID, err := parseUUID(chi.URLParam(r, "userId"))
+	if err != nil {
+		response.Error(w, 400, "invalid user id")
+		return
+	}
+	var body struct {
+		Amount int64  `json:"amount"`
+		Reason string `json:"reason"`
+	}
+	if err := decodeJSON(r, &body); err != nil || body.Amount <= 0 {
+		response.Error(w, 400, "invalid amount")
+		return
+	}
+	claims := middleware.GetClaims(r)
+	if err := h.TopUpLog.TopUp(userID, claims.UserID, body.Amount, body.Reason); err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.Success(w, map[string]string{"message": "top-up success"})
+}
+
+func (h *Handler) ListTopUpLogs(w http.ResponseWriter, r *http.Request) {
+	userID, err := parseUUID(chi.URLParam(r, "userId"))
+	if err != nil {
+		response.Error(w, 400, "invalid user id")
+		return
+	}
+	p := pagination.ParseParams(r)
+	items, total, err := h.TopUpLog.List(userID, p.Page, p.PageSize)
+	if err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.SuccessWithPagination(w, items, p.Page, p.PageSize, total)
+}
+
+// --- Toggle Quota Active ---
+func (h *Handler) ToggleQuotaActive(w http.ResponseWriter, r *http.Request) {
+	userID, err := parseUUID(chi.URLParam(r, "userId"))
+	if err != nil {
+		response.Error(w, 400, "invalid user id")
+		return
+	}
+	item, err := h.TokenQuota.GetByUserID(userID)
+	if err != nil {
+		response.Error(w, 404, "quota not found")
+		return
+	}
+	item.IsActive = !item.IsActive
+	if err := h.TokenQuota.Update(item); err != nil {
+		response.Error(w, 500, err.Error())
+		return
+	}
+	response.Success(w, item)
 }

@@ -2,10 +2,12 @@
 import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
   TextField, Button, Tooltip, Grid, MenuItem, Chip, Typography, LinearProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment,
+  Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment, Tabs, Tab,
+  Avatar, Stack, Alert,
 } from '@mui/material';
 import {
   Add, Edit, Refresh, Key, Visibility, VisibilityOff, ContentCopy, Delete, Close,
+  Security, Person,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -95,12 +97,57 @@ export default function TokensPage() {
   const { enqueueSnackbar } = useSnackbar();
   const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
   const [statusFilter, setStatusFilter] = useState('');
+  const [mainTab, setMainTab] = useState(0);
   const queryParams = { ...params, status: statusFilter || undefined };
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [newTokenValue, setNewTokenValue] = useState<string>('');
+
+  // ---- 白名单 state ----
+  const [wlDialogOpen, setWlDialogOpen] = useState(false);
+  const [wlForm, setWlForm] = useState({ user_id: '', remark: '' });
+  const { data: wlData, refetch: refetchWl } = useQuery({
+    queryKey: ['whitelist'],
+    queryFn: () => tokensApi.whitelist.list({ page: 1, page_size: 100 }),
+  });
+  const wlItems = wlData?.data?.data || [];
+  const addWlMutation = useMutation({
+    mutationFn: (d: { user_id: string; remark?: string }) => tokensApi.whitelist.add(d),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['whitelist'] }); setWlDialogOpen(false); setWlForm({ user_id: '', remark: '' }); enqueueSnackbar('已添加白名单', { variant: 'success' }); },
+    onError: () => enqueueSnackbar('添加失败', { variant: 'error' }),
+  });
+  const removeWlMutation = useMutation({
+    mutationFn: (id: string) => tokensApi.whitelist.remove(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['whitelist'] }); enqueueSnackbar('已移除', { variant: 'success' }); },
+  });
+
+  // ---- 配额管理 state ----
+  const [quotaEditItem, setQuotaEditItem] = useState<any>(null);
+  const [quotaForm, setQuotaForm] = useState({ daily_limit: 100000, monthly_limit: 3000000, overage_policy: 'block', source: 'platform', remark: '' });
+  const [quotaDialogOpen, setQuotaDialogOpen] = useState(false);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpForm, setTopUpForm] = useState({ user_id: '', amount: 0, reason: '' });
+  const { data: quotaData, refetch: refetchQuotas } = useQuery({
+    queryKey: ['token-quotas'],
+    queryFn: () => tokensApi.quotas.list({ page: 1, page_size: 100 }),
+  });
+  const quotaItems = quotaData?.data?.data || [];
+  const updateQuotaMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: any }) => tokensApi.quotas.update(userId, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['token-quotas'] }); setQuotaDialogOpen(false); enqueueSnackbar('配额已更新', { variant: 'success' }); },
+    onError: () => enqueueSnackbar('更新失败', { variant: 'error' }),
+  });
+  const topUpMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: any }) => tokensApi.quotas.topUp(userId, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['token-quotas'] }); setTopUpOpen(false); setTopUpForm({ user_id: '', amount: 0, reason: '' }); enqueueSnackbar('充值成功', { variant: 'success' }); },
+    onError: () => enqueueSnackbar('充值失败', { variant: 'error' }),
+  });
+  const toggleQuotaMutation = useMutation({
+    mutationFn: (userId: string) => tokensApi.quotas.toggle(userId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['token-quotas'] }); enqueueSnackbar('状态已切换', { variant: 'success' }); },
+  });
   const [form, setForm] = useState<any>({
     name: '', owner: '', target_system: '', credential_type: 'api_key', status: 'active', quota_limit: '', expires_at: '',
     credential_config: defaultCredentialConfig('api_key'),
@@ -200,35 +247,46 @@ export default function TokensPage() {
     });
   };
 
+  const tabLabels = ['API 令牌', '管理员 Token 白名单', 'Token 配额管理'];
+
   return (
     <Box>
       <PageHeader
-        title="API令牌"
-        subtitle="管理API密钥、OAuth令牌和凭证"
+        title="Token 管理"
+        subtitle="管理API令牌、白名单与用户配额"
         actions={
-          <>
-            <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
-            <Button variant="contained" startIcon={<Add />} onClick={() => { resetForm(); setEditItem(null); setDialogOpen(true); }}>
-              添加令牌
-            </Button>
-          </>
+          <Tooltip title="刷新">
+            <IconButton onClick={() => { refetch(); refetchWl(); refetchQuotas(); }}><Refresh /></IconButton>
+          </Tooltip>
         }
       />
 
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        filters={
-          <TextField
-            select size="small" label="状态"
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            sx={{ minWidth: 120 }}
-          >
-            {STATUS_OPTIONS.map(s => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
-          </TextField>
-        }
-      />
+      <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        {tabLabels.map((l, i) => <Tab key={i} label={l} />)}
+      </Tabs>
+
+      {/* =================== Tab 0: API 令牌 =================== */}
+      {mainTab === 0 && (
+        <>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="contained" startIcon={<Add />} onClick={() => { resetForm(); setEditItem(null); setDialogOpen(true); }}>
+              添加令牌
+            </Button>
+          </Box>
+          <FilterBar
+            search={search}
+            onSearchChange={setSearch}
+            filters={
+              <TextField
+                select size="small" label="状态"
+                value={statusFilter}
+                onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+                sx={{ minWidth: 120 }}
+              >
+                {STATUS_OPTIONS.map(s => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
+              </TextField>
+            }
+          />
 
       {isLoading ? <LoadingState /> : (
         <DataTable pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: setPageSize }}>
@@ -335,8 +393,123 @@ export default function TokensPage() {
           </TableBody>
         </DataTable>
       )}
+        </>
+      )}
 
-      {/* 创建/编辑弹窗 */}
+      {/* =================== Tab 1: 管理员 Token 白名单 =================== */}
+      {mainTab === 1 && (
+        <>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="contained" startIcon={<Add />} onClick={() => setWlDialogOpen(true)}>添加用户</Button>
+          </Box>
+          <DataTable pagination={{ page: 1, pageSize: 50, total: wlItems.length, onPageChange: () => {}, onPageSizeChange: () => {} }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>用户 ID</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>授权时间</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>备注</TableCell>
+                <TableCell sx={{ fontWeight: 700, width: 80 }}>操作</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {wlItems.length === 0 ? (
+                <TableRow><TableCell colSpan={5}><EmptyState title="暂无白名单" description="添加有权使用管理员 Token 的用户" /></TableCell></TableRow>
+              ) : wlItems.map((item: any) => (
+                <TableRow key={item.id} hover>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>{item.user_id}</TableCell>
+                  <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{item.granted_at ? new Date(item.granted_at).toLocaleString() : '-'}</TableCell>
+                  <TableCell>
+                    <Chip size="small" label={item.is_active ? '启用' : '已停用'} color={item.is_active ? 'success' : 'default'} variant="outlined" />
+                  </TableCell>
+                  <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{item.remark || '-'}</TableCell>
+                  <TableCell>
+                    <Tooltip title="移除">
+                      <IconButton size="small" color="error" onClick={() => { if (confirm('确认移除该用户？')) removeWlMutation.mutate(item.id); }}>
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </DataTable>
+        </>
+      )}
+
+      {/* =================== Tab 2: Token 配额管理 =================== */}
+      {mainTab === 2 && (
+        <>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button variant="outlined" startIcon={<Person />} onClick={() => setTopUpOpen(true)}>充值 Token</Button>
+          </Box>
+          <DataTable pagination={{ page: 1, pageSize: 50, total: quotaItems.length, onPageChange: () => {}, onPageSizeChange: () => {} }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>持有人 (User ID)</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>每日限额</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>每日已用</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>每月限额</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>每月已用</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Token 来源</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>累计充值</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>超额策略</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
+                <TableCell sx={{ fontWeight: 700, width: 140 }}>操作</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {quotaItems.length === 0 ? (
+                <TableRow><TableCell colSpan={10}><EmptyState title="暂无配额记录" description="用户首次使用后自动生成" /></TableCell></TableRow>
+              ) : quotaItems.map((item: any) => {
+                const dailyPct = item.daily_limit > 0 ? Math.min((item.daily_used / item.daily_limit) * 100, 100) : 0;
+                return (
+                  <TableRow key={item.id} hover>
+                    <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>{item.user_id}</TableCell>
+                    <TableCell sx={{ fontSize: 12 }}>{item.daily_limit?.toLocaleString() || '-'}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 120 }}>
+                        <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{item.daily_used?.toLocaleString() || 0}</Typography>
+                        {item.daily_limit > 0 && <LinearProgress variant="determinate" value={dailyPct} color={dailyPct >= 90 ? 'error' : dailyPct >= 70 ? 'warning' : 'success'} sx={{ flex: 1, height: 4, borderRadius: 2 }} />}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 12 }}>{item.monthly_limit?.toLocaleString() || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: 12 }}>{item.monthly_used?.toLocaleString() || 0}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={item.source === 'platform' ? '平台分配' : item.source === 'purchased' ? '购买' : '自有'} variant="outlined" sx={{ fontSize: 11 }} />
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 12, color: 'primary.main' }}>{item.total_recharged?.toLocaleString() || 0}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={item.overage_policy === 'block' ? '停用' : '降级'} color={item.overage_policy === 'block' ? 'error' : 'warning'} variant="outlined" sx={{ fontSize: 11 }} />
+                    </TableCell>
+                    <TableCell>
+                      <Chip size="small" label={item.is_active !== false ? '正常' : '已停用'} color={item.is_active !== false ? 'success' : 'error'} />
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="编辑配额">
+                          <IconButton size="small" onClick={() => {
+                            setQuotaEditItem(item);
+                            setQuotaForm({ daily_limit: item.daily_limit || 100000, monthly_limit: item.monthly_limit || 3000000, overage_policy: item.overage_policy || 'block', source: item.source || 'platform', remark: item.remark || '' });
+                            setQuotaDialogOpen(true);
+                          }}><Edit fontSize="small" /></IconButton>
+                        </Tooltip>
+                        <Tooltip title={item.is_active !== false ? '停用' : '启用'}>
+                          <IconButton size="small" color={item.is_active !== false ? 'warning' : 'success'} onClick={() => toggleQuotaMutation.mutate(item.user_id)}>
+                            <Security fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </DataTable>
+        </>
+      )}
+
+      {/* 创建/编辑令牌弹窗 */}
       <CrudDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -443,6 +616,104 @@ export default function TokensPage() {
           <Button onClick={() => setNewTokenValue('')}>关闭</Button>
         </DialogActions>
       </Dialog>
+
+      {/* 白名单添加弹窗 */}
+      <CrudDialog
+        open={wlDialogOpen}
+        onClose={() => setWlDialogOpen(false)}
+        title="添加管理员 Token 白名单"
+        onSave={() => addWlMutation.mutate(wlForm)}
+        saving={addWlMutation.isPending}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <TextField
+            fullWidth label="用户 ID" required
+            placeholder="输入用户 UUID"
+            value={wlForm.user_id}
+            onChange={e => setWlForm({ ...wlForm, user_id: e.target.value })}
+          />
+          <TextField
+            fullWidth label="备注" multiline rows={2}
+            placeholder="说明授权原因..."
+            value={wlForm.remark}
+            onChange={e => setWlForm({ ...wlForm, remark: e.target.value })}
+          />
+        </Box>
+      </CrudDialog>
+
+      {/* 配额编辑弹窗 */}
+      <CrudDialog
+        open={quotaDialogOpen}
+        onClose={() => setQuotaDialogOpen(false)}
+        title="编辑 Token 配额"
+        onSave={() => quotaEditItem && updateQuotaMutation.mutate({ userId: quotaEditItem.user_id, data: quotaForm })}
+        saving={updateQuotaMutation.isPending}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <TextField
+            fullWidth label="每日限额 (Token)" type="number"
+            value={quotaForm.daily_limit}
+            onChange={e => setQuotaForm({ ...quotaForm, daily_limit: Number(e.target.value) })}
+            helperText="每人每天可用的最大 Token 数"
+          />
+          <TextField
+            fullWidth label="每月限额 (Token)" type="number"
+            value={quotaForm.monthly_limit}
+            onChange={e => setQuotaForm({ ...quotaForm, monthly_limit: Number(e.target.value) })}
+          />
+          <TextField
+            fullWidth select label="超额策略" value={quotaForm.overage_policy}
+            onChange={e => setQuotaForm({ ...quotaForm, overage_policy: e.target.value })}
+            helperText="Token 用尽后的处理方式"
+          >
+            <MenuItem value="block">停用（无法继续使用平台）</MenuItem>
+            <MenuItem value="downgrade">降级（切换到个人 Token）</MenuItem>
+          </TextField>
+          <TextField
+            fullWidth select label="Token 来源" value={quotaForm.source}
+            onChange={e => setQuotaForm({ ...quotaForm, source: e.target.value })}
+          >
+            <MenuItem value="platform">平台分配</MenuItem>
+            <MenuItem value="purchased">购买</MenuItem>
+            <MenuItem value="self">自有</MenuItem>
+          </TextField>
+          <TextField
+            fullWidth label="备注" multiline rows={2}
+            value={quotaForm.remark}
+            onChange={e => setQuotaForm({ ...quotaForm, remark: e.target.value })}
+          />
+        </Box>
+      </CrudDialog>
+
+      {/* 充值弹窗 */}
+      <CrudDialog
+        open={topUpOpen}
+        onClose={() => setTopUpOpen(false)}
+        title="充值 Token"
+        onSave={() => topUpForm.user_id && topUpForm.amount > 0 && topUpMutation.mutate({ userId: topUpForm.user_id, data: { amount: topUpForm.amount, reason: topUpForm.reason } })}
+        saving={topUpMutation.isPending}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <Alert severity="info">充值将减少用户已用额度，相当于给用户增加可用 Token。充值后自动恢复用户使用权限。</Alert>
+          <TextField
+            fullWidth label="用户 ID" required
+            placeholder="输入用户 UUID"
+            value={topUpForm.user_id}
+            onChange={e => setTopUpForm({ ...topUpForm, user_id: e.target.value })}
+          />
+          <TextField
+            fullWidth label="充值数量 (Token)" type="number" required
+            value={topUpForm.amount || ''}
+            onChange={e => setTopUpForm({ ...topUpForm, amount: Number(e.target.value) })}
+          />
+          <TextField
+            fullWidth label="充值原因" multiline rows={2}
+            placeholder="说明充值原因..."
+            value={topUpForm.reason}
+            onChange={e => setTopUpForm({ ...topUpForm, reason: e.target.value })}
+          />
+        </Box>
+      </CrudDialog>
     </Box>
   );
 }

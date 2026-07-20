@@ -82,9 +82,9 @@ export default function WikiPage() {
   if (!wiki) return <EmptyState title="暂无 Wiki 数据" description="该知识库尚未生成 Wiki 内容" />;
 
   return (
-    <Box>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
       {/* 面包屑 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
         <IconButton size="small" onClick={() => navigate(`/rag/knowledge-bases/${kbId}`)}><ArrowBack /></IconButton>
         <Typography variant="caption" sx={{ color: 'text.secondary', cursor: 'pointer' }} onClick={() => navigate('/rag/knowledge-bases')}>知识库</Typography>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>/</Typography>

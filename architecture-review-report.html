@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>openclaw 代码结构审查报告</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-2: #f8f7f4;
+    --bg-3: #f1efe8;
+    --text: #2c2c2a;
+    --text-2: #5f5e5a;
+    --text-3: #888780;
+    --border: rgba(0,0,0,0.12);
+    --border-2: rgba(0,0,0,0.25);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --red: #a32d2d;
+    --red-bg: #fcebeb;
+    --amber: #854f0b;
+    --amber-bg: #faeeda;
+    --teal: #085041;
+    --teal-bg: #e1f5ee;
+    --blue: #0c447c;
+    --blue-bg: #e6f1fb;
+    --purple: #3c3489;
+    --purple-bg: #eeedfe;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 1.7; color: var(--text);
+    background: var(--bg-3); padding: 0;
+  }
+  .container { max-width: 960px; margin: 0 auto; background: var(--bg); padding: 48px 56px 80px; }
+  h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .subtitle { color: var(--text-2); font-size: 14px; margin-bottom: 32px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; color: var(--text); }
+  h4 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; color: var(--text-2); }
+  p { margin-bottom: 12px; }
+  code { font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace; font-size: 12.5px; background: var(--bg-3); padding: 2px 6px; border-radius: 4px; color: var(--purple); }
+  pre { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; overflow-x: auto; margin: 12px 0; font-size: 12.5px; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: var(--text); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { text-align: left; font-weight: 600; padding: 10px 12px; border-bottom: 2px solid var(--border-2); color: var(--text-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: var(--bg-2); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+  .badge-p0 { background: var(--red-bg); color: var(--red); }
+  .badge-p1 { background: var(--amber-bg); color: var(--amber); }
+  .badge-p2 { background: var(--teal-bg); color: var(--teal); }
+  .badge-good { background: var(--blue-bg); color: var(--blue); }
+
+  .issue-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 24px; margin: 16px 0; background: var(--bg); }
+  .issue-card.p0 { border-left: 3px solid var(--red); }
+  .issue-card.p1 { border-left: 3px solid var(--amber); }
+  .issue-card.p2 { border-left: 3px solid var(--teal); }
+  .issue-title { font-weight: 600; font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .issue-desc { color: var(--text-2); font-size: 13px; margin-bottom: 8px; }
+  .issue-fix { background: var(--bg-2); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: var(--text-2); }
+  .issue-fix strong { color: var(--text); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+  .stat-card { background: var(--bg-2); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 600; color: var(--text); }
+  .stat-label { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+  .layer-table td:first-child { font-weight: 600; white-space: nowrap; }
+  ul, ol { margin: 8px 0 12px 20px; }
+  li { margin-bottom: 4px; }
+  .tag { display: inline-block; background: var(--bg-3); padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
+  .summary-box { background: var(--blue-bg); border-radius: var(--radius-lg); padding: 20px 24px; margin: 20px 0; }
+  .summary-box h3 { color: var(--blue); margin-top: 0; }
+  .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>openclaw 代码结构审查报告</h1>
+<p class="subtitle">审查日期：2026-07-16 · 项目版本：v0.1 · 审查范围：后端 Go 代码 + 前端结构 + 部署配置</p>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="stat-num">37</div><div class="stat-label">Go 源文件</div></div>
+  <div class="stat-card"><div class="stat-num">11</div><div class="stat-label">internal 包</div></div>
+  <div class="stat-card"><div class="stat-num">30</div><div class="stat-label">数据模型</div></div>
+  <div class="stat-card"><div class="stat-num">60+</div><div class="stat-label">API 路由</div></div>
+</div>
+
+<div class="summary-box">
+  <h3>总体评价</h3>
+  <p>openclaw 采用了清晰的分层架构（handler → service → repository → model），领域模型设计完善，枚举常量覆盖全面。模型网关的熔断/加权轮转/降级设计和 Agent 引擎的条件-动作管道是两个亮点。但存在几个需要优先解决的结构性问题：引擎层绕过 Repository 直接操作 <code>gorm.DB</code>、main.go 手动组装 20+ 依赖、CORS 安全配置矛盾、以及多处 stub 实现（Webhook 路由、Dashboard 统计、定时调度器）。总体处于<strong>可用的早期原型阶段</strong>，架构方向正确，需要在依赖注入、接口抽象和安全加固上投入。</p>
+</div>
+
+<h2>一、项目目录结构</h2>
+
+<pre><code>openclaw-main/
+├── cmd/openclaw/main.go          # 入口，手动 DI 组装
+├── configs/config.yaml            # Viper 配置（支持环境变量覆盖）
+├── internal/
+│   ├── config/                    # 配置结构与加载
+│   ├── handler/                   # HTTP 处理器（4 文件）
+│   │   ├── router.go              # Chi 路由 + 中间件挂载
+│   │   ├── handler.go             # Handler 结构体 + 用户/组织/认证
+│   │   ├── domain_handlers.go     # 12 域 CRUD + 审计/配额/统计
+│   │   └── engine_handlers.go     # 网关/Agent/匹配器/Starlark
+│   ├── middleware/                # JWT 认证 / 日志 / 请求 ID
+│   ├── service/                   # 14 个业务服务（薄封装）
+│   ├── repository/                # 20 个仓储（GORM）
+│   ├── model/                     # 30 个数据模型 + 枚举
+│   ├── gateway/                   # 模型 API 网关（熔断 + WRR）
+│   ├── agent/                     # Agent 执行引擎
+│   ├── matcher/                   # 账号匹配引擎
+│   ├── starlark/                  # Starlark 脚本沙箱
+│   └── pkg/                       # 公共工具（auth/crypto/errors/...）
+├── frontend/                      # React + TS + MUI + Vite
+├── deployments/                   # Dockerfile + nginx 配置
+└── docker-compose.yaml</code></pre>
+
+<h3>模块职责划分</h3>
+<table class="layer-table">
+  <tr><th>包</th><th>职责</th><th>关键文件数</th><th>评价</th></tr>
+  <tr><td>cmd/openclaw</td><td>程序入口、依赖组装</td><td>1</td><td><span class="badge badge-p1">过重</span> 手动组装 20 repo + 14 service + 4 engine</td></tr>
+  <tr><td>handler</td><td>HTTP 路由与请求处理</td><td>4</td><td><span class="badge badge-p2">合理</span> 按域/引擎拆分清晰</td></tr>
+  <tr><td>middleware</td><td>认证、日志、请求追踪</td><td>2</td><td><span class="badge badge-good">良好</span> 双 token 认证设计合理</td></tr>
+  <tr><td>service</td><td>业务逻辑层</td><td>3</td><td><span class="badge badge-p1">过薄</span> 大部分是 repo 的透传</td></tr>
+  <tr><td>repository</td><td>数据访问层</td><td>4</td><td><span class="badge badge-p2">合理</span> 但无接口定义</td></tr>
+  <tr><td>model</td><td>领域模型与枚举</td><td>10</td><td><span class="badge badge-good">良好</span> 模型完整，枚举规范</td></tr>
+  <tr><td>gateway</td><td>LLM 模型网关</td><td>1</td><td><span class="badge badge-p1">直接依赖 DB</span> 绕过 repository 层</td></tr>
+  <tr><td>agent</td><td>Agent 执行引擎</td><td>1</td><td><span class="badge badge-p1">直接依赖 DB</span> 绕过 repository 层</td></tr>
+  <tr><td>matcher</td><td>账号匹配引擎</td><td>1</td><td><span class="badge badge-p1">直接依赖 DB</span> 绕过 repository 层</td></tr>
+  <tr><td>starlark</td><td>脚本沙箱</td><td>1</td><td><span class="badge badge-good">良好</span> 步数/超时限制完善</td></tr>
+  <tr><td>pkg</td><td>公共工具</td><td>5</td><td><span class="badge badge-good">良好</span> 职责清晰</td></tr>
+</table>
+
+<h2>二、架构分析</h2>
+
+<h3>2.1 分层架构</h3>
+<p>项目遵循经典的四层架构，请求流为：</p>
+<pre><code>HTTP Request → Nginx → Chi Router → Middleware → Handler → Service → Repository → Database
+                                              ↘ Engine Handler → Engine (Gateway/Agent/Matcher/Starlark)</code></pre>
+
+<h4>路由分组设计（3 层权限）</h4>
+<table>
+  <tr><th>路由组</th><th>认证要求</th><th>典型路由</th></tr>
+  <tr><td>公开路由</td><td>无</td><td><code>POST /auth/login</code> · <code>GET /system/health</code> · <code>/webhooks/*</code></td></tr>
+  <tr><td>认证路由</td><td>User 或 Admin JWT</td><td><code>GET /users</code> · <code>GET /agents</code> · <code>GET /tokens</code> 等（只读）</td></tr>
+  <tr><td>管理员路由</td><td>Admin JWT</td><td><code>POST /users</code> · <code>POST /agents</code> · 引擎触发等（写操作 + 引擎）</td></tr>
+</table>
+
+<h4>双 JWT 密钥设计</h4>
+<p>系统区分 User JWT 和 Admin JWT，使用不同密钥签名。<code>CombinedAuthMiddleware</code> 先尝试 User 密钥验证，失败后尝试 Admin 密钥。这保证了普通用户和管理员的 token 隔离，是一个合理的安全设计。</p>
+
+<h3>2.2 核心引擎设计</h3>
+
+<h4>模型网关（Gateway）</h4>
+<ul>
+  <li><strong>策略解析</strong>：支持按 <code>PolicyID</code> 直接指定或按 <code>BindingType+BindingID</code> 自动解析（用户/组织/Agent 绑定默认策略）</li>
+  <li><strong>上游选择</strong>：加权轮转（Weighted Round-Robin），跳过熔断中的和不活跃的上游</li>
+  <li><strong>熔断器</strong>：三态（closed → open → half-open），连续失败达阈值后打开，60 秒后进入半开探测</li>
+  <li><strong>重试与降级</strong>：失败后自动切换到下一个上游，最多重试 <code>max_retries</code> 次；主策略全失败后尝试 <code>FallbackPolicyID</code></li>
+  <li><strong>调用日志</strong>：每次调用记录策略 ID、模型源、调用方、token 消耗、费用、延迟、熔断状态</li>
+  <li><strong>健康检查</strong>：并发探测所有活跃模型源，更新 <code>health_status</code> 和 <code>last_health_check</code></li>
+</ul>
+
+<h4>Agent 执行引擎</h4>
+<ul>
+  <li><strong>执行管道</strong>：加载 Agent → 创建执行记录 → 评估条件（短路）→ 顺序执行动作 → 记录日志 → 终结</li>
+  <li><strong>条件类型</strong>：field_match、time_window、starlark 脚本、model_judgment（未实现，自动通过）、approval_gate（未实现，自动通过）</li>
+  <li><strong>动作类型</strong>：call_model、call_skill/script（Starlark）、query/write_connector、send_im、trigger_agent（异步）、http_request</li>
+  <li><strong>上下文传递</strong>：每个动作的输出合并到 <code>actionContext</code>，后续动作可通过 <code>step_N_*</code> 和 <code>last_output</code> 访问</li>
+  <li><strong>失败策略</strong>：stop / skip / continue / retry（单次重试）</li>
+  <li><strong>接口抽象</strong>：<code>GatewayProxy</code> 和 <code>ScriptRunner</code> 接口解耦了引擎对具体实现的依赖</li>
+</ul>
+
+<h4>账号匹配引擎</h4>
+<ul>
+  <li><strong>评分机制</strong>：按字段配置（phone/email/name/company）加权打分，支持精确/模糊/部分匹配</li>
+  <li><strong>阈值分流</strong>：高分自动匹配（≥ auto_threshold）、中分待确认（≥ pending_threshold）、低分未匹配</li>
+  <li><strong>冲突检测</strong>：多个候选超过自动阈值时标记为冲突</li>
+  <li><strong>保护机制</strong>：<code>protected_from_auto</code> 标记的匹配结果不会被自动刷新覆盖</li>
+  <li><strong>证据追踪</strong>：每个匹配结果记录字段级评分证据（field, chat_val, tp_val, score, weight, match_type）</li>
+</ul>
+
+<h4>Starlark 沙箱</h4>
+<ul>
+  <li>执行步数限制（<code>SetMaxExecutionSteps</code>）和超时限制</li>
+  <li>内置函数：<code>http_get</code>、<code>http_post</code>、<code>json_parse</code>、<code>json_dumps</code>、<code>log_info</code>、<code>log_error</code>、<code>env_get</code></li>
+  <li>Go ↔ Starlark 类型自动转换</li>
+</ul>
+
+<h3>2.3 数据模型概览</h3>
+<p>30 个模型覆盖 6 大领域，通过 <code>registry.go</code> 的 <code>AllModels()</code> 统一注册 AutoMigrate：</p>
+<table>
+  <tr><th>领域</th><th>模型</th></tr>
+  <tr><td>身份</td><td>User, AdminAccount, Organization, OrganizationMember</td></tr>
+  <tr><td>账号</td><td>ChatAccount, ThirdPartyAccount</td></tr>
+  <tr><td>匹配</td><td>AccountMatchResult, AccountMatchRun, AccountMatchStrategy</td></tr>
+  <tr><td>Token</td><td>Token, TokenPermission, TokenUsageLog</td></tr>
+  <tr><td>SKILL</td><td>Skill, SkillVersion, SkillVisibility, SkillMarketplaceListing, SkillInstallation, SkillFavorite</td></tr>
+  <tr><td>Agent</td><td>Agent, AgentTrigger, AgentCondition, AgentAction, AgentExecution, AgentExecutionLog</td></tr>
+  <tr><td>模型网关</td><td>ModelSource, ModelPolicy, ModelPolicyUpstream, ModelPolicyBinding, ModelCallLog</td></tr>
+  <tr><td>连接器</td><td>Connector, ConnectorEvent</td></tr>
+  <tr><td>治理</td><td>AuditLog, UsageStat, DiskQuota, ApprovalRequest</td></tr>
+</table>
+
+<h2>三、问题清单</h2>
+
+<h3>P0 — 必须修复（安全 / 正确性）</h3>
+
+<div class="issue-card p0">
+  <div class="issue-title">1. CORS 配置矛盾且不安全 <span class="badge badge-p0">P0</span></div>
+  <div class="issue-desc">
+    <code>router.go</code> 第 22 行：<code>AllowedOrigins: []string{"*"}</code> 同时 <code>AllowCredentials: true</code>。
+    根据 CORS 规范，<code>AllowCredentials: true</code> 时不能使用通配符 origin。浏览器会拒绝此响应，
+    导致前端跨域请求失败。更严重的是，在生产环境中通配符 origin 允许任意网站发起跨域请求。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>将 <code>AllowedOrigins</code> 改为具体的前端域名列表，如
+    <code>[]string{"https://openclaw.one-line-ai.top", "http://localhost:3000"}</code>，
+    或使用 <code>AllowedOriginFunc</code> 动态校验。
+  </div>
+</div>
+
+<div class="issue-card p0">
+  <div class="issue-title">2. 硬编码默认管理员凭据 <span class="badge badge-p0">P0</span></div>
+  <div class="issue-desc">
+    <code>auth_service.go</code> 第 116 行：<code>SeedAdmin()</code> 创建 <code>admin/admin123</code> 用户名密码对。
+    此凭据在每次启动时检查并创建，且未从配置读取。攻击者可利用默认凭据获取管理员权限。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>从环境变量或配置文件读取初始管理员凭据；
+    若未配置则跳过 seeding 并输出警告日志。生产环境必须强制修改默认密码。
+  </div>
+</div>
+
+<div class="issue-card p0">
+  <div class="issue-title">3. 模型源认证凭据未实际解密 <span class="badge badge-p0">P0</span></div>
+  <div class="issue-desc">
+    <code>gateway.go</code> 第 541 行注释 <code>"In production this would be decrypted"</code>，
+    但实际直接使用 <code>source.AuthCredentialEncrypted</code> 字段值作为认证凭据。
+    如果存储的是加密后的值，所有模型 API 调用将使用错误凭据而失败。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>在 <code>applyAuth</code> 调用前通过 <code>crypto.Decrypt()</code> 解密凭据。
+    <code>internal/pkg/crypto</code> 已存在但仅用于 JWT，需扩展对称加密能力。
+  </div>
+</div>
+
+<div class="issue-card p0">
+  <div class="issue-title">4. Starlark env_get 暴露环境变量 <span class="badge badge-p0">P0</span></div>
+  <div class="issue-desc">
+    <code>starlark/engine.go</code> 内置 <code>env_get(key)</code> 函数允许脚本读取任意环境变量，
+    包括 <code>DATABASE_DSN</code>、<code>JWT_SECRET</code> 等敏感信息。SKILL 脚本由用户上传，
+    这构成信息泄露风险。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>移除 <code>env_get</code> 内置函数，或改为白名单机制仅允许读取
+    <code>OC_</code> 前缀的非敏感变量。
+  </div>
+</div>
+
+<h3>P1 — 应尽快修复（架构 / 可维护性）</h3>
+
+<div class="issue-card p1">
+  <div class="issue-title">5. 引擎层绕过 Repository 直接操作 gorm.DB <span class="badge badge-p1">P1</span></div>
+  <div class="issue-desc">
+    <code>Gateway</code>、<code>Agent.Engine</code>、<code>Matcher</code> 三个引擎都直接持有 <code>*gorm.DB</code> 并在内部执行数据库查询，
+    而非通过 Repository 层。这破坏了分层架构的一致性，导致：
+    (1) 数据访问逻辑分散在多处，难以统一管理；
+    (2) 无法通过 Mock Repository 进行单元测试；
+    (3) 事务边界不清晰。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>为引擎层创建专用 Repository（如 <code>ModelPolicyRepository</code>、<code>AgentExecutionRepository</code> 已存在但未被 Agent.Engine 使用），
+    引擎通过接口依赖注入。Agent.Engine 应使用已有的 <code>AgentExecutionRepository</code> 而非直接 <code>e.db.Create()</code>。
+  </div>
+</div>
+
+<div class="issue-card p1">
+  <div class="issue-title">6. main.go 手动依赖组装过于冗长 <span class="badge badge-p1">P1</span></div>
+  <div class="issue-desc">
+    <code>main.go</code> 手动实例化 20 个 Repository、14 个 Service、4 个 Engine，全部在一个函数内完成。
+    每新增一个域需要修改 main.go 的 3-4 处代码。<code>Handler</code> 结构体持有 19 个字段，也是手动赋值。
+    另有 <code>_ = tokenUsageLogRepo</code> 表明存在已创建但未使用的依赖。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>引入 <a href="https://github.com/google/wire">Google Wire</a> 进行编译时依赖注入代码生成，
+    或按域拆分为多个 <code>Init*</code> 函数（如 <code>initIdentity(db)</code>、<code>initAgent(db)</code>）。
+    Handler 结构体可按域拆分为多个子 Handler。
+  </div>
+</div>
+
+<div class="issue-card p1">
+  <div class="issue-title">7. Repository 无接口定义 <span class="badge badge-p1">P1</span></div>
+  <div class="issue-desc">
+    所有 Repository 都是具体 struct 类型，Service 直接持有 <code>*repository.XxxRepository</code> 指针。
+    这使得 Service 层无法通过 Mock 进行单元测试，也无法替换实现（如缓存层）。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>为每个 Repository 定义接口（如 <code>UserRepo interface { Create(...) error; GetByID(...) (...) }</code>），
+    Service 依赖接口而非具体类型。可使用 <code>mockgen</code> 或手写 Mock。
+  </div>
+</div>
+
+<div class="issue-card p1">
+  <div class="issue-title">8. Webhook 路由为空实现 <span class="badge badge-p1">P1</span></div>
+  <div class="issue-desc">
+    <code>router.go</code> 第 36-41 行：聊天和连接器 Webhook 路由直接返回 200 OK，无任何处理逻辑。
+    需求文档中明确要求"企业微信消息可触发 Agent"和"CRM 事件触发 Agent"，这是核心业务流程的入口。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>实现 Webhook 处理器：验证签名 → 解析事件 → 路由到对应 Agent 触发器 → 异步执行。
+    可使用消息队列（如 Redis Stream / NATS）解耦 Webhook 接收和 Agent 执行。
+  </div>
+</div>
+
+<div class="issue-card p1">
+  <div class="issue-title">9. 无定时任务调度器 <span class="badge badge-p1">P1</span></div>
+  <div class="issue-desc">
+    配置文件中有 <code>agent.cron_timezone</code> 和 <code>matcher.run_interval</code>，
+    Agent 触发器支持 <code>cron</code> 类型，但代码中没有任何调度器实现。
+    Agent 只能通过手动 API 调用执行。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>引入 <code>github.com/robfig/cron/v3</code> 或类似库，
+    在 main.go 启动时扫描所有 active 的 cron 触发器并注册到调度器。
+    匹配器也应按 <code>run_interval</code> 定时执行。
+  </div>
+</div>
+
+<div class="issue-card p1">
+  <div class="issue-title">10. DashboardSummary 返回硬编码零值 <span class="badge badge-p1">P1</span></div>
+  <div class="issue-desc">
+    <code>domain_handlers.go</code> 第 760 行：<code>DashboardSummary</code> 返回所有指标为 0 的硬编码 map，
+    未查询数据库。首页看板无法反映真实平台状态。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>实现 <code>StatsService.Dashboard()</code> 方法，
+    查询今日 Agent 执行次数、失败数、模型费用、待审批数等。可使用 Redis 缓存热数据。
+  </div>
+</div>
+
+<div class="issue-card p1">
+  <div class="issue-title">11. Dockerfile Go 版本与 go.mod 不一致 <span class="badge badge-p1">P1</span></div>
+  <div class="issue-desc">
+    <code>go.mod</code> 声明 <code>go 1.26.3</code>，但 <code>Dockerfile</code> 使用 <code>golang:1.24-alpine</code>。
+    版本不匹配可能导致构建失败或使用不存在的标准库特性。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>将 Dockerfile 基础镜像更新为 <code>golang:1.26-alpine</code>（或与 go.mod 一致的版本）。
+  </div>
+</div>
+
+<h3>P2 — 建议改进（代码质量 / 演进）</h3>
+
+<div class="issue-card p2">
+  <div class="issue-title">12. Service 层过于贫血 <span class="badge badge-p2">P2</span></div>
+  <div class="issue-desc">
+    大部分 Service（如 ModelSourceService、ConnectorService）仅是 Repository 方法的透传，
+    没有业务逻辑。例如创建 Token 时未触发审批流程，更新 Agent 时未校验 SKILL/Token 可用性。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>将业务规则下沉到 Service 层。如 TokenService.Create 应检查额度、创建审批请求；
+    AgentService.Create 应校验关联的 SKILL 和 Token 权限是否存在。
+  </div>
+</div>
+
+<div class="issue-card p2">
+  <div class="issue-title">13. 无单元测试 <span class="badge badge-p2">P2</span></div>
+  <div class="issue-desc">
+    项目中没有任何 <code>_test.go</code> 文件。Makefile 中有 <code>test</code> 目标但 <code>go test ./...</code> 不会执行任何测试。
+    核心引擎（Gateway 熔断逻辑、Agent 条件评估、Matcher 评分算法）尤其需要测试覆盖。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>优先为以下模块编写测试：
+    (1) Gateway 的熔断器状态转换和上游选择；
+    (2) Agent 的条件评估和动作执行；
+    (3) Matcher 的评分算法和冲突检测；
+    (4) Starlark 沙箱的安全边界。
+  </div>
+</div>
+
+<div class="issue-card p2">
+  <div class="issue-title">14. 数据库连接未优雅关闭 <span class="badge badge-p2">P2</span></div>
+  <div class="issue-desc">
+    <code>main.go</code> 的优雅关闭仅调用 <code>srv.Close()</code>，未关闭数据库连接池。
+    在 Kubernetes 滚动更新时可能导致连接泄露。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>在收到信号后调用 <code>sqlDB.Close()</code>：
+    <pre><code>sqlDB, _ := db.DB.DB()
+// 在 shutdown 逻辑中:
+sqlDB.Close()</code></pre>
+  </div>
+</div>
+
+<div class="issue-card p2">
+  <div class="issue-title">15. Handler 层 Update 操作使用 map[string]interface{} <span class="badge badge-p2">P2</span></div>
+  <div class="issue-desc">
+    多个 Update handler（如 UpdateModelSource、UpdateConnector）使用 <code>map[string]interface{}</code> 接收请求体，
+    然后逐字段类型断言赋值。这种方式没有类型安全，无法利用 struct tag 做验证，且容易遗漏字段。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>为每个 Update 操作定义带指针字段的 request struct，
+    使用 <code>json:"field_name,omitempty"</code> 实现 PATCH 语义，并添加 <code>validate</code> tag。
+  </div>
+</div>
+
+<div class="issue-card p2">
+  <div class="issue-title">16. model_judgment 和 approval_gate 条件未实现 <span class="badge badge-p2">P2</span></div>
+  <div class="issue-desc">
+    Agent 引擎中 <code>ConditionTypeModelJudgment</code> 和 <code>ConditionTypeApprovalGate</code> 自动返回 <code>true</code>（通过），
+    注释标注"not yet implemented"。这意味着依赖模型判断或人工审批的 Agent 流程会无条件执行，可能导致错误的自动化操作。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>model_judgment 应通过 Gateway 发起 LLM 调用并解析判断结果；
+    approval_gate 应创建 ApprovalRequest 并暂停执行等待审批。
+    在未实现前应默认返回 <code>false</code> 而非 <code>true</code>（安全优先）。
+  </div>
+</div>
+
+<div class="issue-card p2">
+  <div class="issue-title">17. trigger_agent 递归无深度控制 <span class="badge badge-p2">P2</span></div>
+  <div class="issue-desc">
+    <code>executeTriggerAgent</code> 通过 goroutine 异步递归调用 <code>ExecuteAgent</code>，
+    虽然配置中有 <code>max_recursion_depth: 3</code>，但代码未读取或检查此配置。
+    恶意配置的 Agent 链可能导致资源耗尽。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>在 actionContext 中传递 <code>recursion_depth</code>，
+    在 ExecuteAgent 入口检查是否超过 <code>cfg.Agent.MaxRecursionDepth</code>。
+  </div>
+</div>
+
+<div class="issue-card p2">
+  <div class="issue-title">18. 无 API 限流 <span class="badge badge-p2">P2</span></div>
+  <div class="issue-desc">
+    所有 API 路由未配置限流中间件。管理员可以通过 <code>/api/v1/agents/{id}/execute</code> 无限触发 Agent 执行，
+    普通用户可以无限制查询。Starlark 执行端点也无限制。
+  </div>
+  <div class="issue-fix">
+    <strong>修复建议：</strong>引入 <code>golang.org/x/time/rate</code> 或 <code>github.com/ulule/limiter</code>，
+    对引擎端点（Gateway/Agent/Starlark）施加更严格的限流。
+  </div>
+</div>
+
+<h2>四、优化建议</h2>
+
+<h3>4.1 架构演进路线</h3>
+
+<h4>阶段一：修复基础（1-2 周）</h4>
+<ol>
+  <li>修复 P0 安全问题（CORS、默认凭据、凭据解密、env_get）</li>
+  <li>统一 Go 版本（Dockerfile + go.mod）</li>
+  <li>实现数据库优雅关闭</li>
+  <li>为引擎层创建 Repository 接口，消除直接 DB 依赖</li>
+</ol>
+
+<h4>阶段二：补全核心功能（2-4 周）</h4>
+<ol>
+  <li>实现 Webhook 处理器（企微回调 + 连接器事件）</li>
+  <li>引入 Cron 调度器，支持定时 Agent 和定时匹配</li>
+  <li>实现 Dashboard 统计查询</li>
+  <li>实现 model_judgment 和 approval_gate 条件</li>
+  <li>将 model_judgment / approval_gate 默认行为改为 <code>false</code></li>
+</ol>
+
+<h4>阶段三：质量与可维护性（持续）</h4>
+<ol>
+  <li>为 Repository 定义接口，引入 Mock 测试</li>
+  <li>为核心引擎编写单元测试（目标覆盖率 > 70%）</li>
+  <li>引入 Wire 或按域拆分 main.go 依赖组装</li>
+  <li>Service 层补充业务规则（Token 审批流、Agent 发布前检查）</li>
+  <li>引入 API 限流中间件</li>
+  <li>添加结构化错误码体系（当前全部用 HTTP status + message）</li>
+</ol>
+
+<h3>4.2 推荐的目录结构演进</h3>
+<pre><code>internal/
+├── domain/                    # 按领域组织（替代平铺的 service/repository）
+│   ├── identity/              # 用户、组织、认证
+│   │   ├── service.go
+│   │   ├── repository.go
+│   │   └── handler.go
+│   ├── agent/                 # Agent 管理 + 执行引擎
+│   │   ├── service.go
+│   │   ├── repository.go
+│   │   ├── handler.go
+│   │   └── engine.go
+│   ├── model/                 # 模型源 + 策略 + 网关
+│   │   ├── service.go
+│   │   ├── repository.go
+│   │   ├── handler.go
+│   │   └── gateway.go
+│   └── ...
+├── pkg/                       # 跨领域共享工具
+└── config/</code></pre>
+
+<h3>4.3 关键接口定义建议</h3>
+<pre><code>// Repository 接口示例
+type AgentRepository interface {
+    Create(a *model.Agent) error
+    GetByID(id uuid.UUID) (*model.Agent, error)
+    List(page, pageSize int, opts ListOptions) ([]model.Agent, int64, error)
+    Update(a *model.Agent) error
+    Delete(id uuid.UUID) error
+}
+
+// Engine 依赖接口（已实现，保持）
+type GatewayProxy interface {
+    ProxyCall(ctx context.Context, req gateway.CallRequest) (*gateway.CallResponse, error)
+}
+
+// 新增：调度器接口
+type Scheduler interface {
+    AddFunc(spec string, cmd func()) error
+    Start()
+    Stop()
+}</code></pre>
+
+<h2>五、亮点总结</h2>
+<table>
+  <tr><th>设计亮点</th><th>说明</th></tr>
+  <tr><td>模型网关熔断 + WRR + 降级</td><td>类比 Nginx upstream 的可解释路由策略，故障自动摘除</td></tr>
+  <tr><td>Agent 条件-动作管道</td><td>支持条件短路、多动作类型、上下文传递、4 种失败策略</td></tr>
+  <tr><td>账号匹配证据追踪</td><td>每个匹配结果记录字段级评分证据，支持可解释审计</td></tr>
+  <tr><td>Starlark 沙箱</td><td>步数 + 超时双限制，内置 HTTP/JSON 工具函数</td></tr>
+  <tr><td>双 JWT 密钥</td><td>User 和 Admin token 隔离，安全边界清晰</td></tr>
+  <tr><td>枚举常量体系</td><td>300+ 枚举覆盖所有状态/类型，代码可读性高</td></tr>
+  <tr><td>双数据库支持</td><td>SQLite (dev) / PostgreSQL (prod) 无缝切换</td></tr>
+  <tr><td>引擎接口抽象</td><td>GatewayProxy / ScriptRunner 接口解耦引擎依赖</td></tr>
+</table>
+
+<div class="footer">
+  <p>本报告基于对项目全部 37 个 Go 源文件、配置文件、部署配置和需求文档的逐行审查生成。</p>
+  <p>问题严重级别：P0 = 安全/正确性，必须修复 · P1 = 架构/功能，应尽快修复 · P2 = 代码质量，建议改进</p>
+</div>
+
+</div>
+</body>
+</html>

@@ -97,19 +97,21 @@ export default function KnowledgeBasesPage() {
   };
 
   return (
-    <Box>
-      <PageHeader title="知识库" subtitle="管理和组织您的知识资产" actions={
-        viewMode === 'admin' ? (
-          <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>
-            创建知识库
-          </Button>
-        ) : null
-      } />
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
+      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
+        <PageHeader title="知识库" subtitle="管理和组织您的知识资产" actions={
+          viewMode === 'admin' ? (
+            <Button variant="contained" startIcon={<Add />} onClick={() => setDialogOpen(true)}>
+              创建知识库
+            </Button>
+          ) : null
+        } />
+      </Box>
 
       {/* 工具栏 */}
       <Box sx={{
-        display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap', alignItems: 'center',
-        p: 1.5, borderRadius: 2,
+        display: 'flex', gap: 1.5, mb: 2, flexWrap: 'wrap', alignItems: 'center',
+        p: 1.25, borderRadius: 2,
         bgcolor: 'rgba(0,212,255,0.02)', border: '1px solid rgba(0,212,255,0.06)',
       }}>
         <TextField
@@ -126,7 +128,7 @@ export default function KnowledgeBasesPage() {
       {isLoading ? <LoadingState /> : items.length === 0 ? (
         <EmptyState title="暂无知识库" description="点击右上角创建知识库" />
       ) : cardViewMode === 'card' ? (
-        <Grid container spacing={2.5}>
+        <Grid container spacing={2}>
           {items.map((kb: any) => {
             const tc = TYPE_CONFIG[kb.type] || TYPE_CONFIG.document;
             return (
@@ -135,9 +137,9 @@ export default function KnowledgeBasesPage() {
                   height: '100%', cursor: 'pointer', position: 'relative', overflow: 'hidden',
                   borderLeft: `3px solid ${tc.borderColor}`,
                   transition: 'transform 0.25s ease, box-shadow 0.3s ease',
-                  '&:hover': { transform: 'translateY(-3px)', boxShadow: `0 0 24px ${tc.borderColor}20, 0 8px 24px rgba(0,0,0,0.3)` },
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: `0 0 20px ${tc.borderColor}18, 0 6px 20px rgba(0,0,0,0.25)` },
                 }} onClick={() => navigate(`/rag/knowledge-bases/${kb.id}`)}>
-                  <CardContent sx={{ p: 2.5, pb: '16px !important' }}>
+                  <CardContent sx={{ p: 2, pb: '12px !important' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Avatar sx={{ width: 40, height: 40, bgcolor: `${tc.borderColor}15`, color: tc.borderColor, border: `1px solid ${tc.borderColor}30`, fontSize: 18 }}>

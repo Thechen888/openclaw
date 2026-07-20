@@ -75,13 +75,13 @@ export const frontNavConfig: NavSection[] = [
     ],
   },
   {
-    label: 'AI 对话',
+    label: '技能',
     items: [
-      { title: '对话中心', path: '/chat', icon: <Chat fontSize="small" /> },
+      { title: '技能列表', path: '/skills', icon: <ExtensionIcon fontSize="small" /> },
     ],
   },
   {
-    label: '交易',
+    label: 'Token 转售',
     items: [
       { title: 'Token 转售', path: '/tokens/resale', icon: <Storefront fontSize="small" /> },
     ],
@@ -145,8 +145,18 @@ export const adminNavConfig: NavSection[] = [
   {
     label: '令牌管理',
     items: [
-      { title: '令牌', path: '/tokens', icon: <KeyIcon fontSize="small" /> },
-      { title: '审批', path: '/tokens/approvals', icon: <Security fontSize="small" /> },
+      { title: 'Token 账户', path: '/tokens/accounts', icon: <KeyIcon fontSize="small" /> },
+      { title: '白名单', path: '/tokens/whitelist', icon: <Security fontSize="small" /> },
+      { title: '配额管理', path: '/tokens/quotas', icon: <DataUsage fontSize="small" /> },
+      { title: '用量看板', path: '/tokens/usage', icon: <BarChartIcon fontSize="small" /> },
+      { title: '超额策略', path: '/tokens/overage', icon: <Gavel fontSize="small" /> },
+      { title: '审批', path: '/tokens/approvals', icon: <PlaylistAddCheckCircle fontSize="small" /> },
+    ],
+  },
+  {
+    label: 'Token 转售',
+    items: [
+      { title: 'Token 转售', path: '/tokens/resale', icon: <Storefront fontSize="small" /> },
     ],
   },
   {

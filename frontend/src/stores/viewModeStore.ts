@@ -23,6 +23,6 @@ export const useViewModeStore = create<ViewModeState>()(
 
 // 各视图默认落地页
 export const VIEW_DEFAULT_PATH: Record<ViewMode, string> = {
-  front: '/agents',
+  front: '/chat',
   admin: '/',
 };

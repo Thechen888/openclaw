@@ -77,6 +77,9 @@ func main() {
 	usageRepo := repository.NewUsageStatRepository(db.DB)
 	quotaRepo := repository.NewDiskQuotaRepository(db.DB)
 	approvalRepo := repository.NewApprovalRepository(db.DB)
+	whitelistRepo := repository.NewAdminTokenWhitelistRepository(db.DB)
+	tokenQuotaRepo := repository.NewTokenQuotaRepository(db.DB)
+	topUpLogRepo := repository.NewTokenTopUpLogRepository(db.DB)
 
 	// Init services
 	authSvc := service.NewAuthService(userRepo, adminRepo, &cfg.Auth)
@@ -93,6 +96,9 @@ func main() {
 	statsSvc := service.NewStatsService(usageRepo, modelCallLogRepo)
 	approvalSvc := service.NewApprovalService(approvalRepo)
 	quotaSvc := service.NewQuotaService(quotaRepo)
+	whitelistSvc := service.NewAdminTokenWhitelistService(whitelistRepo)
+	tokenQuotaSvc := service.NewTokenQuotaService(tokenQuotaRepo)
+	topUpLogSvc := service.NewTokenTopUpLogService(topUpLogRepo, tokenQuotaRepo)
 
 	// Seed default admin
 	if err := authSvc.SeedAdmin(); err != nil {
@@ -126,6 +132,9 @@ func main() {
 		Stats:       statsSvc,
 		Approval:    approvalSvc,
 		Quota:       quotaSvc,
+		Whitelist:   whitelistSvc,
+		TokenQuota:  tokenQuotaSvc,
+		TopUpLog:    topUpLogSvc,
 		Config:      cfg,
 		Gateway:     gw,
 		AgentEngine: agentEngine,

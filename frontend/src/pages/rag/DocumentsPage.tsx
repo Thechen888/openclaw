@@ -164,19 +164,21 @@ export default function DocumentsPage() {
   ];
 
   return (
-    <Box>
-      <PageHeader title="文档管理" subtitle="上传文档到知识库，系统自动分块、向量化后供 RAG 检索使用" actions={
-        <>
-          <Button startIcon={<Refresh />} onClick={() => qc.invalidateQueries({ queryKey: ['rag-docs'] })}>刷新</Button>
-          <Tooltip title={!kbFilter ? '请先在下方选择目标知识库' : `上传到「${selectedKb?.name}」`}>
-            <span>
-              <Button variant="contained" startIcon={<UploadFile />} onClick={handleOpenUpload} disabled={!kbFilter}>
-                上传文档
-              </Button>
-            </span>
-          </Tooltip>
-        </>
-      } />
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
+      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
+        <PageHeader title="文档管理" subtitle="上传文档到知识库，系统自动分块、向量化后供 RAG 检索使用" actions={
+          <>
+            <Button startIcon={<Refresh />} onClick={() => qc.invalidateQueries({ queryKey: ['rag-docs'] })}>刷新</Button>
+            <Tooltip title={!kbFilter ? '请先在下方选择目标知识库' : `上传到「${selectedKb?.name}」`}>
+              <span>
+                <Button variant="contained" startIcon={<UploadFile />} onClick={handleOpenUpload} disabled={!kbFilter}>
+                  上传文档
+                </Button>
+              </span>
+            </Tooltip>
+          </>
+        } />
+      </Box>
 
       {/* 知识库选择器 - 卡片式带搜索 */}
       <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: kbFilter ? 'primary.main' : 'warning.main' }}>

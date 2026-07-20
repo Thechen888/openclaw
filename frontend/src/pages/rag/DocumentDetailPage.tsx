@@ -32,9 +32,9 @@ export default function DocumentDetailPage() {
   if (!doc) return <EmptyState title="文档不存在" />;
 
   return (
-    <Box>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
       {/* 面包屑 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
         <IconButton size="small" onClick={() => navigate(`/rag/knowledge-bases/${kbId}`)}><ArrowBack /></IconButton>
         <Typography variant="caption" sx={{ color: 'text.secondary', cursor: 'pointer' }} onClick={() => navigate('/rag/knowledge-bases')}>知识库</Typography>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>/</Typography>
