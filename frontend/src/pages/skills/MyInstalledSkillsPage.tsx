@@ -3,7 +3,7 @@ import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton, Button,
   Typography, Chip, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
-import { Delete, Refresh, Extension, UnfoldMore, Visibility } from '@mui/icons-material';
+import { Delete, Refresh, Extension, Visibility, SystemUpdateAlt } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
@@ -78,7 +78,14 @@ export default function MyInstalledSkillsPage() {
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Chip label={`v${item.version}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20, fontFamily: 'monospace' }} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Chip label={`v${item.version}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20, fontFamily: 'monospace' }} />
+                    {item.has_update && (
+                      <Tooltip title={`有新版本 v${item.latest_version}`}>
+                        <Chip label="NEW" size="small" sx={{ fontSize: 9, height: 16, bgcolor: 'warning.main', color: '#fff', fontWeight: 700 }} />
+                      </Tooltip>
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell>
                   <Typography variant="caption" color="text.secondary">{item.owner_name}</Typography>
@@ -88,6 +95,13 @@ export default function MyInstalledSkillsPage() {
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    {item.has_update && (
+                      <Tooltip title={`升级到 v${item.latest_version}`}>
+                        <IconButton size="small" color="warning" onClick={() => enqueueSnackbar(`已升级到 v${item.latest_version}（mock）`, { variant: 'success' })}>
+                          <SystemUpdateAlt fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     <Tooltip title="详情">
                       <IconButton size="small" onClick={() => navigate(`/skills/${item.skill_id}/detail`)}>
                         <Visibility fontSize="small" />

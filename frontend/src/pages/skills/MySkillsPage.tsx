@@ -4,10 +4,17 @@ import {
   Typography, Chip, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Drawer, List, ListItemButton, ListItemText, ListItemIcon,
 } from '@mui/material';
+import Timeline from '@mui/lab/Timeline';
+import TimelineItem from '@mui/lab/TimelineItem';
+import TimelineSeparator from '@mui/lab/TimelineSeparator';
+import TimelineConnector from '@mui/lab/TimelineConnector';
+import TimelineContent from '@mui/lab/TimelineContent';
+import TimelineDot from '@mui/lab/TimelineDot';
 import {
   Add, Refresh, Delete, Edit, Send, CloudOff, Extension,
   Upload, AutoAwesome, CancelScheduleSend, Save, Close,
-  Description, Article, Settings,
+  Description, Article, Settings, History, Undo, CheckCircle,
+  Error, HourglassEmpty, Archive,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -17,44 +24,38 @@ import { skillsApi } from '../../api/client';
 import api from '../../api/client';
 
 /**
- * Skill 状态机定义（含版本管理）
+ * 双层状态机设计
  * 
- * 状态流转：
- *   draft ──publish──▶ pending ──approve──▶ published
- *     ▲                   │                      │
- *     │                 cancel              edit│delist
- *     │                   │                      ▼
- *     └──edit/reject── rejected              delisted
- *                           │                      │
- *                      edit│                    edit│
- *                           ▼                      ▼
- *                        modified ◀───────────────┘
- *                           │
- *                    publish│rollback
- *                           ▼
- *                    pending│published/delisted
+ * Skill 级（列表展示用，聚合得出）：
+ *   未发布 / 已上架 / 审核中 / 有未发布修改（原"已修改"）
  * 
- * 版本管理逻辑：
- *   - 已上架(published)/已下架(delisted) 的技能被编辑后，进入 modified 状态
- *   - modified 状态表示"有未发布的修改"
- *   - 可发布修改（→ pending 待审核）或回滚到上次发布状态
+ * 版本级（真实的业务状态，挂在 SkillVersion 上）：
+ *   草稿 → 审核中 → 已发布（在架）
+ *                 → 已驳回
+ *   已发布 → 历史版本（被新版本顶替）
+ *          → 已废弃（有严重问题，标记不回滚到它）
  * 
- * 各状态可用操作：
- *   draft     → 文件列表、设置、提交发布、删除
- *   pending   → 撤回申请（→ draft）
- *   published → 文件列表、设置、申请下架（→ delisted）、发布新版本
- *   modified  → 文件列表、设置、发布修改、回滚版本、删除
- *   rejected  → 文件列表、设置、重新提交发布、删除
- *   delisted  → 文件列表、设置、重新发布（→ pending）、删除
+ * 核心铁律：市场上跑的永远是快照，作者改的永远是草稿
  */
 
-const STATUS_META: Record<string, { label: string; color: string }> = {
+// Skill 级聚合状态（列表展示）
+const SKILL_STATUS_META: Record<string, { label: string; color: string }> = {
   draft: { label: '未发布', color: 'default' },
-  pending: { label: '待审核', color: 'warning' },
+  pending: { label: '审核中', color: 'warning' },
   published: { label: '已上架', color: 'success' },
-  modified: { label: '已修改', color: 'warning' },
+  modified: { label: '有未发布修改', color: 'info' },
   rejected: { label: '已驳回', color: 'error' },
   delisted: { label: '已下架', color: 'error' },
+};
+
+// 版本级状态
+const VERSION_STATUS_META: Record<string, { label: string; color: 'default' | 'primary' | 'success' | 'warning' | 'error' | 'info'; icon: React.ReactNode }> = {
+  draft: { label: '草稿', color: 'default', icon: <Edit sx={{ fontSize: 14 }} /> },
+  pending: { label: '审核中', color: 'warning', icon: <HourglassEmpty sx={{ fontSize: 14 }} /> },
+  published: { label: '在架', color: 'success', icon: <CheckCircle sx={{ fontSize: 14 }} /> },
+  rejected: { label: '已驳回', color: 'error', icon: <Error sx={{ fontSize: 14 }} /> },
+  history: { label: '历史版本', color: 'info', icon: <Archive sx={{ fontSize: 14 }} /> },
+  deprecated: { label: '已废弃', color: 'error', icon: <Error sx={{ fontSize: 14 }} /> },
 };
 
 const SCOPE_LABEL: Record<string, string> = {
@@ -63,12 +64,12 @@ const SCOPE_LABEL: Record<string, string> = {
 
 /** 各状态对应的可用操作按钮 */
 const STATUS_ACTIONS: Record<string, string[]> = {
-  draft: ['files', 'settings', 'publish', 'delete'],
-  pending: ['cancel'],
-  published: ['files', 'settings', 'delist', 'publish_new'],
-  modified: ['files', 'settings', 'publish', 'rollback', 'delete'],
-  rejected: ['files', 'settings', 'publish', 'delete'],
-  delisted: ['files', 'settings', 'publish', 'delete'],
+  draft: ['files', 'settings', 'publish', 'versions', 'delete'],
+  pending: ['cancel', 'versions'],
+  published: ['files', 'settings', 'delist', 'publish_new', 'versions'],
+  modified: ['files', 'settings', 'publish', 'versions', 'delete'],
+  rejected: ['files', 'settings', 'publish', 'versions', 'delete'],
+  delisted: ['files', 'settings', 'publish', 'versions', 'delete'],
 };
 
 /** 操作按钮元数据 */
@@ -76,9 +77,9 @@ const ACTION_META: Record<string, { icon: React.ReactNode; label: string; color?
   files: { icon: <Description fontSize="small" />, label: '文件列表', color: 'text.secondary' },
   settings: { icon: <Settings fontSize="small" />, label: '设置', color: 'text.secondary' },
   publish: { icon: <Send fontSize="small" />, label: '发布', color: 'primary.main' },
-  publish_new: { icon: <Send fontSize="small" />, label: '新版本', color: 'primary.main' },
+  publish_new: { icon: <Send fontSize="small" />, label: '发布新版本', color: 'primary.main' },
   delist: { icon: <CloudOff fontSize="small" />, label: '下架', color: 'warning.main' },
-  rollback: { icon: <CancelScheduleSend fontSize="small" />, label: '回滚版本', color: 'warning.main' },
+  versions: { icon: <History fontSize="small" />, label: '版本历史', color: 'info.main' },
   cancel: { icon: <CancelScheduleSend fontSize="small" />, label: '撤回', color: 'text.secondary' },
   delete: { icon: <Delete fontSize="small" />, label: '删除', color: 'error.main' },
 };
@@ -141,6 +142,141 @@ function FileEditorDialog({
   );
 }
 
+// =================== 版本历史弹窗 ===================
+function VersionHistoryDialog({
+  open, skill, onClose,
+}: { open: boolean; skill: any; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
+  const [rollbackTarget, setRollbackTarget] = useState<any>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['skill-versions', skill?.id],
+    queryFn: () => api.get(`/skills/${skill.id}/versions`),
+    enabled: open && !!skill?.id,
+  });
+  const versions: any[] = data?.data?.data || [];
+
+  // 基于历史版本回滚
+  const rollbackMutation = useMutation({
+    mutationFn: ({ skillId, versionId }: { skillId: string; versionId: string }) =>
+      api.post(`/skills/${skillId}/versions/${versionId}/rollback`),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['skills-my'] });
+      qc.invalidateQueries({ queryKey: ['skill-versions'] });
+      setRollbackTarget(null);
+      enqueueSnackbar(`已基于 v${rollbackTarget?.version} 创建新版本 v${res.data.data.version}（草稿）`, { variant: 'success' });
+    },
+    onError: () => enqueueSnackbar('回滚失败', { variant: 'error' }),
+  });
+
+  return (
+    <>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
+          <History sx={{ color: 'info.main' }} />
+          版本历史 — {skill?.name}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {isLoading ? <LoadingState /> : versions.length === 0 ? (
+            <EmptyState title="暂无版本记录" description="发布后将生成版本快照" />
+          ) : (
+            <Timeline sx={{ p: 0, '& .MuiTimelineItem-root:before': { display: 'none' } }}>
+              {versions.map((v: any, idx: number) => {
+                const meta = VERSION_STATUS_META[v.status] || VERSION_STATUS_META.draft;
+                const isCurrent = v.status === 'published';
+                const canRollback = v.status === 'history' || v.status === 'deprecated';
+                return (
+                  <TimelineItem key={v.id}>
+                    <TimelineSeparator>
+                      <TimelineDot color={meta.color} variant={isCurrent ? 'filled' : 'outlined'} sx={{ my: 0.5 }}>
+                        {meta.icon}
+                      </TimelineDot>
+                      {idx < versions.length - 1 && <TimelineConnector />}
+                    </TimelineSeparator>
+                    <TimelineContent sx={{ pb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
+                          v{v.version}
+                        </Typography>
+                        <Chip
+                          label={meta.label}
+                          size="small"
+                          color={meta.color}
+                          variant={isCurrent ? 'filled' : 'outlined'}
+                          sx={{ height: 20, fontSize: 11 }}
+                        />
+                        {v.is_rollback && (
+                          <Chip label="回滚" size="small" variant="outlined" sx={{ height: 20, fontSize: 11, color: 'warning.main', borderColor: 'warning.main' }} />
+                        )}
+                        {isCurrent && (
+                          <Chip label="当前在架" size="small" sx={{ height: 20, fontSize: 11, bgcolor: 'success.main', color: '#fff' }} />
+                        )}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                        {v.published_at ? `发布于 ${v.published_at}` : '未发布'} · {v.publisher}
+                      </Typography>
+                      {v.changelog && (
+                        <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary', fontSize: 12 }}>
+                          {v.changelog}
+                        </Typography>
+                      )}
+                      <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.25 }}>
+                        {v.file_count} 个文件 · {(v.total_size / 1024).toFixed(1)} KB
+                      </Typography>
+                      {canRollback && (
+                        <Button
+                          size="small"
+                          startIcon={<Undo />}
+                          sx={{ mt: 0.5, fontSize: 12 }}
+                          onClick={() => setRollbackTarget(v)}
+                        >
+                          基于此版本回滚
+                        </Button>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                );
+              })}
+            </Timeline>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>关闭</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 回滚确认 */}
+      <Dialog open={!!rollbackTarget} onClose={() => setRollbackTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>确认回滚</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            将基于 <b>v{rollbackTarget?.version}</b> 的快照创建一个新的草稿版本。
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            回滚不会删除任何历史版本，已安装用户不受影响。新版本需走正常发布审核流程。
+          </Typography>
+          <Typography variant="caption" color="warning.main">
+            注意：已废弃版本可能存在严重问题，请谨慎回滚。
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRollbackTarget(null)}>取消</Button>
+          <Button
+            variant="contained"
+            color="warning"
+            startIcon={<Undo />}
+            onClick={() => rollbackMutation.mutate({ skillId: skill.id, versionId: rollbackTarget.id })}
+            disabled={rollbackMutation.isPending}
+          >
+            确认回滚
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
 // =================== 主页面 ===================
 export default function MySkillsPage() {
   const qc = useQueryClient();
@@ -162,10 +298,12 @@ export default function MySkillsPage() {
   const [drawerSkill, setDrawerSkill] = useState<any>(null);
   const [editFilePath, setEditFilePath] = useState<string>('');
 
+  // 版本历史弹窗
+  const [versionHistorySkill, setVersionHistorySkill] = useState<any>(null);
+
   // 确认弹窗
   const [delistConfirm, setDelistConfirm] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
-  const [rollbackConfirm, setRollbackConfirm] = useState<any>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['skills-my', params],
@@ -214,22 +352,10 @@ export default function MySkillsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['skills-my'] }); setDelistConfirm(null); enqueueSnackbar('下架申请已提交', { variant: 'success' }); },
   });
 
-  // 发布
-  const publishMutation = useMutation({
-    mutationFn: (id: string) => skillsApi.publish(id, {}),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['skills-my'] }); enqueueSnackbar('发布申请已提交', { variant: 'success' }); },
-  });
-
   // 撤回
   const cancelMutation = useMutation({
     mutationFn: (id: string) => api.post(`/skills/${id}/cancel`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['skills-my'] }); enqueueSnackbar('已撤回发布申请', { variant: 'info' }); },
-  });
-
-  // 回滚版本（放弃未发布的修改）
-  const rollbackMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/skills/${id}/rollback`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['skills-my'] }); setRollbackConfirm(null); enqueueSnackbar('已回滚到上次发布版本', { variant: 'success' }); },
   });
 
   const handleCreate = () => {
@@ -262,7 +388,7 @@ export default function MySkillsPage() {
       case 'publish_new': navigate(`/skills/publish/${item.id}?new_version=true`); break;
       case 'delist': setDelistConfirm(item); break;
       case 'cancel': cancelMutation.mutate(item.id); break;
-      case 'rollback': setRollbackConfirm(item); break;
+      case 'versions': setVersionHistorySkill(item); break;
       case 'delete': setDeleteConfirm(item); break;
     }
   };
@@ -271,7 +397,7 @@ export default function MySkillsPage() {
     <Box>
       <PageHeader
         title="我创建的技能"
-        subtitle="管理你的技能，提交发布到技能市场"
+        subtitle="管理你的技能，提交发布到技能市场。市场上跑的永远是快照，你改的永远是草稿。"
         actions={
           <>
             <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
@@ -291,18 +417,18 @@ export default function MySkillsPage() {
               <TableCell sx={{ fontWeight: 700 }}>名称</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>描述</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 80 }}>版本</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 90 }}>状态</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 120 }}>状态</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 80 }}>范围</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 80 }}>安装量</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 130 }}>更新时间</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 220 }}>操作</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 240 }}>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {items.length === 0 ? (
               <TableRow><TableCell colSpan={8}><EmptyState title="暂无技能" description="创建你的第一个技能" /></TableCell></TableRow>
             ) : items.map((item: any) => {
-              const sm = STATUS_META[item.status] || STATUS_META.draft;
+              const sm = SKILL_STATUS_META[item.status] || SKILL_STATUS_META.draft;
               const actions = STATUS_ACTIONS[item.status] || STATUS_ACTIONS.draft;
               return (
                 <TableRow key={item.id} hover>
@@ -325,6 +451,9 @@ export default function MySkillsPage() {
                       <StatusBadge status={item.status} label={sm.label} />
                       {item.status === 'rejected' && item.reject_reason && (
                         <Typography variant="caption" color="error" sx={{ fontSize: 10 }}>{item.reject_reason}</Typography>
+                      )}
+                      {item.status === 'modified' && (
+                        <Typography variant="caption" color="info.main" sx={{ fontSize: 10 }}>工作副本有改动，可发布新版本</Typography>
                       )}
                     </Box>
                   </TableCell>
@@ -426,7 +555,10 @@ export default function MySkillsPage() {
             </Box>
             {/* 技能文件夹内容 */}
             <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700, color: 'text.primary' }}>技能文件夹内容</Typography>
+              <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700, color: 'text.primary' }}>技能文件夹内容（工作副本）</Typography>
+              <Typography variant="caption" color="info.main" sx={{ display: 'block', mb: 1 }}>
+                你编辑的是工作副本，不会影响已上架版本。修改后需发布新版本才能更新市场。
+              </Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                 <Button variant="contained" size="small" disabled>选择文件夹</Button>
                 <Button variant="outlined" color="error" size="small" startIcon={<Delete />} onClick={() => { if (confirm('确认删除该技能下的所有文件？')) { enqueueSnackbar('文件已清空（mock）', { variant: 'success' }); } }}>
@@ -486,6 +618,13 @@ export default function MySkillsPage() {
         <FileEditorDialog open={!!editFilePath} skillId={(drawerSkill || settingsItem).id} filePath={editFilePath} onClose={() => setEditFilePath('')} />
       )}
 
+      {/* 版本历史弹窗 */}
+      <VersionHistoryDialog
+        open={!!versionHistorySkill}
+        skill={versionHistorySkill}
+        onClose={() => setVersionHistorySkill(null)}
+      />
+
       {/* 下架确认 */}
       <Dialog open={!!delistConfirm} onClose={() => setDelistConfirm(null)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>确认下架</DialogTitle>
@@ -507,23 +646,6 @@ export default function MySkillsPage() {
         <DialogActions>
           <Button onClick={() => setDeleteConfirm(null)}>取消</Button>
           <Button variant="contained" color="error" onClick={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)} disabled={deleteMutation.isPending}>确认删除</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* 回滚版本确认 */}
-      <Dialog open={!!rollbackConfirm} onClose={() => setRollbackConfirm(null)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>确认回滚版本</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            确定要放弃当前未发布的修改，回滚到上次发布的版本吗？
-          </Typography>
-          <Typography variant="body2" color="warning.main">
-             此操作将丢弃所有未发布的更改，且不可撤销。
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRollbackConfirm(null)}>取消</Button>
-          <Button variant="contained" color="warning" onClick={() => rollbackConfirm && rollbackMutation.mutate(rollbackConfirm.id)} disabled={rollbackMutation.isPending}>确认回滚</Button>
         </DialogActions>
       </Dialog>
     </Box>

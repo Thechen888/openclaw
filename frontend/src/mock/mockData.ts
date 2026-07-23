@@ -1386,6 +1386,26 @@ const skills: any[] = [
   { id: 'sk-14', name: 'sales-report', slug: 'sales-report', description: '销售数据报表生成，支持多维度筛选和图表导出', status: 'modified', scope: 'company', version: '2.0.0', install_count: 89, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: '2026-03-15 10:00', updated_at: '2026-07-08 16:30', changelog: '新增季度对比图表功能' },
 ];
 
+// =================== 技能版本历史（不可变快照） ===================
+// status: draft | pending | published | rejected | history | deprecated
+// is_rollback: 是否为回滚版本
+const skillVersions: any[] = [
+  // sk-1 kingdee-erp-query 版本历史
+  { id: 'sv-1-1', skill_id: 'sk-1', version: '2.1.0', status: 'published', is_rollback: false, changelog: '新增库存报表接口', published_at: '2026-05-10 09:30', publisher: '张伟', file_count: 9, total_size: 22460 },
+  { id: 'sv-1-2', skill_id: 'sk-1', version: '2.0.0', status: 'history', is_rollback: false, changelog: '重构查询路由，优化性能', published_at: '2026-04-15 14:00', publisher: '张伟', file_count: 8, total_size: 19800 },
+  { id: 'sv-1-3', skill_id: 'sk-1', version: '1.5.0', status: 'history', is_rollback: false, changelog: '新增生产订单查询', published_at: '2026-03-20 10:00', publisher: '张伟', file_count: 7, total_size: 16500 },
+  { id: 'sv-1-4', skill_id: 'sk-1', version: '1.0.0', status: 'history', is_rollback: false, changelog: '首次发布', published_at: '2026-02-01 08:00', publisher: '张伟', file_count: 5, total_size: 12000 },
+  // sk-4 mes 版本历史
+  { id: 'sv-4-1', skill_id: 'sk-4', version: '3.0.1', status: 'published', is_rollback: false, changelog: '重构查询路由', published_at: '2026-06-01 14:00', publisher: '张伟', file_count: 12, total_size: 35000 },
+  { id: 'sv-4-2', skill_id: 'sk-4', version: '3.0.0', status: 'history', is_rollback: false, changelog: '新增供应链报表模块', published_at: '2026-05-15 10:00', publisher: '张伟', file_count: 11, total_size: 32000 },
+  { id: 'sv-4-3', skill_id: 'sk-4', version: '2.5.0', status: 'deprecated', is_rollback: false, changelog: '有严重 Bug，已废弃', published_at: '2026-04-20 09:00', publisher: '张伟', file_count: 10, total_size: 28000 },
+  // sk-14 sales-report 版本历史（有未发布修改）
+  { id: 'sv-14-1', skill_id: 'sk-14', version: '2.0.0', status: 'published', is_rollback: false, changelog: '新增季度对比图表功能', published_at: '2026-06-20 10:00', publisher: '张伟', file_count: 6, total_size: 15000 },
+  { id: 'sv-14-2', skill_id: 'sk-14', version: '1.0.0', status: 'history', is_rollback: false, changelog: '首次发布', published_at: '2026-03-15 10:00', publisher: '张伟', file_count: 4, total_size: 10000 },
+  // sk-10 wecom-send-media 版本历史（待审核）
+  { id: 'sv-10-1', skill_id: 'sk-10', version: '1.0.0', status: 'pending', is_rollback: false, changelog: '首次提交发布', published_at: null, publisher: '王强', file_count: 3, total_size: 4500 },
+];
+
 // =================== Skill 文件系统 ===================
 const skillFiles: Record<string, { path: string; size: number; updatedAt: string }[]> = {
   'sk-1': [
@@ -1615,11 +1635,11 @@ const marketplaceSkills = [
 
 // =================== 我安装的技能 ===================
 const installedSkills: any[] = [
-  { id: 'inst-1', skill_id: 'sk-1', skill_name: 'kingdee-erp-query', skill_slug: 'kingdee-erp-query', description: '查询金蝶云星空 ERP 数据', version: '2.1.0', installed_at: dayAgo(30), installed_by: 'u-1', owner_name: '张伟', scope: 'company' },
-  { id: 'inst-2', skill_id: 'sk-4', skill_name: 'mes', skill_slug: 'mes', description: 'MES Skill 体系', version: '3.0.1', installed_at: dayAgo(15), installed_by: 'u-1', owner_name: '张伟', scope: 'company' },
-  { id: 'inst-3', skill_id: 'sk-5', skill_name: 'knows', skill_slug: 'knows', description: '公司内部知识库', version: '1.5.0', installed_at: dayAgo(7), installed_by: 'u-1', owner_name: '李娜', scope: 'company' },
-  { id: 'inst-4', skill_id: 'sk-8', skill_name: 'crm', skill_slug: 'crm', description: 'CRM 客户管理数据查询与同步', version: '1.3.0', installed_at: dayAgo(3), installed_by: 'u-1', owner_name: '张伟', scope: 'company' },
-  { id: 'inst-5', skill_id: 'sk-6', skill_name: 'minimax-pdf', skill_slug: 'minimax-pdf', description: 'PDF 文档生成与填写', version: '2.0.0', installed_at: dayAgo(1), installed_by: 'u-1', owner_name: '赵敏', scope: 'company' },
+  { id: 'inst-1', skill_id: 'sk-1', skill_name: 'kingdee-erp-query', skill_slug: 'kingdee-erp-query', description: '查询金蝶云星空 ERP 数据', version: '2.1.0', version_id: 'sv-1-1', installed_at: dayAgo(30), installed_by: 'u-1', owner_name: '张伟', scope: 'company', has_update: false, latest_version: '2.1.0' },
+  { id: 'inst-2', skill_id: 'sk-4', skill_name: 'mes', skill_slug: 'mes', description: 'MES Skill 体系', version: '3.0.0', version_id: 'sv-4-2', installed_at: dayAgo(15), installed_by: 'u-1', owner_name: '张伟', scope: 'company', has_update: true, latest_version: '3.0.1' },
+  { id: 'inst-3', skill_id: 'sk-5', skill_name: 'knows', skill_slug: 'knows', description: '公司内部知识库', version: '1.5.0', version_id: 'sv-5-1', installed_at: dayAgo(7), installed_by: 'u-1', owner_name: '李娜', scope: 'company', has_update: false, latest_version: '1.5.0' },
+  { id: 'inst-4', skill_id: 'sk-8', skill_name: 'crm', skill_slug: 'crm', description: 'CRM 客户管理数据查询与同步', version: '1.3.0', version_id: 'sv-8-1', installed_at: dayAgo(3), installed_by: 'u-1', owner_name: '张伟', scope: 'company', has_update: false, latest_version: '1.3.0' },
+  { id: 'inst-5', skill_id: 'sk-6', skill_name: 'minimax-pdf', skill_slug: 'minimax-pdf', description: 'PDF 文档生成与填写', version: '2.0.0', version_id: 'sv-6-1', installed_at: dayAgo(1), installed_by: 'u-1', owner_name: '赵敏', scope: 'company', has_update: false, latest_version: '2.0.0' },
 ];
 
 // =================== 发布审核记录 ===================
@@ -3194,6 +3214,44 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const idx = skills.findIndex(s => s.id === sid);
     if (idx >= 0) skills[idx] = { ...skills[idx], status: 'published', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
     return ok(idx >= 0 ? skills[idx] : null);
+  }
+
+  // Skills — 版本历史
+  if (/^\/skills\/[^/]+\/versions$/.test(path) && method === 'get') {
+    const sid = path.split('/')[2];
+    const versions = skillVersions.filter(v => v.skill_id === sid);
+    return ok(versions);
+  }
+
+  // Skills — 基于历史版本回滚（创建新版本草稿）
+  if (/^\/skills\/[^/]+\/versions\/[^/]+\/rollback$/.test(path) && method === 'post') {
+    const sid = path.split('/')[2];
+    const vid = path.split('/')[4];
+    const sourceVersion = skillVersions.find(v => v.id === vid);
+    if (!sourceVersion) return { status: 404, data: { error: 'Version not found' } };
+    // 生成新版本号（基于当前最新版本 +1）
+    const skill = skills.find(s => s.id === sid);
+    const currentVer = skill?.version || '1.0.0';
+    const parts = currentVer.split('.').map(Number);
+    const newVer = `${parts[0]}.${parts[1] + 1}.0`;
+    const newVersion = {
+      id: 'sv-' + Date.now(),
+      skill_id: sid,
+      version: newVer,
+      status: 'draft',
+      is_rollback: true,
+      changelog: `回滚自 v${sourceVersion.version}`,
+      published_at: null,
+      publisher: '张伟',
+      file_count: sourceVersion.file_count,
+      total_size: sourceVersion.total_size,
+    };
+    skillVersions.unshift(newVersion);
+    if (skill) {
+      skill.status = 'modified';
+      skill.updated_at = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    }
+    return ok(newVersion);
   }
 
   // Skills — 后台 CRUD
