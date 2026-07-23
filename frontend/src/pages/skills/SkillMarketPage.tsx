@@ -3,23 +3,26 @@ import {
   Box, Grid, Card, CardContent, CardActions, Typography, Chip, Button,
   TextField, InputAdornment, IconButton, Tooltip, Skeleton, Tabs, Tab, Avatar,
 } from '@mui/material';
-import { Search, Download, Extension, Refresh, Person, Groups, Public } from '@mui/icons-material';
+import { Search, Download, Extension, Refresh, Person, Groups, Public, Science } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/shared';
 import { skillsApi } from '../../api/client';
+import api from '../../api/client';
 
 const SCOPE_TABS = [
   { label: '全部', value: 'all' },
-  { label: '权限分享', value: 'department' },
+  { label: '他人分享', value: 'department' },
   { label: '全公司', value: 'company' },
+  { label: '内测', value: 'beta' },
 ];
 
 const SCOPE_ICON: Record<string, React.ReactNode> = {
   private: <Person fontSize="small" />,
   department: <Groups fontSize="small" />,
   company: <Public fontSize="small" />,
+  beta: <Science fontSize="small" />,
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -34,12 +37,23 @@ export default function SkillMarketPage() {
   const [search, setSearch] = useState('');
   const [scopeTab, setScopeTab] = useState('all');
 
+  // 正式市场数据
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['skills-market', { search, scope: scopeTab }],
     queryFn: () => skillsApi.list({ page_size: 50, search, status: 'published' }),
+    enabled: scopeTab !== 'beta',
   });
+
+  // 内测分享数据
+  const { data: betaData, isLoading: betaLoading } = useQuery({
+    queryKey: ['skills-shared-to-me', { search }],
+    queryFn: () => api.get('/skills/shared-to-me', { params: { page_size: 50, search } }),
+    enabled: scopeTab === 'beta',
+  });
+
   const allItems = data?.data?.data || [];
-  const items = scopeTab === 'all' ? allItems : allItems.filter((s: any) => s.scope === scopeTab);
+  const betaItems = betaData?.data?.data || [];
+  const items = scopeTab === 'all' ? allItems : scopeTab === 'beta' ? betaItems : allItems.filter((s: any) => s.scope === scopeTab);
 
   const installMutation = useMutation({
     mutationFn: (skillId: string) => skillsApi.publish(skillId, { action: 'install' }),
@@ -81,7 +95,7 @@ export default function SkillMarketPage() {
       </Box>
 
       {/* Skill Grid */}
-      {isLoading ? (
+      {isLoading || betaLoading ? (
         <Grid container spacing={2}>
           {[1, 2, 3, 4, 5, 6].map(i => (
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
@@ -131,9 +145,12 @@ export default function SkillMarketPage() {
                     </Box>
                     <Chip
                       icon={SCOPE_ICON[item.scope] as any}
-                      label={item.scope === 'company' ? '全公司' : item.scope === 'department' ? '权限分享' : '私有'}
+                      label={item.scope === 'company' ? '全公司' : item.scope === 'department' ? '他人分享' : '私有'}
                       size="small" sx={{ fontSize: 10, height: 22 }}
                     />
+                    {scopeTab === 'beta' && (
+                      <Chip label="内测" size="small" sx={{ fontSize: 10, height: 22, bgcolor: 'warning.main', color: '#fff', fontWeight: 700, ml: 0.5 }} />
+                    )}
                   </Box>
 
                   <Typography variant="body2" color="text.secondary" sx={{

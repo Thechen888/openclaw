@@ -1640,6 +1640,16 @@ const installedSkills: any[] = [
   { id: 'inst-3', skill_id: 'sk-5', skill_name: 'knows', skill_slug: 'knows', description: '公司内部知识库', version: '1.5.0', version_id: 'sv-5-1', installed_at: dayAgo(7), installed_by: 'u-1', owner_name: '李娜', scope: 'company', has_update: false, latest_version: '1.5.0' },
   { id: 'inst-4', skill_id: 'sk-8', skill_name: 'crm', skill_slug: 'crm', description: 'CRM 客户管理数据查询与同步', version: '1.3.0', version_id: 'sv-8-1', installed_at: dayAgo(3), installed_by: 'u-1', owner_name: '张伟', scope: 'company', has_update: false, latest_version: '1.3.0' },
   { id: 'inst-5', skill_id: 'sk-6', skill_name: 'minimax-pdf', skill_slug: 'minimax-pdf', description: 'PDF 文档生成与填写', version: '2.0.0', version_id: 'sv-6-1', installed_at: dayAgo(1), installed_by: 'u-1', owner_name: '赵敏', scope: 'company', has_update: false, latest_version: '2.0.0' },
+  { id: 'inst-6', skill_id: 'sk-14', skill_name: 'sales-report', skill_slug: 'sales-report', description: '销售数据报表生成（内测版）', version: '0.1-test', version_id: null, installed_at: dayAgo(2), installed_by: 'u-1', owner_name: '张伟', scope: 'private', has_update: false, latest_version: '2.0.0', is_beta: true },
+];
+
+// =================== 技能定向授权（内测分享/白名单） ===================
+// share_type: test（测试分享，作者发起，免审）/ release（发布白名单，管理员配置）
+// target_type: user / role
+const skillShares: any[] = [
+  { id: 'ss-1', skill_id: 'sk-1', skill_name: 'kingdee-erp-query', target_type: 'user', target_id: 'u-2', target_name: '李思', target_dept: '产品部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(5) },
+  { id: 'ss-2', skill_id: 'sk-1', skill_name: 'kingdee-erp-query', target_type: 'user', target_id: 'u-4', target_name: '赵敏', target_dept: '设计部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(3) },
+  { id: 'ss-3', skill_id: 'sk-14', skill_name: 'sales-report', target_type: 'user', target_id: 'u-3', target_name: '王五', target_dept: '技术研发部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(1) },
 ];
 
 // =================== 发布审核记录 ===================
@@ -3252,6 +3262,67 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       skill.updated_at = new Date().toISOString().slice(0, 16).replace('T', ' ');
     }
     return ok(newVersion);
+  }
+
+  // Skills — 分享（定向授权）
+  if (/^\/skills\/[^/]+\/share$/.test(path) && method === 'post') {
+    const sid = path.split('/')[2];
+    const skill = skills.find(s => s.id === sid);
+    if (!skill) return { status: 404, data: { error: 'Skill not found' } };
+    const targets = data.targets || []; // [{ target_type, target_id, target_name, target_dept }]
+    const existing = skillShares.filter(s => s.skill_id === sid);
+    if (existing.length + targets.length > 20) {
+      return { status: 400, data: { error: '内测分享仅限小范围（最多20人/角色），如需更大范围请走发布流程' } };
+    }
+    const newShares = targets.map((t: any) => ({
+      id: 'ss-' + Date.now() + '-' + t.target_id,
+      skill_id: sid,
+      skill_name: skill.name,
+      target_type: t.target_type || 'user',
+      target_id: t.target_id,
+      target_name: t.target_name,
+      target_dept: t.target_dept || '',
+      share_type: 'test',
+      granted_by: 'u-1',
+      granted_by_name: '张伟',
+      created_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    }));
+    skillShares.push(...newShares);
+    return ok(newShares);
+  }
+
+  // Skills — 移除分享
+  if (/^\/skills\/[^/]+\/share\/[^/]+$/.test(path) && method === 'delete') {
+    const shareId = path.split('/')[4];
+    const idx = skillShares.findIndex(s => s.id === shareId);
+    if (idx >= 0) skillShares.splice(idx, 1);
+    return ok(null);
+  }
+
+  // Skills — 获取分享列表
+  if (/^\/skills\/[^/]+\/share$/.test(path) && method === 'get') {
+    const sid = path.split('/')[2];
+    const shares = skillShares.filter(s => s.skill_id === sid);
+    return ok(shares);
+  }
+
+  // Skills — 验证通过（白名单验证发布 → 正式上架）
+  if (/^\/skills\/[^/]+\/verify$/.test(path) && method === 'post') {
+    const sid = path.split('/')[2];
+    const idx = skills.findIndex(s => s.id === sid);
+    if (idx >= 0) {
+      skills[idx] = { ...skills[idx], status: 'published', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+    }
+    return ok(idx >= 0 ? skills[idx] : null);
+  }
+
+  // Skills — 获取内测分享的技能（给技能市场用）
+  if (path === '/skills/shared-to-me' && method === 'get') {
+    // 当前用户 u-1 收到的分享
+    const myShares = skillShares.filter(s => s.target_id === 'u-1' || s.target_id === 'dept-1');
+    const sharedSkillIds = [...new Set(myShares.map(s => s.skill_id))];
+    const sharedSkills = skills.filter(s => sharedSkillIds.includes(s.id));
+    return paginate(sharedSkills, p.page, p.page_size, p.search);
   }
 
   // Skills — 后台 CRUD

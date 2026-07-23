@@ -14,7 +14,7 @@ import {
   Add, Refresh, Delete, Edit, Send, CloudOff, Extension,
   Upload, AutoAwesome, CancelScheduleSend, Save, Close,
   Description, Article, Settings, History, Undo, CheckCircle,
-  Error, HourglassEmpty, Archive,
+  Error, HourglassEmpty, Archive, PersonAdd, VerifiedUser,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -42,6 +42,7 @@ import api from '../../api/client';
 const SKILL_STATUS_META: Record<string, { label: string; color: string }> = {
   draft: { label: '未发布', color: 'default' },
   pending: { label: '审核中', color: 'warning' },
+  pending_whitelist: { label: '白名单验证中', color: 'info' },
   published: { label: '已上架', color: 'success' },
   modified: { label: '有未发布修改', color: 'info' },
   rejected: { label: '已驳回', color: 'error' },
@@ -49,13 +50,13 @@ const SKILL_STATUS_META: Record<string, { label: string; color: string }> = {
 };
 
 // 版本级状态
-const VERSION_STATUS_META: Record<string, { label: string; color: 'default' | 'primary' | 'success' | 'warning' | 'error' | 'info'; icon: React.ReactNode }> = {
-  draft: { label: '草稿', color: 'default', icon: <Edit sx={{ fontSize: 14 }} /> },
-  pending: { label: '审核中', color: 'warning', icon: <HourglassEmpty sx={{ fontSize: 14 }} /> },
-  published: { label: '在架', color: 'success', icon: <CheckCircle sx={{ fontSize: 14 }} /> },
-  rejected: { label: '已驳回', color: 'error', icon: <Error sx={{ fontSize: 14 }} /> },
-  history: { label: '历史版本', color: 'info', icon: <Archive sx={{ fontSize: 14 }} /> },
-  deprecated: { label: '已废弃', color: 'error', icon: <Error sx={{ fontSize: 14 }} /> },
+const VERSION_STATUS_META: Record<string, { label: string; dotColor: 'inherit' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' | 'grey'; chipColor: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'; icon: React.ReactNode }> = {
+  draft: { label: '草稿', dotColor: 'grey', chipColor: 'default', icon: <Edit sx={{ fontSize: 14 }} /> },
+  pending: { label: '审核中', dotColor: 'warning', chipColor: 'warning', icon: <HourglassEmpty sx={{ fontSize: 14 }} /> },
+  published: { label: '在架', dotColor: 'success', chipColor: 'success', icon: <CheckCircle sx={{ fontSize: 14 }} /> },
+  rejected: { label: '已驳回', dotColor: 'error', chipColor: 'error', icon: <Error sx={{ fontSize: 14 }} /> },
+  history: { label: '历史版本', dotColor: 'info', chipColor: 'info', icon: <Archive sx={{ fontSize: 14 }} /> },
+  deprecated: { label: '已废弃', dotColor: 'error', chipColor: 'error', icon: <Error sx={{ fontSize: 14 }} /> },
 };
 
 const SCOPE_LABEL: Record<string, string> = {
@@ -64,12 +65,13 @@ const SCOPE_LABEL: Record<string, string> = {
 
 /** 各状态对应的可用操作按钮 */
 const STATUS_ACTIONS: Record<string, string[]> = {
-  draft: ['files', 'settings', 'publish', 'versions', 'delete'],
+  draft: ['files', 'settings', 'publish', 'share', 'versions', 'delete'],
   pending: ['cancel', 'versions'],
-  published: ['files', 'settings', 'delist', 'publish_new', 'versions'],
-  modified: ['files', 'settings', 'publish', 'versions', 'delete'],
-  rejected: ['files', 'settings', 'publish', 'versions', 'delete'],
-  delisted: ['files', 'settings', 'publish', 'versions', 'delete'],
+  pending_whitelist: ['verify', 'cancel', 'versions'],
+  published: ['files', 'settings', 'delist', 'publish_new', 'share', 'versions'],
+  modified: ['files', 'settings', 'publish', 'share', 'versions', 'delete'],
+  rejected: ['files', 'settings', 'publish', 'share', 'versions', 'delete'],
+  delisted: ['files', 'settings', 'publish', 'share', 'versions', 'delete'],
 };
 
 /** 操作按钮元数据 */
@@ -80,6 +82,8 @@ const ACTION_META: Record<string, { icon: React.ReactNode; label: string; color?
   publish_new: { icon: <Send fontSize="small" />, label: '发布新版本', color: 'primary.main' },
   delist: { icon: <CloudOff fontSize="small" />, label: '下架', color: 'warning.main' },
   versions: { icon: <History fontSize="small" />, label: '版本历史', color: 'info.main' },
+  share: { icon: <PersonAdd fontSize="small" />, label: '分享', color: 'info.main' },
+  verify: { icon: <VerifiedUser fontSize="small" />, label: '验证通过', color: 'success.main' },
   cancel: { icon: <CancelScheduleSend fontSize="small" />, label: '撤回', color: 'text.secondary' },
   delete: { icon: <Delete fontSize="small" />, label: '删除', color: 'error.main' },
 };
@@ -189,7 +193,7 @@ function VersionHistoryDialog({
                 return (
                   <TimelineItem key={v.id}>
                     <TimelineSeparator>
-                      <TimelineDot color={meta.color} variant={isCurrent ? 'filled' : 'outlined'} sx={{ my: 0.5 }}>
+                      <TimelineDot color={meta.dotColor} variant={isCurrent ? 'filled' : 'outlined'} sx={{ my: 0.5 }}>
                         {meta.icon}
                       </TimelineDot>
                       {idx < versions.length - 1 && <TimelineConnector />}
@@ -202,7 +206,7 @@ function VersionHistoryDialog({
                         <Chip
                           label={meta.label}
                           size="small"
-                          color={meta.color}
+                          color={meta.chipColor}
                           variant={isCurrent ? 'filled' : 'outlined'}
                           sx={{ height: 20, fontSize: 11 }}
                         />
@@ -277,6 +281,168 @@ function VersionHistoryDialog({
   );
 }
 
+// =================== 分享弹窗 ===================
+function ShareDialog({
+  open, skill, onClose,
+}: { open: boolean; skill: any; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
+  const [searchText, setSearchText] = useState('');
+  const [selectedTargets, setSelectedTargets] = useState<any[]>([]);
+
+  // 获取已分享列表
+  const { data: sharesData, refetch: refetchShares } = useQuery({
+    queryKey: ['skill-shares', skill?.id],
+    queryFn: () => api.get(`/skills/${skill.id}/share`),
+    enabled: open && !!skill?.id,
+  });
+  const shares: any[] = sharesData?.data?.data || [];
+
+  // 模拟可选用户列表
+  const availableUsers = [
+    { target_type: 'user', target_id: 'u-2', target_name: '李思', target_dept: '产品部' },
+    { target_type: 'user', target_id: 'u-3', target_name: '王五', target_dept: '技术研发部' },
+    { target_type: 'user', target_id: 'u-4', target_name: '赵敏', target_dept: '设计部' },
+    { target_type: 'user', target_id: 'u-5', target_name: '刘芳', target_dept: '人力资源部' },
+    { target_type: 'role', target_id: 'role-1', target_name: '研发测试组', target_dept: '' },
+    { target_type: 'role', target_id: 'role-2', target_name: '产品体验组', target_dept: '' },
+  ];
+
+  const filteredUsers = availableUsers.filter(u =>
+    u.target_name.toLowerCase().includes(searchText.toLowerCase()) ||
+    u.target_dept.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  // 分享
+  const shareMutation = useMutation({
+    mutationFn: (targets: any[]) => api.post(`/skills/${skill.id}/share`, { targets }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['skill-shares'] });
+      setSelectedTargets([]);
+      setSearchText('');
+      refetchShares();
+      enqueueSnackbar('分享成功，被分享者可在技能市场「内测」分组看到', { variant: 'success' });
+    },
+    onError: (err: any) => enqueueSnackbar(err?.response?.data?.error || '分享失败', { variant: 'error' }),
+  });
+
+  // 移除分享
+  const removeMutation = useMutation({
+    mutationFn: (shareId: string) => api.delete(`/skills/${skill.id}/share/${shareId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['skill-shares'] });
+      refetchShares();
+      enqueueSnackbar('已移除分享', { variant: 'info' });
+    },
+  });
+
+  const handleAddTarget = (user: any) => {
+    if (selectedTargets.find(t => t.target_id === user.target_id)) return;
+    if (shares.length + selectedTargets.length >= 20) {
+      enqueueSnackbar('内测分享仅限小范围（最多20人/角色），如需更大范围请走发布流程', { variant: 'warning' });
+      return;
+    }
+    setSelectedTargets([...selectedTargets, user]);
+    setSearchText('');
+  };
+
+  const handleRemoveTarget = (targetId: string) => {
+    setSelectedTargets(selectedTargets.filter(t => t.target_id !== targetId));
+  };
+
+  const handleShare = () => {
+    if (selectedTargets.length === 0) return;
+    shareMutation.mutate(selectedTargets);
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
+        <PersonAdd sx={{ color: 'info.main' }} />
+        分享「{skill?.name}」
+      </DialogTitle>
+      <DialogContent sx={{ pt: 1 }}>
+        {/* 搜索并选择 */}
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>分享给 *</Typography>
+          <TextField
+            fullWidth size="small" placeholder="搜索用户或角色..."
+            value={searchText} onChange={e => setSearchText(e.target.value)}
+            sx={{ mb: 1 }}
+          />
+          {searchText && (
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 160, overflow: 'auto' }}>
+              {filteredUsers.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ p: 1.5 }}>无匹配结果</Typography>
+              ) : filteredUsers.map(u => (
+                <Box
+                  key={u.target_id}
+                  onClick={() => handleAddTarget(u)}
+                  sx={{
+                    px: 1.5, py: 1, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    '&:hover': { bgcolor: 'action.hover' },
+                  }}
+                >
+                  <Box>
+                    <Typography variant="body2" sx={{ fontSize: 13 }}>{u.target_name}</Typography>
+                    <Typography variant="caption" color="text.secondary">{u.target_dept} · {u.target_type === 'role' ? '角色' : '用户'}</Typography>
+                  </Box>
+                  <Add fontSize="small" sx={{ color: 'text.secondary' }} />
+                </Box>
+              ))}
+            </Box>
+          )}
+          {/* 已选目标 */}
+          {selectedTargets.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+              {selectedTargets.map(t => (
+                <Chip
+                  key={t.target_id}
+                  label={t.target_name}
+                  size="small"
+                  onDelete={() => handleRemoveTarget(t.target_id)}
+                  sx={{ fontSize: 11 }}
+                />
+              ))}
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 1, alignSelf: 'center' }}>
+                {shares.length + selectedTargets.length}/20
+              </Typography>
+            </Box>
+          )}
+        </Box>
+
+        {/* 已分享列表 */}
+        {shares.length > 0 && (
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>已分享列表</Typography>
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 200, overflow: 'auto' }}>
+              {shares.map(s => (
+                <Box key={s.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontSize: 13 }}>{s.target_name}</Typography>
+                    <Typography variant="caption" color="text.secondary">{s.target_dept} · {s.created_at} 由{s.granted_by_name}分享</Typography>
+                  </Box>
+                  <Button size="small" color="error" onClick={() => removeMutation.mutate(s.id)}>移除</Button>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+          说明：内测分享免审核，被分享者可在技能市场的「内测」分组看到并安装此技能。
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>关闭</Button>
+        <Button variant="contained" startIcon={<PersonAdd />} onClick={handleShare} disabled={shareMutation.isPending || selectedTargets.length === 0}>
+          完成分享
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 // =================== 主页面 ===================
 export default function MySkillsPage() {
   const qc = useQueryClient();
@@ -300,6 +466,15 @@ export default function MySkillsPage() {
 
   // 版本历史弹窗
   const [versionHistorySkill, setVersionHistorySkill] = useState<any>(null);
+
+  // 分享弹窗
+  const [shareSkill, setShareSkill] = useState<any>(null);
+
+  // 验证通过
+  const verifyMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/skills/${id}/verify`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['skills-my'] }); enqueueSnackbar('验证通过，已正式上架', { variant: 'success' }); },
+  });
 
   // 确认弹窗
   const [delistConfirm, setDelistConfirm] = useState<any>(null);
@@ -389,6 +564,8 @@ export default function MySkillsPage() {
       case 'delist': setDelistConfirm(item); break;
       case 'cancel': cancelMutation.mutate(item.id); break;
       case 'versions': setVersionHistorySkill(item); break;
+      case 'share': setShareSkill(item); break;
+      case 'verify': verifyMutation.mutate(item.id); break;
       case 'delete': setDeleteConfirm(item); break;
     }
   };
@@ -623,6 +800,13 @@ export default function MySkillsPage() {
         open={!!versionHistorySkill}
         skill={versionHistorySkill}
         onClose={() => setVersionHistorySkill(null)}
+      />
+
+      {/* 分享弹窗 */}
+      <ShareDialog
+        open={!!shareSkill}
+        skill={shareSkill}
+        onClose={() => setShareSkill(null)}
       />
 
       {/* 下架确认 */}

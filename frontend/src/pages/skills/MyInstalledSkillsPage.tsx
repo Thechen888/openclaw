@@ -3,7 +3,7 @@ import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton, Button,
   Typography, Chip, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
-import { Delete, Refresh, Extension, Visibility, SystemUpdateAlt } from '@mui/icons-material';
+import { Delete, Refresh, Extension, Visibility, SystemUpdateAlt, Science } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
@@ -80,9 +80,14 @@ export default function MyInstalledSkillsPage() {
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Chip label={`v${item.version}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20, fontFamily: 'monospace' }} />
+                    {item.is_beta && (
+                      <Tooltip title="内测版">
+                        <Chip label="内测" size="small" sx={{ fontSize: 9, height: 16, bgcolor: 'warning.main', color: '#fff', fontWeight: 700 }} />
+                      </Tooltip>
+                    )}
                     {item.has_update && (
                       <Tooltip title={`有新版本 v${item.latest_version}`}>
-                        <Chip label="NEW" size="small" sx={{ fontSize: 9, height: 16, bgcolor: 'warning.main', color: '#fff', fontWeight: 700 }} />
+                        <Chip label="NEW" size="small" sx={{ fontSize: 9, height: 16, bgcolor: 'info.main', color: '#fff', fontWeight: 700 }} />
                       </Tooltip>
                     )}
                   </Box>
