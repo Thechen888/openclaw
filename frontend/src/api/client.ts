@@ -123,6 +123,42 @@ export const skillsApi = {
   create: (data: any) => api.post('/skills', data),
   update: (id: string, data: any) => api.put(`/skills/${id}`, data),
   delete: (id: string) => api.delete(`/skills/${id}`),
+  // 前台：我创建的
+  my: (params?: ListParams) => api.get('/skills/my', { params }),
+  // 前台：我安装的
+  installed: (params?: ListParams) => api.get('/skills/installed', { params }),
+  uninstall: (id: string) => api.post(`/skills/installed/${id}/uninstall`),
+  // 发布与下架
+  publish: (id: string, data: any) => api.post(`/skills/${id}/publish`, data),
+  delist: (id: string, data?: any) => api.post(`/skills/${id}/delist`, data),
+};
+
+// 发布审核中心
+export const reviewApi = {
+  list: (params?: ListParams & { type?: string; status?: string }) => api.get('/review/records', { params }),
+  approve: (id: string, scopeConfig?: { scope_type: string; scope_role_ids?: string[] }) => api.post(`/review/${id}/approve`, scopeConfig || {}),
+  reject: (id: string, reason?: string) => api.post(`/review/${id}/reject`, { reason }),
+};
+
+// 统一资源权限
+export const resourceAclApi = {
+  listAll: (params?: { resource_type?: string }) => api.get('/resource-acl', { params }),
+  list: (resourceType: string, resourceId: string) => api.get(`/resource-acl/${resourceType}/${resourceId}`),
+  add: (resourceType: string, resourceId: string, data: any) => api.post(`/resource-acl/${resourceType}/${resourceId}`, data),
+  update: (resourceType: string, resourceId: string, aclId: string, data: any) => api.put(`/resource-acl/${resourceType}/${resourceId}/${aclId}`, data),
+  remove: (resourceType: string, resourceId: string, aclId: string) => api.delete(`/resource-acl/${resourceType}/${resourceId}/${aclId}`),
+};
+
+// 前台权限管理（角色级）
+export const frontPermApi = {
+  resources: (params?: ListParams & { resource_type?: string; status?: string; idle?: string }) => api.get('/front-perm/resources', { params }),
+  getAcl: (resourceType: string, resourceId: string) => api.get(`/front-perm/acl/${resourceType}/${resourceId}`),
+  addAcl: (resourceType: string, resourceId: string, data: any) => api.post(`/front-perm/acl/${resourceType}/${resourceId}`, data),
+  removeAcl: (resourceType: string, resourceId: string, aclId: string) => api.delete(`/front-perm/acl/${resourceType}/${resourceId}/${aclId}`),
+  roles: () => api.get('/front-perm/roles'),
+  toggle: (id: string) => api.post(`/front-perm/resources/${id}/toggle`),
+  delete: (id: string) => api.delete(`/front-perm/resources/${id}`),
+  transfer: (id: string, data: any) => api.post(`/front-perm/resources/${id}/transfer`, data),
 };
 
 export const agentsApi = {
@@ -169,6 +205,19 @@ export const tokensApi = {
     toggle: (userId: string) => api.post(`/tokens/quotas/${userId}/toggle`),
     topUpLogs: (userId: string, params?: ListParams) => api.get(`/tokens/top-up-logs/${userId}`, { params }),
   },
+};
+
+// 平台公共 Token 账户
+export const tokenAccountsApi = {
+  list: () => api.get('/token-accounts'),
+  whitelist: (accountId: string) => api.get('/token-accounts/whitelist', { params: { account_id: accountId } }),
+};
+
+// Agent 公共额度
+export const publicQuotaApi = {
+  get: (resourceId: string) => api.get(`/front-perm/resources/${resourceId}/public-quota`),
+  enable: (resourceId: string, data: any) => api.post(`/front-perm/resources/${resourceId}/public-quota`, data),
+  disable: (resourceId: string) => api.delete(`/front-perm/resources/${resourceId}/public-quota`),
 };
 
 export const chatAccountsApi = {

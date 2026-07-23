@@ -8,7 +8,7 @@ import {
   Add, SmartToy, Folder,
   AutoStories, Search, Settings, Logout,
   ExpandMore, ExpandLess, Chat, MenuBook,
-  AutoFixHigh,
+  AutoFixHigh, Extension, Storefront, Download,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useViewModeStore } from '../stores/viewModeStore';
@@ -58,6 +58,7 @@ export default function FrontLayout() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [spacesExpanded, setSpacesExpanded] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [skillsExpanded, setSkillsExpanded] = useState(true);
   const [activeId, setActiveId] = useState<string>('');
 
   const isDark = themeMode === 'dark';
@@ -162,6 +163,56 @@ export default function FrontLayout() {
                 </Typography>
               </Box>
             ))}
+          </Box>
+
+          {/* 技能（可折叠子菜单） */}
+          <Box sx={{ mt: 0.5 }}>
+            <Box
+              onClick={() => setSkillsExpanded(!skillsExpanded)}
+              sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                px: 1.5, py: 0.85, cursor: 'pointer', borderRadius: 1.5,
+                '&:hover': { bgcolor: c.navHover },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                <Extension sx={{ fontSize: 'small', color: c.text2 }} />
+                <Typography sx={{ fontSize: 13, fontWeight: 600, color: c.text2 }}>
+                  技能
+                </Typography>
+              </Box>
+              {skillsExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
+            </Box>
+            <Collapse in={skillsExpanded}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, pl: 1 }}>
+                {[
+                  { icon: <Storefront sx={{ fontSize: 14 }} />, label: '技能市场', path: '/skills/market' },
+                  { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/skills/my-installed' },
+                  { icon: <Extension sx={{ fontSize: 14 }} />, label: '我创建的', path: '/skills/my' },
+                ].map((item) => (
+                  <Box
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    sx={{
+                      display: 'flex', alignItems: 'center', gap: 1.25,
+                      px: 1.5, py: 0.7, borderRadius: 1.5,
+                      cursor: 'pointer',
+                      bgcolor: isNavActive(item.path) ? c.navActive : 'transparent',
+                      color: isNavActive(item.path) ? c.accent : c.text3,
+                      transition: 'all 0.15s',
+                      '&:hover': { bgcolor: c.navHover, color: c.text1 },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: 20, justifyContent: 'center', opacity: 0.7 }}>
+                      {item.icon}
+                    </Box>
+                    <Typography sx={{ fontSize: 12.5, fontWeight: isNavActive(item.path) ? 600 : 400 }}>
+                      {item.label}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Collapse>
           </Box>
         </Box>
 

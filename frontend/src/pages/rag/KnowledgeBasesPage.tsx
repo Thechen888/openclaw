@@ -5,7 +5,7 @@ import {
   InputAdornment, Select, Avatar,
 } from '@mui/material';
 import {
-  Add, Search, ViewModule, ViewList, Star, StarBorder, Description, Delete, Security,
+  Add, Search, ViewModule, ViewList, Star, StarBorder, Description, Delete,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader, LoadingState, EmptyState } from '../../components/shared';
 import { ragApi } from '../../api/client';
 import { useViewModeStore } from '../../stores/viewModeStore';
-import KbPermissionDialog from './KbPermissionDialog';
 
 const TYPE_CONFIG: Record<string, { label: string; color: string; borderColor: string; icon: React.ReactNode }> = {
   document: { label: '文档', color: '#00E676', borderColor: '#00E676', icon: <Description fontSize="small" /> },
@@ -41,8 +40,6 @@ export default function KnowledgeBasesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
-  const [permDialogOpen, setPermDialogOpen] = useState(false);
-  const [permTarget, setPermTarget] = useState<any>(null);
   const [form, setForm] = useState({
     name: '', type: 'document', description: '', embedding_model: 'bge-m3', vector_store: 'pgvector',
   });
@@ -154,9 +151,6 @@ export default function KnowledgeBasesPage() {
                         {kb.favorite ? <Star fontSize="small" /> : <StarBorder fontSize="small" />}
                       </IconButton>
                       {viewMode === 'admin' && (
-                        <Tooltip title="权限管理"><IconButton size="small" onClick={e => { e.stopPropagation(); setPermTarget(kb); setPermDialogOpen(true); }} sx={{ color: 'text.secondary', '&:hover': { color: '#00E676' } }}><Security fontSize="small" /></IconButton></Tooltip>
-                      )}
-                      {viewMode === 'admin' && (
                         <Tooltip title="删除知识库"><IconButton size="small" onClick={e => { e.stopPropagation(); handleDeleteClick(kb); }} sx={{ color: 'text.secondary', '&:hover': { color: '#FF3366' } }}><Delete fontSize="small" /></IconButton></Tooltip>
                       )}
                     </Box>
@@ -211,9 +205,6 @@ export default function KnowledgeBasesPage() {
                       <IconButton size="small" onClick={e => { e.stopPropagation(); toggleFavorite.mutate(kb); }} sx={{ color: kb.favorite ? '#FFD54F' : 'text.secondary' }}>
                         {kb.favorite ? <Star fontSize="small" /> : <StarBorder fontSize="small" />}
                       </IconButton>
-                      {viewMode === 'admin' && (
-                        <Tooltip title="权限管理"><IconButton size="small" onClick={e => { e.stopPropagation(); setPermTarget(kb); setPermDialogOpen(true); }} sx={{ color: 'text.secondary', '&:hover': { color: '#00E676' } }}><Security fontSize="small" /></IconButton></Tooltip>
-                      )}
                       {viewMode === 'admin' && (
                         <Tooltip title="删除知识库"><IconButton size="small" onClick={e => { e.stopPropagation(); handleDeleteClick(kb); }} sx={{ color: 'text.secondary', '&:hover': { color: '#FF3366' } }}><Delete fontSize="small" /></IconButton></Tooltip>
                       )}
@@ -282,10 +273,6 @@ export default function KnowledgeBasesPage() {
         </DialogActions>
       </Dialog>
 
-      {/* 权限管理弹窗 */}
-      {permTarget && (
-        <KbPermissionDialog open={permDialogOpen} kb={permTarget} onClose={() => { setPermDialogOpen(false); setPermTarget(null); }} />
-      )}
     </Box>
   );
 }

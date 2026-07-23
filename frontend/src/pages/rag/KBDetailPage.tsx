@@ -11,14 +11,13 @@ import {
   ArrowBack, Description, QuestionAnswer, AutoStories, Analytics, Settings,
   Search, Upload, Chat, Download, Refresh, CheckCircle, Warning, Error,
   Pending, Visibility, ExpandMore, ExpandLess, Folder, Hub, Delete,
-  CloudUpload, Link as LinkIcon, Edit, Close, Send, InsertDriveFile, Security,
+  CloudUpload, Link as LinkIcon, Edit, Close, Send, InsertDriveFile,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { PageHeader, LoadingState, StatusBadge, EmptyState } from '../../components/shared';
 import { ragApi } from '../../api/client';
 import { useViewModeStore } from '../../stores/viewModeStore';
-import KbPermissionDialog from './KbPermissionDialog';
 
 const DOC_STATUS_ICON: Record<string, React.ReactNode> = {
   completed: <CheckCircle sx={{ color: '#00E676', fontSize: 16 }} />,
@@ -55,8 +54,6 @@ export default function KBDetailPage() {
   const [chatMessages, setChatMessages] = useState<Array<{ role: string; content: string; sources?: any[] }>>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  // 权限管理
-  const [permDialogOpen, setPermDialogOpen] = useState(false);
 
   const { data: kbData, isLoading } = useQuery({
     queryKey: ['rag-kb', id],
@@ -290,9 +287,6 @@ export default function KBDetailPage() {
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button variant="outlined" size="small" startIcon={<Upload />} onClick={() => setImportDialogOpen(true)}>上传资料</Button>
               <Button variant="contained" size="small" startIcon={<Chat />} onClick={() => navigate(`/chat?kb_id=${id}&kb_name=${encodeURIComponent(kb.name)}&mode=rag`)}>基于此库问答</Button>
-              {viewMode === 'admin' && (
-                <Tooltip title="权限管理"><IconButton size="small" onClick={() => setPermDialogOpen(true)} sx={{ color: 'text.secondary', '&:hover': { color: '#00D4FF' } }}><Security /></IconButton></Tooltip>
-              )}
             </Box>
           </Box>
           {/* 概要条 */}
@@ -825,8 +819,6 @@ export default function KBDetailPage() {
         </Box>
       </Dialog>
 
-      {/* 权限管理弹窗 */}
-      <KbPermissionDialog open={permDialogOpen} onClose={() => setPermDialogOpen(false)} kb={kb} />
     </Box>
   );
 }

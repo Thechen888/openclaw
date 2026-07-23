@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader, EmptyState, LoadingState } from '../../components/shared';
 import { agentsApi } from '../../api/client';
 import { AgentCard } from './components/agentShared';
-import CollaboratorDialog from './components/CollaboratorDialog';
+import ResourceAclDialog from '../../components/ResourceAclDialog';
 
 const TYPE_TABS = [
   { label: '全部', value: '' },
@@ -128,7 +128,7 @@ export default function AgentsPage() {
         </Grid>
       )}
 
-      <CollaboratorDialog open={!!permAgent} onClose={() => setPermAgent(null)} agent={permAgent} />
+      <ResourceAclDialog open={!!permAgent} onClose={() => setPermAgent(null)} resourceType="agent" resourceId={permAgent?.id || ''} resourceName={permAgent?.name} />
     </Box>
   );
 }

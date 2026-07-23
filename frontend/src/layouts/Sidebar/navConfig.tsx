@@ -40,6 +40,8 @@ import {
   Storefront,
   Workspaces,
   History as HistoryIcon,
+  Download as DownloadIcon,
+  Build,
 } from '@mui/icons-material';
 
 export interface NavItem {
@@ -77,7 +79,10 @@ export const frontNavConfig: NavSection[] = [
   {
     label: '技能',
     items: [
-      { title: '技能列表', path: '/skills', icon: <ExtensionIcon fontSize="small" /> },
+      { title: '技能市场', path: '/skills/market', icon: <Storefront fontSize="small" /> },
+      { title: '我安装的', path: '/skills/my-installed', icon: <DownloadIcon fontSize="small" /> },
+      { title: '我创建的', path: '/skills/my', icon: <ExtensionIcon fontSize="small" /> },
+      { title: '技能管理', path: '/skills/admin', icon: <Build fontSize="small" /> },
     ],
   },
   {
@@ -136,10 +141,9 @@ export const adminNavConfig: NavSection[] = [
     ],
   },
   {
-    label: '技能',
+    label: '权限治理',
     items: [
-      { title: '技能列表', path: '/skills', icon: <ExtensionIcon fontSize="small" /> },
-      { title: '技能市场', path: '/skills/marketplace', icon: <ExtensionIcon fontSize="small" /> },
+      { title: '前台权限管理', path: '/front-permissions', icon: <Shield fontSize="small" /> },
     ],
   },
   {

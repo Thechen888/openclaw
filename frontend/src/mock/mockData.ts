@@ -706,9 +706,11 @@ const reportTemplates: any[] = [
 // prompt 与 config 为本配置专属，Agent 生成时按此指令产出对应数据。
 const reportConfigs: any[] = [
   {
-    id: 'rc-1', name: '技术研发部周报', scope: 'department', department_id: 'org-2', department_name: '技术研发部',
-    period: 'weekly', template_id: 'tpl-1', template_name: '部门标准周报模板',
-    agent_id: 'a-7', agent_name: '技术研发部周报Agent',
+    id: 'rc-1', name: '公司经营周报', scope: 'company', department_id: '', department_name: '',
+    period: 'weekly', template_id: 'tpl-3', template_name: '公司运营周报模板',
+    agent_id: 'a-11', agent_name: '预算Agent',
+    data_keys: ['revenue', 'cost', 'profit', 'margin', 'growth', 'forecast'],
+    dimensions: ['department', 'region', 'product', 'channel', 'time', 'customer'],
     block_configs: [
       { key: 'core_metrics', type: 'metrics', label: '核心指标', description: '部门KPI指标数组', prompt: '按本周研发数据汇总核心指标，每项含数值、单位、环比变化', config: { metrics: [
         { name: '接口调用量', unit: '次', data_source: 'gateway_logs', format: 'integer', aggregation: 'sum', trend: 'higher_better' },
@@ -778,9 +780,11 @@ const reportConfigs: any[] = [
     last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
-    id: 'rc-3', name: '全公司日报', scope: 'company', department_id: '', department_name: '',
-    period: 'daily', template_id: 'tpl-2', template_name: '公司日报精简模板',
-    agent_id: 'a-11', agent_name: '运营汇总周报Agent',
+    id: 'rc-3', name: '个人工作日报', scope: 'personal', department_id: '', department_name: '',
+    period: 'daily', template_id: 'tpl-2', template_name: '个人日报模板',
+    agent_id: 'a-12', agent_name: '个人工作助手Agent',
+    data_keys: ['tasks', 'hours'],
+    dimensions: ['project', 'priority'],
     block_configs: [
       { key: 'core_metrics', type: 'metrics', label: '今日指标', description: '公司级KPI', prompt: '今日全公司核心指标汇总', config: { metrics: [
         { name: '当日活跃用户', unit: '人', data_source: 'user_activity', format: 'integer', aggregation: 'count_distinct', trend: 'higher_better' },
@@ -828,9 +832,11 @@ const reportConfigs: any[] = [
     last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
-    id: 'rc-5', name: '销售部月报', scope: 'department', department_id: 'org-3', department_name: '销售部',
+    id: 'rc-5', name: '销售月报', scope: 'department', department_id: 'org-3', department_name: '销售部',
     period: 'monthly', template_id: 'tpl-4', template_name: '销售月度报告模板',
-    agent_id: 'a-9', agent_name: '销售部周报Agent',
+    agent_id: 'a-9', agent_name: '销售部月报Agent',
+    data_keys: ['deals', 'gmv', 'conversion'],
+    dimensions: ['product', 'region', 'salesperson'],
     block_configs: [
       { key: 'core_metrics', type: 'metrics', label: '月度KPI', description: '销售月度指标', prompt: '汇总本月销售 KPI', config: { metrics: [
         { name: '新增合同', unit: '个', data_source: 'crm_deals', format: 'integer', aggregation: 'count', trend: 'higher_better' },
@@ -991,12 +997,12 @@ const reports: any[] = [
 // =================== Agent ===================
 // agent_type: 'workflow'（工作流编排，拖拽画布）| 'chat'（对话，右侧调试预览）
 const agents = [
-  { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。' },
+  { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。', editable_roles: ['技术部成员'], viewable_roles: ['普通用户'] },
   { id: 'a-2', name: '设备巡检', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), updated_at: ago(240), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
   { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
   { id: 'a-4', name: '每日总结', agent_type: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), updated_at: ago(360), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
   { id: 'a-5', name: '个人提醒', agent_type: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), updated_at: ago(400), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
-  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
+  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', editable_roles: ['技术部成员', '产品部成员'], viewable_roles: ['普通用户', '运营部成员'], chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
   { id: 'a-7', name: '技术研发部周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
   { id: 'a-8', name: 'AI平台组周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
   { id: 'a-9', name: '销售部周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
@@ -1360,22 +1366,24 @@ function buildRunDetail(execId: string) {
   return { ...run, node_executions };
 }
 
-// =================== 技能 ===================
-// source_adapter_id / source_adapter_name 标记 Skill 来源：
-// - 有值：由对应 Starlark 适配器自动登记
-// - null：管理员手动创建
+// =================== 技能（前台 + 后台共用） ===================
+// status: draft | pending | published | rejected | delisted
+// scope: private | department | company
 const skills: any[] = [
-  { id: 'sk-1', name: 'kingdee-erp-query', description: '查询金蝶云星空 ERP 数据时使用，适用于按 formId 查询表单/单据列表、通过 FID 内码查看表单详情、查询销售订单、采购订单、收料通知单、应付单、付款单、库存、生产订单、生产领料、质检单、调拨单、其他入库...', status: 'active', created_at: '2026-04-29 01:06' },
-  { id: 'sk-2', name: 'cron', description: '定时任务', status: 'active', created_at: '2026-03-28 05:03' },
-  { id: 'sk-3', name: 'recloud', description: 'recloud', status: 'active', created_at: '2026-03-12 04:13' },
-  { id: 'sk-4', name: 'mes', description: 'MES Skill 体系：查遍 MES 从工单投产、质量测试、物料追溯、产出交接到供应链报表的 25 个业务域数据', status: 'active', created_at: '2026-03-30 23:39' },
-  { id: 'sk-5', name: 'knows', description: '公司内部知识库：生产及工艺、研发知识、产品知识、售后服务、公司流程、法务财务、工程项目', status: 'active', created_at: '2026-04-16 07:08' },
-  { id: 'sk-6', name: 'minimax-pdf', description: '基于 token 化设计系统生成、填写和重排 PDF 文档。支持三种模式：CREATE（从零生成，15 种封面风格）、FILL（填写现有表单字段）、REFORMAT（将已有文档重排为新设计）。排版与配色由文档类型自动推导，输...', status: 'active', created_at: '2026-04-14 23:50' },
-  { id: 'sk-7', name: 'beisen', description: '北森查用功能', status: 'active', created_at: '2026-03-21 20:06' },
-  { id: 'sk-8', name: 'crm', description: 'crm', status: 'active', created_at: '2026-03-11 04:44' },
-  { id: 'sk-9', name: 'wecom-smartsheet-schema', description: '企业微信智能表格模式', status: 'active', created_at: '2026-04-09 05:14' },
-  { id: 'sk-10', name: 'wecom-send-media', description: '企业微信发送文件 图片等', status: 'active', created_at: '2026-04-09 05:13' },
-  { id: 'sk-11', name: 'gen-image', description: '生成图片', status: 'active', created_at: '2026-04-08 00:59' },
+  { id: 'sk-1', name: 'kingdee-erp-query', slug: 'kingdee-erp-query', description: '查询金蝶云星空 ERP 数据时使用，适用于按 formId 查询表单/单据列表、通过 FID 内码查看表单详情、查询销售订单、采购订单、收料通知单、应付单、付款单、库存、生产订单、生产领料、质检单、调拨单、其他入库...', status: 'published', scope: 'company', version: '2.1.0', install_count: 328, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: '2026-04-29 01:06', updated_at: '2026-05-10 09:30', changelog: '新增库存报表接口' },
+  { id: 'sk-2', name: 'cron', slug: 'cron', description: '定时任务', status: 'published', scope: 'company', version: '1.0.0', install_count: 156, owner_id: 'u-2', owner_name: '李娜', owner_dept: '产品部', created_at: '2026-03-28 05:03', updated_at: '2026-03-28 05:03', changelog: '' },
+  { id: 'sk-3', name: 'recloud', slug: 'recloud', description: 'recloud', status: 'published', scope: 'department', version: '1.2.0', install_count: 42, owner_id: 'u-3', owner_name: '王强', owner_dept: '技术研发部', created_at: '2026-03-12 04:13', updated_at: '2026-04-01 10:00', changelog: '修复连接超时问题', scope_dept_ids: ['dept-1'] },
+  { id: 'sk-4', name: 'mes', slug: 'mes', description: 'MES Skill 体系：查遍 MES 从工单投产、质量测试、物料追溯、产出交接到供应链报表的 25 个业务域数据', status: 'published', scope: 'company', version: '3.0.1', install_count: 512, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: '2026-03-30 23:39', updated_at: '2026-06-01 14:00', changelog: '重构查询路由' },
+  { id: 'sk-5', name: 'knows', slug: 'knows', description: '公司内部知识库：生产及工艺、研发知识、产品知识、售后服务、公司流程、法务财务、工程项目', status: 'published', scope: 'company', version: '1.5.0', install_count: 890, owner_id: 'u-2', owner_name: '李娜', owner_dept: '产品部', created_at: '2026-04-16 07:08', updated_at: '2026-05-20 11:00', changelog: '新增法务财务板块' },
+  { id: 'sk-6', name: 'minimax-pdf', slug: 'minimax-pdf', description: '基于 token 化设计系统生成、填写和重排 PDF 文档。支持三种模式：CREATE（从零生成，15 种封面风格）、FILL（填写现有表单字段）、REFORMAT（将已有文档重排为新设计）。', status: 'published', scope: 'company', version: '2.0.0', install_count: 234, owner_id: 'u-4', owner_name: '赵敏', owner_dept: '设计部', created_at: '2026-04-14 23:50', updated_at: '2026-05-15 16:00', changelog: '新增 FILL 模式' },
+  { id: 'sk-7', name: 'beisen', slug: 'beisen', description: '北森查用功能', status: 'published', scope: 'department', version: '1.0.0', install_count: 67, owner_id: 'u-5', owner_name: '刘芳', owner_dept: '人力资源部', created_at: '2026-03-21 20:06', updated_at: '2026-03-21 20:06', changelog: '', scope_dept_ids: ['dept-3'] },
+  { id: 'sk-8', name: 'crm', slug: 'crm', description: 'CRM 客户管理数据查询与同步', status: 'published', scope: 'company', version: '1.3.0', install_count: 178, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: '2026-03-11 04:44', updated_at: '2026-04-20 09:00', changelog: '新增客户画像接口' },
+  { id: 'sk-9', name: 'wecom-smartsheet-schema', slug: 'wecom-smartsheet', description: '企业微信智能表格模式', status: 'draft', scope: 'private', version: '0.1.0', install_count: 0, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: '2026-04-09 05:14', updated_at: '2026-04-09 05:14', changelog: '' },
+  { id: 'sk-10', name: 'wecom-send-media', slug: 'wecom-send-media', description: '企业微信发送文件 图片等', status: 'pending', scope: 'department', version: '1.0.0', install_count: 0, owner_id: 'u-3', owner_name: '王强', owner_dept: '技术研发部', created_at: '2026-04-09 05:13', updated_at: '2026-04-09 05:13', changelog: '首次提交发布', scope_dept_ids: ['dept-1'] },
+  { id: 'sk-11', name: 'gen-image', slug: 'gen-image', description: '生成图片', status: 'rejected', scope: 'private', version: '0.2.0', install_count: 0, owner_id: 'u-4', owner_name: '赵敏', owner_dept: '设计部', created_at: '2026-04-08 00:59', updated_at: '2026-04-10 10:00', changelog: '', reject_reason: '缺少 SKILL.md 中的安全声明' },
+  { id: 'sk-12', name: 'data-cleanup', slug: 'data-cleanup', description: '自动清洗和格式化原始数据，支持 CSV/Excel/JSON', status: 'draft', scope: 'private', version: '0.1.0', install_count: 0, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: '2026-06-15 10:00', updated_at: '2026-06-15 10:00', changelog: '' },
+  { id: 'sk-13', name: 'meeting-notes', slug: 'meeting-notes', description: '会议纪要自动生成，支持语音转文字和结构化输出', status: 'delisted', scope: 'company', version: '1.1.0', install_count: 45, owner_id: 'u-2', owner_name: '李娜', owner_dept: '产品部', created_at: '2026-02-20 08:00', updated_at: '2026-05-28 14:00', changelog: '管理员强制下架：依赖接口已废弃' },
+  { id: 'sk-14', name: 'sales-report', slug: 'sales-report', description: '销售数据报表生成，支持多维度筛选和图表导出', status: 'modified', scope: 'company', version: '2.0.0', install_count: 89, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: '2026-03-15 10:00', updated_at: '2026-07-08 16:30', changelog: '新增季度对比图表功能' },
 ];
 
 // =================== Skill 文件系统 ===================
@@ -1390,6 +1398,15 @@ const skillFiles: Record<string, { path: string; size: number; updatedAt: string
     { path: 'references/query-contracts.md', size: 3200, updatedAt: '2026-04-29 01:06' },
     { path: 'references/report-contracts.md', size: 2780, updatedAt: '2026-04-29 01:06' },
     { path: 'references/workflow.md', size: 1540, updatedAt: '2026-04-29 01:06' },
+  ],
+  'sk-10': [
+    { path: 'SKILL.md', size: 2100, updatedAt: '2026-04-09 05:13' },
+    { path: 'agents/wecom.yaml', size: 380, updatedAt: '2026-04-09 05:13' },
+    { path: 'references/api-spec.md', size: 1200, updatedAt: '2026-04-09 05:13' },
+  ],
+  'sk-11': [
+    { path: 'SKILL.md', size: 800, updatedAt: '2026-04-08 00:59' },
+    { path: 'agents/image-gen.yaml', size: 400, updatedAt: '2026-04-08 00:59' },
   ],
 };
 
@@ -1513,6 +1530,74 @@ curl -X POST https://api.company.com/k3cloud/erp/query \\
 
 旧版全量 skill 已拆分。请使用新版模块化 skill。
 `,
+  'sk-10:SKILL.md': `---
+name: wecom-send-media
+description: 企业微信发送文件、图片等多媒体消息。支持通过部门ID或用户ID发送，支持多种文件类型。
+---
+
+# 企业微信发送多媒体
+
+通过企业微信 API 发送文件、图片、语音等多媒体消息。
+
+## 使用场景
+
+- 发送文件到指定部门群
+- 发送图片给特定用户
+- 批量发送通知文件
+
+## 执行流程
+
+1. 确认目标用户/部门
+2. 上传文件到企业微信素材库
+3. 发送消息
+
+## 注意事项
+
+- 文件大小不超过 20MB
+- 仅支持企业微信认证用户`,
+  'sk-10:agents/wecom.yaml': `model: gpt-4o-mini
+temperature: 0.3
+system_prompt: |
+  你是企业微信消息发送助手。请严格按照 SKILL.md 中的流程操作。
+  不要暴露 API token 和 secret。`,
+  'sk-10:references/api-spec.md': `# 企业微信 API 规范
+
+## 上传素材
+POST /cgi-bin/media/upload
+- type: file/image/voice
+- media: 文件内容
+
+## 发送消息
+POST /cgi-bin/message/send
+- touser / toparty
+- msgtype: file/image/voice
+- 对应类型的 content 字段`,
+  'sk-11:SKILL.md': `---
+name: gen-image
+description: 根据文字描述生成图片，支持多种风格和尺寸。
+---
+
+# 图片生成
+
+根据用户描述生成图片。
+
+## 支持的风格
+
+- 写实照片
+- 卡通插画
+- 水彩画
+- 油画
+
+## 尺寸选项
+
+- 1024x1024 (默认)
+- 1792x1024 (宽屏)
+- 1024x1792 (竖屏)`,
+  'sk-11:agents/image-gen.yaml': `model: dall-e-3
+temperature: 0.7
+system_prompt: |
+  你是图片生成助手。根据用户描述生成高质量图片。
+  不要生成包含暴力、色情等不当内容的图片。`,
 };
 
 // =================== 技能市场 ===================
@@ -1528,7 +1613,114 @@ const marketplaceSkills = [
   { id: 'mk-9', name: '会议纪要', author: 'OpenClaw官方', category: 'Automation', description: '自动转录会议录音并生成结构化纪要', rating: 4.8, rating_count: 456, install_count: 5670 },
 ];
 
+// =================== 我安装的技能 ===================
+const installedSkills: any[] = [
+  { id: 'inst-1', skill_id: 'sk-1', skill_name: 'kingdee-erp-query', skill_slug: 'kingdee-erp-query', description: '查询金蝶云星空 ERP 数据', version: '2.1.0', installed_at: dayAgo(30), installed_by: 'u-1', owner_name: '张伟', scope: 'company' },
+  { id: 'inst-2', skill_id: 'sk-4', skill_name: 'mes', skill_slug: 'mes', description: 'MES Skill 体系', version: '3.0.1', installed_at: dayAgo(15), installed_by: 'u-1', owner_name: '张伟', scope: 'company' },
+  { id: 'inst-3', skill_id: 'sk-5', skill_name: 'knows', skill_slug: 'knows', description: '公司内部知识库', version: '1.5.0', installed_at: dayAgo(7), installed_by: 'u-1', owner_name: '李娜', scope: 'company' },
+  { id: 'inst-4', skill_id: 'sk-8', skill_name: 'crm', skill_slug: 'crm', description: 'CRM 客户管理数据查询与同步', version: '1.3.0', installed_at: dayAgo(3), installed_by: 'u-1', owner_name: '张伟', scope: 'company' },
+  { id: 'inst-5', skill_id: 'sk-6', skill_name: 'minimax-pdf', skill_slug: 'minimax-pdf', description: 'PDF 文档生成与填写', version: '2.0.0', installed_at: dayAgo(1), installed_by: 'u-1', owner_name: '赵敏', scope: 'company' },
+];
+
+// =================== 发布审核记录 ===================
+const reviewRecords: any[] = [
+  { id: 'rv-1', type: 'skill_publish', target_id: 'sk-10', target_name: 'wecom-send-media', applicant: 'u-3', applicant_name: '王强', applicant_dept: '技术研发部', scope: 'department', scope_dept_ids: ['dept-1'], version: '1.0.0', changelog: '首次提交发布', submitted_at: dayAgo(2), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null, auto_check: { has_skill_md: true, file_count: 3, total_size: 4500, danger_keywords: [], slug_conflict: false } },
+  { id: 'rv-2', type: 'skill_publish', target_id: 'sk-11', target_name: 'gen-image', applicant: 'u-4', applicant_name: '赵敏', applicant_dept: '设计部', scope: 'company', version: '0.2.0', changelog: '', submitted_at: dayAgo(5), status: 'rejected', reviewer: 'u-admin', review_reason: '缺少 SKILL.md 中的安全声明，请补充后重新提交', reviewed_at: dayAgo(3), auto_check: { has_skill_md: false, file_count: 2, total_size: 1200, danger_keywords: [], slug_conflict: false } },
+  { id: 'rv-3', type: 'skill_publish', target_id: 'sk-13', target_name: 'meeting-notes', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.1.0', changelog: '新增语音转文字支持', submitted_at: dayAgo(60), status: 'approved', reviewer: 'u-admin', review_reason: null, reviewed_at: dayAgo(58), auto_check: { has_skill_md: true, file_count: 5, total_size: 8900, danger_keywords: [], slug_conflict: false } },
+  { id: 'rv-4', type: 'report_publish', target_id: 'rpt-1', target_name: '2026年第20周运营周报', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', submitted_at: dayAgo(4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
+  { id: 'rv-5', type: 'agent_share', target_id: 'a-6', target_name: '知识库问答助手', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', submitted_at: dayAgo(1), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
+];
+
+// =================== 统一资源权限（resource_acl） ===================
+const resourceAcls: any[] = [
+  // Agent 权限
+  { id: 'acl-1', resource_type: 'agent', resource_id: 'a-1', resource_name: '金蝶ERP智能查询助手', principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' },
+  { id: 'acl-2', resource_type: 'agent', resource_id: 'a-1', resource_name: '金蝶ERP智能查询助手', principal_type: 'user', user_id: 'u-2', name: '李娜', role: 'editor' },
+  { id: 'acl-3', resource_type: 'agent', resource_id: 'a-1', resource_name: '金蝶ERP智能查询助手', principal_type: 'department', dept_id: 'dept-1', name: '技术部', member_count: 12, role: 'viewer' },
+  { id: 'acl-4', resource_type: 'agent', resource_id: 'a-6', resource_name: '售后工单自动处理', principal_type: 'user', user_id: 'u-2', name: '李娜', role: 'owner' },
+  { id: 'acl-5', resource_type: 'agent', resource_id: 'a-6', resource_name: '售后工单自动处理', principal_type: 'department', dept_id: 'dept-2', name: '产品部', member_count: 8, role: 'chat_only' },
+  // Skill 权限
+  { id: 'acl-10', resource_type: 'skill', resource_id: 'sk-1', resource_name: 'kingdee-erp-query', principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' },
+  { id: 'acl-11', resource_type: 'skill', resource_id: 'sk-4', resource_name: 'weekly-report-gen', principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' },
+  { id: 'acl-12', resource_type: 'skill', resource_id: 'sk-5', resource_name: 'data-cleaning', principal_type: 'user', user_id: 'u-2', name: '李娜', role: 'owner' },
+  // 知识库权限
+  { id: 'acl-20', resource_type: 'knowledge_base', resource_id: 'kb-1', resource_name: '产品技术文档库', principal_type: 'user', user_id: 'u-2', name: '李娜', role: 'owner' },
+  { id: 'acl-21', resource_type: 'knowledge_base', resource_id: 'kb-1', resource_name: '产品技术文档库', principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'admin' },
+  { id: 'acl-22', resource_type: 'knowledge_base', resource_id: 'kb-1', resource_name: '产品技术文档库', principal_type: 'department', dept_id: 'dept-1', name: '技术部', member_count: 12, role: 'viewer' },
+  // 报告权限
+  { id: 'acl-30', resource_type: 'report', resource_id: 'rpt-1', resource_name: '公司经营周报', principal_type: 'user', user_id: 'u-1', name: '张伟', role: 'owner' },
+];
+
+// =================== 前台权限管理（角色级资源权限） ===================
+const frontPermResources: any[] = [
+  // 智能体
+  { id: 'fp-a1', resource_type: 'agent', resource_id: 'a-1', name: '金蝶ERP智能查询助手', sub_type: 'chat', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'active', last_used_at: dayAgo(0), use_count_30d: 328, created_at: dayAgo(120) },
+  { id: 'fp-a2', resource_type: 'agent', resource_id: 'a-2', name: '售后工单自动处理', sub_type: 'workflow', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'active', last_used_at: dayAgo(1), use_count_30d: 156, created_at: dayAgo(90) },
+  { id: 'fp-a3', resource_type: 'agent', resource_id: 'a-3', name: '销售数据周报Agent', sub_type: 'workflow', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'active', last_used_at: dayAgo(95), use_count_30d: 0, created_at: dayAgo(200) },
+  { id: 'fp-a4', resource_type: 'agent', resource_id: 'a-4', name: 'HR问答助手', sub_type: 'chat', owner_id: 'u-4', owner_name: '赵六', owner_dept: '人事部', status: 'disabled', last_used_at: dayAgo(180), use_count_30d: 0, created_at: dayAgo(300) },
+  // 报告
+  { id: 'fp-r1', resource_type: 'report', resource_id: 'rpt-1', name: '公司经营周报', sub_type: 'public', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'active', last_used_at: dayAgo(0), use_count_30d: 52, created_at: dayAgo(60) },
+  { id: 'fp-r2', resource_type: 'report', resource_id: 'rpt-2', name: '销售月报', sub_type: 'public', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'active', last_used_at: dayAgo(3), use_count_30d: 12, created_at: dayAgo(45) },
+  { id: 'fp-r3', resource_type: 'report', resource_id: 'rpt-3', name: '个人工作日报', sub_type: 'personal', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'active', last_used_at: dayAgo(100), use_count_30d: 0, created_at: dayAgo(150) },
+  // 知识库
+  { id: 'fp-k1', resource_type: 'kb', resource_id: 'kb-1', name: '产品技术文档库', sub_type: 'document', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'active', last_used_at: dayAgo(0), use_count_30d: 89, created_at: dayAgo(80) },
+  { id: 'fp-k2', resource_type: 'kb', resource_id: 'kb-2', name: '制度规范库', sub_type: 'faq', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'active', last_used_at: dayAgo(5), use_count_30d: 34, created_at: dayAgo(100) },
+  { id: 'fp-k3', resource_type: 'kb', resource_id: 'kb-3', name: '项目资料库', sub_type: 'document', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'disabled', last_used_at: dayAgo(200), use_count_30d: 0, created_at: dayAgo(250) },
+  // 技能
+  { id: 'fp-s1', resource_type: 'skill', resource_id: 'sk-1', name: 'kingdee-erp-query', sub_type: 'v2.1.0', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'published', last_used_at: dayAgo(0), use_count_30d: 210, created_at: dayAgo(90) },
+  { id: 'fp-s2', resource_type: 'skill', resource_id: 'sk-2', name: 'weekly-report-gen', sub_type: 'v1.3.0', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'published', last_used_at: dayAgo(2), use_count_30d: 67, created_at: dayAgo(70) },
+  { id: 'fp-s3', resource_type: 'skill', resource_id: 'sk-3', name: 'data-cleaning', sub_type: 'v0.9.0', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'pending', last_used_at: dayAgo(110), use_count_30d: 0, created_at: dayAgo(30) },
+];
+
+// 角色级资源权限（perm: edit / view）
+const frontPermRoleAcls: any[] = [
+  { id: 'fpa-1', resource_type: 'agent', resource_id: 'a-1', role_id: 'role-2', role_name: '普通用户', perm: 'view' },
+  { id: 'fpa-2', resource_type: 'agent', resource_id: 'a-1', role_id: 'role-3', role_name: '技术部成员', perm: 'edit' },
+  { id: 'fpa-3', resource_type: 'agent', resource_id: 'a-2', role_id: 'role-2', role_name: '普通用户', perm: 'view' },
+  { id: 'fpa-4', resource_type: 'report', resource_id: 'rpt-1', role_id: 'role-2', role_name: '普通用户', perm: 'view' },
+  { id: 'fpa-5', resource_type: 'report', resource_id: 'rpt-1', role_id: 'role-4', role_name: '管理层', perm: 'edit' },
+  { id: 'fpa-6', resource_type: 'kb', resource_id: 'kb-1', role_id: 'role-3', role_name: '技术部成员', perm: 'edit' },
+  { id: 'fpa-7', resource_type: 'kb', resource_id: 'kb-1', role_id: 'role-2', role_name: '普通用户', perm: 'view' },
+  { id: 'fpa-8', resource_type: 'skill', resource_id: 'sk-1', role_id: 'role-2', role_name: '普通用户', perm: 'view' },
+  { id: 'fpa-9', resource_type: 'skill', resource_id: 'sk-1', role_id: 'role-3', role_name: '技术部成员', perm: 'edit' },
+];
+
+// 补充角色（现有只有 role-1 和 role-2，PRD 需要更多角色）
+const extraRoles: any[] = [
+  { id: 'role-3', name: '技术部成员', code: 'tech_member', sort_order: 3, status: 'active', remark: '技术部全部成员' },
+  { id: 'role-4', name: '管理层', code: 'management', sort_order: 4, status: 'active', remark: '部门经理及以上' },
+  { id: 'role-5', name: '销售部成员', code: 'sales_member', sort_order: 5, status: 'active', remark: '销售部全部成员' },
+];
+const allRoles = [...roles, ...extraRoles];
+
 // =================== Token ===================
+// 平台公共 Token 账户
+const tokenAccounts: any[] = [
+  { id: 'ta-1', name: '平台公共账户-DeepSeek', model_vendor: 'DeepSeek', model_name: 'DeepSeek-V3', total_quota: 10000000, used_quota: 7650000, status: 'active' },
+  { id: 'ta-2', name: '平台公共账户-Qwen', model_vendor: '阿里云', model_name: 'Qwen-Max', total_quota: 5000000, used_quota: 4800000, status: 'active' },
+  { id: 'ta-3', name: '平台公共账户-GPT4o', model_vendor: 'OpenAI', model_name: 'GPT-4o', total_quota: 8000000, used_quota: 2100000, status: 'active' },
+];
+
+// Token 白名单人员
+const tokenWhitelist: any[] = [
+  { id: 'wl-1', user_id: 'u-1', name: '张三', emp_id: 'EMP001', dept: '研发部', token_account_ids: ['ta-1', 'ta-2'], monthly_limit: 500000, monthly_used: 45000, status: 'active' },
+  { id: 'wl-2', user_id: 'u-2', name: '李四', emp_id: 'EMP002', dept: '研发部', token_account_ids: ['ta-1'], monthly_limit: 300000, monthly_used: 210000, status: 'active' },
+  { id: 'wl-3', user_id: 'u-3', name: '王五', emp_id: 'EMP003', dept: '产品部', token_account_ids: ['ta-3'], monthly_limit: 200000, monthly_used: 85000, status: 'active' },
+  { id: 'wl-4', user_id: 'u-5', name: '孙七', emp_id: 'EMP005', dept: '运营部', token_account_ids: ['ta-2'], monthly_limit: 150000, monthly_used: 32000, status: 'active' },
+];
+
+// Agent 公共额度配置
+const agentPublicQuotas: any[] = [
+  // 预置一条示例，a-1 已开启公共额度
+  {
+    id: 'pq-1', resource_id: 'a-1', resource_name: 'CRM销售通知',
+    account_id: 'ta-1', account_name: '平台公共账户-DeepSeek',
+    monthly_limit: 500000, enabled_users: [
+      { user_id: 'u-1', name: '张三', dept: '研发部', monthly_used: 45000 },
+      { user_id: 'u-2', name: '李四', dept: '研发部', monthly_used: 210000 },
+    ],
+  },
+];
 const tokens: any[] = [
   { id: 'tk-1', name: 'CRM系统接入令牌', owner: '张伟', owner_name: '张伟', target_system: 'Salesforce', credential_type: 'api_key', status: 'active', quota_used: 8500, quota_limit: 10000, expires_at: dayAgo(-30), token_value: 'oc_tk_crm_a3f8b1c2d4e6', credential_config: { api_key: 'crm_api_key_sample_xxx', api_secret: '' } },
   { id: 'tk-2', name: 'ERP数据查询', owner: '李思', owner_name: '李思', target_system: 'SAP', credential_type: 'bearer', status: 'active', quota_used: 3200, quota_limit: 5000, expires_at: dayAgo(-60), token_value: 'oc_tk_erp_7d9f8b6c4x2k', credential_config: { bearer_token: 'erp_bearer_token_sample_yyy', issuer: 'erp.openclaw.local' } },
@@ -2963,18 +3155,72 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok(null);
   }
 
-  // Skills
+  // Skills — 前台路由优先匹配（必须在 /skills/:id 之前）
+  if (path === '/skills/installed' && method === 'get') return paginate(installedSkills, p.page, p.page_size, p.search);
+  if (/^\/skills\/installed\/[^/]+\/uninstall$/.test(path)) {
+    const iid = path.split('/')[3];
+    const idx = installedSkills.findIndex(i => i.id === iid);
+    if (idx >= 0) installedSkills.splice(idx, 1);
+    return ok(null);
+  }
+  if (path === '/skills/my' && method === 'get') {
+    const mySkills = skills.filter(s => s.owner_id === 'u-1');
+    return paginate(mySkills, p.page, p.page_size, p.search);
+  }
+  if (/^\/skills\/[^/]+\/publish$/.test(path) && method === 'post') {
+    const sid = path.split('/')[2];
+    const idx = skills.findIndex(s => s.id === sid);
+    if (idx >= 0) {
+      skills[idx] = { ...skills[idx], ...data, status: 'pending', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+      reviewRecords.unshift({
+        id: 'rv-' + Date.now(), type: 'skill_publish', target_id: sid, target_name: skills[idx].name,
+        applicant: skills[idx].owner_id, applicant_name: skills[idx].owner_name, applicant_dept: skills[idx].owner_dept,
+        scope: data.scope || 'department', version: data.version || '1.0.0', changelog: data.changelog || '',
+        submitted_at: new Date().toISOString(), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null,
+        auto_check: { has_skill_md: true, file_count: 3, total_size: 2000, danger_keywords: [], slug_conflict: false },
+      });
+    }
+    return ok(idx >= 0 ? skills[idx] : data);
+  }
+  if (/^\/skills\/[^/]+\/delist$/.test(path) && method === 'post') {
+    const sid = path.split('/')[2];
+    const idx = skills.findIndex(s => s.id === sid);
+    if (idx >= 0) skills[idx] = { ...skills[idx], status: 'delisted', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+    return ok(idx >= 0 ? skills[idx] : null);
+  }
+  // Skills — 回滚版本（modified → published）
+  if (/^\/skills\/[^/]+\/rollback$/.test(path) && method === 'post') {
+    const sid = path.split('/')[2];
+    const idx = skills.findIndex(s => s.id === sid);
+    if (idx >= 0) skills[idx] = { ...skills[idx], status: 'published', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+    return ok(idx >= 0 ? skills[idx] : null);
+  }
+
+  // Skills — 后台 CRUD
   if (path === '/skills' && method === 'get') return paginate(skills, p.page, p.page_size, p.search);
   if (path === '/skills' && method === 'post') {
-    const newSkill = { id: 'sk-' + Date.now(), status: 'active', created_at: new Date().toISOString().slice(0, 16).replace('T', ' '), ...data };
+    const newSkill = { id: 'sk-' + Date.now(), status: 'draft', scope: 'private', version: '0.1.0', install_count: 0, owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', created_at: new Date().toISOString().slice(0, 16).replace('T', ' '), updated_at: new Date().toISOString().slice(0, 16).replace('T', ' '), changelog: '', ...data };
     skills.push(newSkill);
     skillFiles[newSkill.id] = [];
     return ok(newSkill);
   }
+  // Skills — 获取单个技能详情
+  if (/^\/skills\/[^/]+$/.test(path) && method === 'get') {
+    const sid = path.split('/').pop();
+    const idx = skills.findIndex(s => s.id === sid);
+    return ok(idx >= 0 ? skills[idx] : null);
+  }
   if (/^\/skills\/[^/]+$/.test(path) && method === 'put') {
     const sid = path.split('/').pop();
     const idx = skills.findIndex(s => s.id === sid);
-    if (idx >= 0) skills[idx] = { ...skills[idx], ...data };
+    if (idx >= 0) {
+      // 已上架/已下架的技能被编辑后，状态变为 modified（有未发布的修改）
+      const oldStatus = skills[idx].status;
+      skills[idx] = { ...skills[idx], ...data, updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+      if (oldStatus === 'published' || oldStatus === 'delisted') {
+        skills[idx].status = 'modified';
+      }
+    }
     return ok(skills[idx < 0 ? 0 : idx]);
   }
   if (/^\/skills\/[^/]+$/.test(path) && method === 'delete') {
@@ -3010,6 +3256,155 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // Marketplace
   if (path === '/skills/marketplace') return paginate(marketplaceSkills, p.page, p.page_size, p.search);
   if (/^\/skills\/marketplace\/[^/]+\/install$/.test(path)) return ok(null);
+
+  // 审核记录
+  if (path === '/review/records' && method === 'get') {
+    let filtered = reviewRecords;
+    if (p.type) filtered = filtered.filter(r => r.type === p.type);
+    if (p.status) filtered = filtered.filter(r => r.status === p.status);
+    return paginate(filtered, p.page, p.page_size, p.search);
+  }
+  if (/^\/review\/[^/]+\/approve$/.test(path) && method === 'post') {
+    const rid = path.split('/')[2];
+    const idx = reviewRecords.findIndex(r => r.id === rid);
+    if (idx >= 0) {
+      reviewRecords[idx] = { ...reviewRecords[idx], status: 'approved', reviewer: 'u-admin', reviewed_at: new Date().toISOString(), review_reason: null };
+      const skillIdx = skills.findIndex(s => s.id === reviewRecords[idx].target_id);
+      if (skillIdx >= 0) {
+        const scopeType = data?.scope_type || 'all';
+        const scopeRoleIds = data?.scope_role_ids || [];
+        skills[skillIdx] = {
+          ...skills[skillIdx], status: 'published',
+          scope: scopeType === 'all' ? 'company' : 'private',
+          scope_role_ids: scopeType === 'roles' ? scopeRoleIds : undefined,
+          updated_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        };
+      }
+    }
+    return ok(idx >= 0 ? reviewRecords[idx] : null);
+  }
+  if (/^\/review\/[^/]+\/reject$/.test(path) && method === 'post') {
+    const rid = path.split('/')[2];
+    const idx = reviewRecords.findIndex(r => r.id === rid);
+    if (idx >= 0) {
+      reviewRecords[idx] = { ...reviewRecords[idx], status: 'rejected', reviewer: 'u-admin', reviewed_at: new Date().toISOString(), review_reason: data?.reason || '审核未通过' };
+      const skillIdx = skills.findIndex(s => s.id === reviewRecords[idx].target_id);
+      if (skillIdx >= 0) skills[skillIdx] = { ...skills[skillIdx], status: 'rejected', reject_reason: data?.reason || '审核未通过', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+    }
+    return ok(idx >= 0 ? reviewRecords[idx] : null);
+  }
+
+  // 统一资源权限
+  if (path === '/resource-acl' && method === 'get') {
+    let list = [...resourceAcls];
+    if (p.resource_type) list = list.filter(a => a.resource_type === p.resource_type);
+    return ok(list);
+  }
+  if (/^\/resource-acl\/[^/]+\/[^/]+$/.test(path) && method === 'get') {
+    const parts = path.split('/');
+    const rtype = parts[2]; const rid = parts[3];
+    return ok(resourceAcls.filter(a => a.resource_type === rtype && a.resource_id === rid));
+  }
+  if (/^\/resource-acl\/[^/]+\/[^/]+$/.test(path) && method === 'post') {
+    const parts = path.split('/');
+    const rtype = parts[2]; const rid = parts[3];
+    const newAcl = { id: 'acl-' + Date.now(), resource_type: rtype, resource_id: rid, ...data };
+    resourceAcls.push(newAcl);
+    return ok(newAcl);
+  }
+  if (/^\/resource-acl\/[^/]+\/[^/]+\/[^/]+$/.test(path) && method === 'put') {
+    const parts = path.split('/');
+    const aclId = parts[4];
+    const idx = resourceAcls.findIndex(a => a.id === aclId);
+    if (idx >= 0) resourceAcls[idx] = { ...resourceAcls[idx], ...data };
+    return ok(idx >= 0 ? resourceAcls[idx] : data);
+  }
+  if (/^\/resource-acl\/[^/]+\/[^/]+\/[^/]+$/.test(path) && method === 'delete') {
+    const parts = path.split('/');
+    const aclId = parts[4];
+    const idx = resourceAcls.findIndex(a => a.id === aclId);
+    if (idx >= 0) resourceAcls.splice(idx, 1);
+    return ok(null);
+  }
+
+  // 前台权限管理（角色级）
+  if (path === '/front-perm/resources' && method === 'get') {
+    let list = [...frontPermResources];
+    if (p.resource_type) list = list.filter(r => r.resource_type === p.resource_type);
+    if (p.status) list = list.filter(r => r.status === p.status);
+    if (p.search) {
+      const kw = (p.search as string).toLowerCase();
+      list = list.filter(r => r.name.toLowerCase().includes(kw) || r.owner_name.includes(p.search));
+    }
+    if (p.idle === '1') list = list.filter(r => r.use_count_30d === 0);
+    // 附加授权概况
+    const enriched = list.map(r => {
+      const acls = frontPermRoleAcls.filter(a => a.resource_type === r.resource_type && a.resource_id === r.resource_id);
+      const editCount = acls.filter(a => a.perm === 'edit').length;
+      const viewCount = acls.filter(a => a.perm === 'view').length;
+      return { ...r, edit_role_count: editCount, view_role_count: viewCount };
+    });
+    return paginate(enriched, p.page, p.page_size);
+  }
+  if (/^\/front-perm\/acl\/[^/]+\/[^/]+$/.test(path) && method === 'get') {
+    const parts = path.split('/');
+    const rtype = parts[3]; const rid = parts[4];
+    return ok(frontPermRoleAcls.filter(a => a.resource_type === rtype && a.resource_id === rid));
+  }
+  if (/^\/front-perm\/acl\/[^/]+\/[^/]+$/.test(path) && method === 'post') {
+    const parts = path.split('/');
+    const rtype = parts[3]; const rid = parts[4];
+    const newAcl = { id: 'fpa-' + Date.now(), resource_type: rtype, resource_id: rid, ...data };
+    frontPermRoleAcls.push(newAcl);
+    return ok(newAcl);
+  }
+  if (/^\/front-perm\/acl\/[^/]+\/[^/]+\/[^/]+$/.test(path) && method === 'delete') {
+    const parts = path.split('/');
+    const aclId = parts[5];
+    const idx = frontPermRoleAcls.findIndex(a => a.id === aclId);
+    if (idx >= 0) frontPermRoleAcls.splice(idx, 1);
+    return ok(null);
+  }
+  if (path === '/front-perm/roles' && method === 'get') {
+    return ok(allRoles.filter(r => r.status === 'active'));
+  }
+  if (/^\/front-perm\/resources\/[^/]+\/toggle$/.test(path) && method === 'post') {
+    const parts = path.split('/');
+    const resId = parts[3];
+    const idx = frontPermResources.findIndex(r => r.id === resId);
+    if (idx >= 0) {
+      const res = frontPermResources[idx];
+      if (res.resource_type === 'skill') {
+        res.status = res.status === 'published' ? 'disabled' : 'published';
+      } else {
+        res.status = res.status === 'active' ? 'disabled' : 'active';
+      }
+    }
+    return ok(frontPermResources[idx]);
+  }
+  if (/^\/front-perm\/resources\/[^/]+\/transfer$/.test(path) && method === 'post') {
+    const parts = path.split('/');
+    const resId = parts[3];
+    const idx = frontPermResources.findIndex(r => r.id === resId);
+    if (idx >= 0) { frontPermResources[idx].owner_name = data.owner_name; frontPermResources[idx].owner_dept = data.owner_dept; }
+    return ok(frontPermResources[idx]);
+  }
+  if (/^\/front-perm\/resources\/[^/]+$/.test(path) && method === 'delete') {
+    const parts = path.split('/');
+    const resId = parts[3];
+    const idx = frontPermResources.findIndex(r => r.id === resId);
+    if (idx >= 0) {
+      const removed = frontPermResources[idx];
+      frontPermResources.splice(idx, 1);
+      // 同步清除关联权限记录
+      for (let i = frontPermRoleAcls.length - 1; i >= 0; i--) {
+        if (frontPermRoleAcls[i].resource_type === removed.resource_type && frontPermRoleAcls[i].resource_id === removed.resource_id) {
+          frontPermRoleAcls.splice(i, 1);
+        }
+      }
+    }
+    return ok(null);
+  }
 
   // Tokens
   if (path === '/tokens' && method === 'get') return paginate(tokens, p.page, p.page_size, p.search);
@@ -3976,6 +4371,45 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       resaleSettlements.unshift(record);
     }
     return ok(record);
+  }
+
+  // Token 账户列表
+  if (path === '/token-accounts' && method === 'get') {
+    return ok(tokenAccounts.map(a => ({ ...a, remaining: a.total_quota - a.used_quota })));
+  }
+  // Token 白名单（按账户 ID 筛选）
+  if (path === '/token-accounts/whitelist' && method === 'get') {
+    const accountId = p.account_id;
+    if (accountId) {
+      const users = tokenWhitelist.filter(w => w.token_account_ids.includes(accountId) && w.status === 'active');
+      return ok(users);
+    }
+    return ok(tokenWhitelist);
+  }
+  // 获取 Agent 公共额度配置
+  if (/^\/front-perm\/resources\/[^/]+\/public-quota$/.test(path) && method === 'get') {
+    const parts = path.split('/');
+    const resId = parts[3];
+    const quota = agentPublicQuotas.find(q => q.resource_id === resId);
+    return ok(quota || null);
+  }
+  // 开启/更新 Agent 公共额度
+  if (/^\/front-perm\/resources\/[^/]+\/public-quota$/.test(path) && method === 'post') {
+    const parts = path.split('/');
+    const resId = parts[3];
+    const idx = agentPublicQuotas.findIndex(q => q.resource_id === resId);
+    const quotaData = { resource_id: resId, ...data, updated_at: new Date().toISOString() };
+    if (idx >= 0) { agentPublicQuotas[idx] = { ...agentPublicQuotas[idx], ...quotaData }; }
+    else { agentPublicQuotas.push({ id: `pq-${Date.now()}`, ...quotaData }); }
+    return ok(agentPublicQuotas.find(q => q.resource_id === resId));
+  }
+  // 关闭 Agent 公共额度
+  if (/^\/front-perm\/resources\/[^/]+\/public-quota$/.test(path) && method === 'delete') {
+    const parts = path.split('/');
+    const resId = parts[3];
+    const idx = agentPublicQuotas.findIndex(q => q.resource_id === resId);
+    if (idx >= 0) agentPublicQuotas.splice(idx, 1);
+    return ok({ success: true });
   }
 
   // Default

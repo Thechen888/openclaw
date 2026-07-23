@@ -1,0 +1,130 @@
+import { useState } from 'react';
+import {
+  Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton, Button,
+  Typography, Chip, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
+} from '@mui/material';
+import { Delete, Refresh, Extension, UnfoldMore, Visibility } from '@mui/icons-material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSnackbar } from 'notistack';
+import { useNavigate } from 'react-router-dom';
+import { PageHeader, FilterBar, DataTable, useTableState, EmptyState, LoadingState, StatusBadge } from '../../components/shared';
+import { skillsApi } from '../../api/client';
+
+export default function MyInstalledSkillsPage() {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
+  const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
+  const [confirmUninstall, setConfirmUninstall] = useState<any>(null);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['skills-installed', params],
+    queryFn: () => skillsApi.installed(params),
+  });
+  const items: any[] = data?.data?.data || [];
+  const total: number = data?.data?.pagination?.total || 0;
+
+  const uninstallMutation = useMutation({
+    mutationFn: (id: string) => skillsApi.uninstall(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['skills-installed'] });
+      setConfirmUninstall(null);
+      enqueueSnackbar('已卸载', { variant: 'success' });
+    },
+  });
+
+  return (
+    <Box>
+      <PageHeader
+        title="我安装的技能"
+        subtitle="已安装到工作空间的技能列表"
+        actions={
+          <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
+        }
+      />
+
+      <FilterBar search={search} onSearchChange={setSearch} />
+
+      {isLoading ? <LoadingState /> : (
+        <DataTable pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: setPageSize }}>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 700 }}>技能名称</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>描述</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 100 }}>版本</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 100 }}>来源</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 140 }}>安装时间</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 100 }}>操作</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <EmptyState title="暂无安装的技能" description="前往技能市场安装技能" />
+                </TableCell>
+              </TableRow>
+            ) : items.map((item: any) => (
+              <TableRow key={item.id} hover>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Extension fontSize="small" sx={{ color: '#00D4FF' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.skill_name}</Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 12, maxWidth: 400 }}>
+                    {item.description || '-'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip label={`v${item.version}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20, fontFamily: 'monospace' }} />
+                </TableCell>
+                <TableCell>
+                  <Typography variant="caption" color="text.secondary">{item.owner_name}</Typography>
+                </TableCell>
+                <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>
+                  {item.installed_at ? new Date(item.installed_at).toLocaleDateString() : '-'}
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Tooltip title="详情">
+                      <IconButton size="small" onClick={() => navigate(`/skills/${item.skill_id}/detail`)}>
+                        <Visibility fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="卸载">
+                      <IconButton size="small" color="error" onClick={() => setConfirmUninstall(item)}>
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </DataTable>
+      )}
+
+      {/* 卸载确认弹窗 */}
+      <Dialog open={!!confirmUninstall} onClose={() => setConfirmUninstall(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>确认卸载</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            确定要卸载技能「{confirmUninstall?.skill_name}」吗？卸载后已挂载该技能的 Agent 将无法继续使用。
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmUninstall(null)}>取消</Button>
+          <Button
+            variant="contained" color="error"
+            onClick={() => confirmUninstall && uninstallMutation.mutate(confirmUninstall.id)}
+            disabled={uninstallMutation.isPending}
+          >
+            确认卸载
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

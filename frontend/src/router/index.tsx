@@ -24,8 +24,13 @@ import AgentCreatePage from '../pages/agents/AgentCreatePage';
 import AgentDetailPage from '../pages/agents/AgentDetailPage';
 import AgentWorkflowEditPage from '../pages/agents/AgentWorkflowEditPage';
 import AgentChatEditPage from '../pages/agents/AgentChatEditPage';
-import SkillsPage from '../pages/skills/SkillsPage';
 import MarketplacePage from '../pages/skills/MarketplacePage';
+import SkillMarketPage from '../pages/skills/SkillMarketPage';
+import MyInstalledSkillsPage from '../pages/skills/MyInstalledSkillsPage';
+import MySkillsPage from '../pages/skills/MySkillsPage';
+import SkillDetailPage from '../pages/skills/SkillDetailPage';
+import SkillPublishPage from '../pages/skills/SkillPublishPage';
+import FrontPermManagePage from '../pages/permissions/FrontPermManagePage';
 import TokenAccountsPage from '../pages/tokens/TokenAccountsPage';
 import WhitelistPage from '../pages/tokens/WhitelistPage';
 import QuotaManagePage from '../pages/tokens/QuotaManagePage';
@@ -93,8 +98,14 @@ export const router = createBrowserRouter([
       { path: 'agents/:id/edit/workflow', element: <AgentWorkflowEditPage /> },
       { path: 'agents/:id/edit/chat', element: <AgentChatEditPage /> },
       // Skills
-      { path: 'skills', element: <SkillsPage /> },
+      { path: 'skills/market', element: <SkillMarketPage /> },
       { path: 'skills/marketplace', element: <MarketplacePage /> },
+      { path: 'skills/my-installed', element: <MyInstalledSkillsPage /> },
+      { path: 'skills/my', element: <MySkillsPage /> },
+      { path: 'skills/:id/detail', element: <SkillDetailPage /> },
+      { path: 'skills/publish/:id', element: <SkillPublishPage /> },
+      // 前台权限管理
+      { path: 'front-permissions', element: <FrontPermManagePage /> },
       // Tokens
       { path: 'tokens', element: <Navigate to="/tokens/accounts" /> },
       { path: 'tokens/accounts', element: <TokenAccountsPage /> },

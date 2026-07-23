@@ -274,6 +274,16 @@ export default function ChatPage() {
 
   // 子菜单展开状态
   const [plusSubMenu, setPlusSubMenu] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+
+  // Mock 智能体列表
+  const AGENTS_MOCK = [
+    { id: 'a1', name: '产品管理专家', desc: '擅长产品规划与需求分析', color: '#8b5cf6' },
+    { id: 'a2', name: '代码审查Bot', desc: '代码质量检查与优化建议', color: '#06b6d4' },
+    { id: 'a3', name: '数据分析Agent', desc: '数据可视化与洞察报告', color: '#10b981' },
+    { id: 'a4', name: '客服助手', desc: '智能客服与问题解答', color: '#f59e0b' },
+    { id: 'a5', name: '周报生成器', desc: '自动生成工作总结与周报', color: '#ef4444' },
+  ];
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -443,6 +453,24 @@ export default function ChatPage() {
                 >
                   <Add sx={{ fontSize: 20 }} />
                 </Box>
+
+                {/* 已选智能体 Tab */}
+                {selectedAgent && (
+                  <Box sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.4,
+                    px: 1, py: 0.35, borderRadius: 1.5, fontSize: 12, fontWeight: 500,
+                    bgcolor: `${selectedAgent.color}15`, color: selectedAgent.color,
+                    border: `1px solid ${selectedAgent.color}30`,
+                    cursor: 'default',
+                    '& .close-icon': { opacity: 0, transition: 'opacity 0.15s', fontSize: 14 },
+                    '&:hover .close-icon': { opacity: 1 },
+                  }}>
+                    <SmartToy sx={{ fontSize: 13 }} />
+                    {selectedAgent.name}
+                    <Close className="close-icon" sx={{ fontSize: 14, cursor: 'pointer', ml: 0.25 }}
+                      onClick={() => setSelectedAgent(null)} />
+                  </Box>
+                )}
 
                 {/* 已选模式 Tab */}
                 {selectedMode !== 'chat' && (
@@ -808,6 +836,21 @@ export default function ChatPage() {
                     <ExpandMore sx={{ fontSize: 16, color: 'text.disabled' }} />
                   </MenuItem>
 
+                  {/* 智能体 */}
+                  <MenuItem
+                    onClick={() => setPlusSubMenu('agent')}
+                    sx={{ py: 1.25, px: 2, gap: 1.5 }}
+                  >
+                    <SmartToy sx={{ fontSize: 18, color: '#06b6d4' }} />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>智能体</Typography>
+                      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
+                        {selectedAgent ? selectedAgent.name : '选择智能体'}
+                      </Typography>
+                    </Box>
+                    <ExpandMore sx={{ fontSize: 16, color: 'text.disabled' }} />
+                  </MenuItem>
+
                   {/* 知识库 */}
                   <MenuItem
                     onClick={() => setPlusSubMenu('kb')}
@@ -864,6 +907,33 @@ export default function ChatPage() {
                         <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{mode.desc}</Typography>
                       </Box>
                       {selectedMode === mode.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+                    </MenuItem>
+                  ))}
+                </>
+              ) : plusSubMenu === 'agent' ? (
+                <>
+                  <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>选择智能体</Typography>
+                    <Box onClick={() => setPlusSubMenu(null)} sx={{ cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
+                      <ExpandMore sx={{ fontSize: 18, transform: 'rotate(90deg)' }} />
+                    </Box>
+                  </Box>
+                  <Divider />
+                  {AGENTS_MOCK.map((agent) => (
+                    <MenuItem
+                      key={agent.id}
+                      selected={selectedAgent?.id === agent.id}
+                      onClick={() => { setSelectedAgent(agent); setPlusMenuOpen(false); setPlusSubMenu(null); }}
+                      sx={{ py: 1.25, px: 2, gap: 1.5 }}
+                    >
+                      <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: agent.color, color: 'white' }}>
+                        <SmartToy sx={{ fontSize: 14 }} />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{agent.name}</Typography>
+                        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{agent.desc}</Typography>
+                      </Box>
+                      {selectedAgent?.id === agent.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
                     </MenuItem>
                   ))}
                 </>

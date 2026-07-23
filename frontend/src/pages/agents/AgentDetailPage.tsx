@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import {
   Box, Card, Typography, Button, IconButton, Chip, Tabs, Tab, Divider, Grid,
-  Table, TableHead, TableBody, TableRow, TableCell, Avatar, Tooltip, Stack,
+  Table, TableHead, TableBody, TableRow, TableCell, Tooltip, Stack,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
 } from '@mui/material';
-import { ArrowBack, Edit, Security, PlayArrow, Groups } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowBack, Edit, PlayArrow, Close, AccountBalance, CheckCircle, Info as InfoIcon } from '@mui/icons-material';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader, StatusBadge, EmptyState, LoadingState } from '../../components/shared';
-import { agentsApi } from '../../api/client';
+import { agentsApi, tokensApi, publicQuotaApi } from '../../api/client';
 import {
-  AgentAvatar, getTypeMeta, getRoleMeta, formatTime, relativeTime,
+  AgentAvatar, getTypeMeta, formatTime, relativeTime,
 } from './components/agentShared';
 import { getNodeMeta } from './components/workflowNodeMeta';
-import CollaboratorDialog from './components/CollaboratorDialog';
+import { useAuthStore } from '../../stores/authStore';
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -27,7 +28,17 @@ export default function AgentDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
-  const [permOpen, setPermOpen] = useState(false);
+  const [basicEditOpen, setBasicEditOpen] = useState(false);
+  const [basicForm, setBasicForm] = useState({ name: '', description: '', owner_type: 'personal', visibility_scope: 'private', token_owner_type: 'self', avatar_color: '#00D4FF' });
+
+  // 检查管理员 Token 权限
+  const { data: whitelistData } = useQuery({
+    queryKey: ['whitelist-check', 'me'],
+    queryFn: () => tokensApi.whitelist.check('me'),
+  });
+  const isAdminTokenAuthorized = whitelistData?.data?.data?.authorized || false;
+
+  const COLOR_PRESETS = ['#00D4FF', '#7C3AED', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#06b6d4', '#ef4444'];
 
   const { data: agentData, isLoading } = useQuery({ queryKey: ['agent', id], queryFn: () => agentsApi.get(id) });
   const agent = agentData?.data?.data;
@@ -48,11 +59,37 @@ export default function AgentDetailPage() {
   });
   const collaborators: any[] = collabData?.data?.data || [];
 
+  // 当前登录用户
+  const currentUser = useAuthStore(s => s.user);
+
+  // 公共额度
+  const { data: pqData } = useQuery({
+    queryKey: ['agent-public-quota', id], queryFn: () => publicQuotaApi.get(id), enabled: !!agent,
+  });
+  const publicQuota = pqData?.data?.data;
+
+  const updateBasicMutation = useMutation({
+    mutationFn: (d: any) => agentsApi.update(id, d),
+    onSuccess: () => { setBasicEditOpen(false); window.location.reload(); },
+  });
+
   if (isLoading || !agent) return <LoadingState />;
 
   const meta = getTypeMeta(agent.agent_type);
   const cfg = agent.chat_config || {};
   const goEdit = () => navigate(isChat ? `/agents/${id}/edit/chat` : `/agents/${id}/edit/workflow`);
+
+  const openBasicEdit = () => {
+    setBasicForm({
+      name: agent.name || '',
+      description: agent.description || '',
+      owner_type: agent.owner_type || 'personal',
+      visibility_scope: agent.visibility_scope || 'private',
+      token_owner_type: agent.token_owner_type || 'self',
+      avatar_color: agent.avatar_color || '#00D4FF',
+    });
+    setBasicEditOpen(true);
+  };
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
@@ -79,7 +116,6 @@ export default function AgentDetailPage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          <Button variant="outlined" startIcon={<Security />} onClick={() => setPermOpen(true)}>权限协作</Button>
           <Button variant="contained" startIcon={<Edit />} onClick={goEdit}>编辑</Button>
         </Stack>
       </Card>
@@ -95,7 +131,10 @@ export default function AgentDetailPage() {
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: isChat ? 6 : 12 }}>
             <Card sx={{ p: 2.5 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>基础配置</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>基础配置</Typography>
+                <Button size="small" variant="outlined" startIcon={<Edit />} onClick={openBasicEdit}>编辑基础信息</Button>
+              </Box>
               {isChat ? (
                 <>
                   <InfoRow label="欢迎语" value={cfg.welcome} />
@@ -170,33 +209,105 @@ export default function AgentDetailPage() {
 
       {/* 协作者 */}
       {tab === 1 && (
-        <Card sx={{ p: 2.5 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>协作者与权限</Typography>
-            <Button size="small" variant="outlined" startIcon={<Security />} onClick={() => setPermOpen(true)}>管理协作者</Button>
-          </Box>
-          <Stack spacing={1}>
-            {collaborators.map((c) => {
-              const rm = getRoleMeta(c.role);
-              const isDept = c.principal_type === 'department';
+        <Stack spacing={2.5}>
+          {/* 区块1：我的身份 */}
+          <Card sx={{ p: 2.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>我的身份</Typography>
+            {(() => {
+              const me = collaborators.find(c => c.user_id === currentUser?.id);
+              const identity = me
+                ? me.role === 'owner' ? '拥有者（完全控制）'
+                  : me.role === 'admin' ? '管理员（可管理协作者）'
+                  : me.role === 'editor' ? '可编辑者'
+                  : me.role === 'viewer' ? '仅查看者'
+                  : me.role === 'chat_only' ? '仅对话用户'
+                  : me.role
+                : '未配置（默认仅查看）';
               return (
-                <Box key={isDept ? c.dept_id : c.user_id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1, borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}>
-                  <Avatar sx={{ width: 34, height: 34, fontSize: 14, bgcolor: isDept ? 'secondary.main' : 'primary.main' }}>
-                    {isDept ? <Groups fontSize="small" /> : (c.name || '?').slice(0, 1)}
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.name}</Typography>
-                      {isDept && <Chip size="small" label={`部门 · ${c.member_count} 人`} sx={{ height: 18, fontSize: 10 }} />}
-                    </Box>
-                    <Typography variant="caption" color="text.secondary">{rm.desc}</Typography>
-                  </Box>
-                  <Chip size="small" label={rm.label} color={rm.color} sx={{ height: 24 }} />
-                </Box>
+                <Typography variant="body2">我在本智能体的身份：<strong>{identity}</strong></Typography>
               );
-            })}
-          </Stack>
-        </Card>
+            })()}
+          </Card>
+
+          {/* 区块2：可见范围 */}
+          <Card sx={{ p: 2.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>可见范围</Typography>
+            {(() => {
+              const editableRoles: string[] = agent?.editable_roles || [];
+              const viewableRoles: string[] = agent?.viewable_roles || [];
+              const hasRoles = editableRoles.length > 0 || viewableRoles.length > 0;
+              return (
+                <>
+                  {hasRoles ? (
+                    <>
+                      <Box sx={{ display: 'flex', gap: 2, py: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 96 }}>可编辑角色：</Typography>
+                        <Box sx={{ flex: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {editableRoles.length ? editableRoles.map(r => <Chip key={r} size="small" label={r} sx={{ height: 22, fontSize: 12 }} />) : <Typography variant="body2" color="text.disabled">—</Typography>}
+                        </Box>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 2, py: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 96 }}>可查看角色：</Typography>
+                        <Box sx={{ flex: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {viewableRoles.length ? viewableRoles.map(r => <Chip key={r} size="small" label={r} variant="outlined" sx={{ height: 22, fontSize: 12 }} />) : <Typography variant="body2" color="text.disabled">—</Typography>}
+                        </Box>
+                      </Box>
+                    </>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">仅自己可见（未开放给其他角色）</Typography>
+                  )}
+                  <Divider sx={{ my: 1.5 }} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <InfoIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                    <Typography variant="caption" color="text.disabled">权限由管理员在后台统一配置，如需调整请联系管理员</Typography>
+                  </Box>
+                </>
+              );
+            })()}
+          </Card>
+
+          {/* 区块3：公共额度 */}
+          <Card sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+              <AccountBalance sx={{ fontSize: 18, color: 'primary.main' }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>公共额度</Typography>
+              {publicQuota ? (
+                <Chip size="small" label="已开启" color="success" variant="outlined" sx={{ height: 20, fontSize: 11 }} />
+              ) : (
+                <Chip size="small" label="未开启" variant="outlined" sx={{ height: 20, fontSize: 11, color: 'text.disabled' }} />
+              )}
+            </Box>
+            {publicQuota ? (
+              <>
+                <Box sx={{ display: 'flex', gap: 2, py: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 96 }}>扣费账户：</Typography>
+                  <Typography variant="body2">{publicQuota.account_name || '—'}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2, py: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 96 }}>生效人员：</Typography>
+                  <Typography variant="body2">
+                    {(publicQuota.enabled_users || []).map((u: any) => u.name).join('、') || '—'}
+                  </Typography>
+                </Box>
+                <Divider sx={{ my: 1.5 }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
+                  <Typography variant="body2" color="success.main">
+                    {(() => {
+                      const uid = currentUser?.id;
+                      const inWhitelist = (publicQuota.enabled_users || []).some((u: any) => u.user_id === uid);
+                      return inWhitelist
+                        ? '您使用本智能体将消耗：公共额度（您已被授权）'
+                        : '您使用本智能体将消耗：个人Token';
+                    })()}
+                  </Typography>
+                </Box>
+              </>
+            ) : (
+              <Typography variant="body2" color="text.secondary">未开启，所有使用者消耗个人Token</Typography>
+            )}
+          </Card>
+        </Stack>
       )}
 
       {/* 运行记录 */}
@@ -237,7 +348,63 @@ export default function AgentDetailPage() {
         </Card>
       )}
 
-      <CollaboratorDialog open={permOpen} onClose={() => setPermOpen(false)} agent={agent} />
+
+
+      {/* =================== 编辑基础信息弹窗 =================== */}
+      <Dialog open={basicEditOpen} onClose={() => setBasicEditOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>编辑基础信息</Typography>
+          <IconButton size="small" onClick={() => setBasicEditOpen(false)}><Close fontSize="small" /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <TextField fullWidth label="名称" required value={basicForm.name} onChange={e => setBasicForm({ ...basicForm, name: e.target.value })} />
+            <TextField fullWidth label="描述" multiline rows={3} value={basicForm.description} onChange={e => setBasicForm({ ...basicForm, description: e.target.value })} />
+            <Grid container spacing={2}>
+              <Grid size={6}>
+                <TextField fullWidth select label="归属类型" value={basicForm.owner_type} onChange={e => setBasicForm({ ...basicForm, owner_type: e.target.value })}>
+                  <MenuItem value="personal">个人</MenuItem>
+                  <MenuItem value="organization">组织</MenuItem>
+                </TextField>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>个人：仅自己可见；组织：可添加协作者</Typography>
+              </Grid>
+              <Grid size={6}>
+                <TextField fullWidth select label="可见范围" value={basicForm.visibility_scope} onChange={e => setBasicForm({ ...basicForm, visibility_scope: e.target.value })}>
+                  <MenuItem value="private">私有（仅自己）</MenuItem>
+                  <MenuItem value="department">部门</MenuItem>
+                  <MenuItem value="public">公开</MenuItem>
+                </TextField>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>私有：仅自己；部门：绑定部门成员；公开：全员可见</Typography>
+              </Grid>
+            </Grid>
+            <TextField fullWidth select label="Token 计费方式" value={basicForm.token_owner_type} onChange={e => setBasicForm({ ...basicForm, token_owner_type: e.target.value })} disabled={!isAdminTokenAuthorized && basicForm.token_owner_type !== 'self'}>
+              <MenuItem value="self">个人 Token</MenuItem>
+              <MenuItem value="admin" disabled={!isAdminTokenAuthorized}>管理员 Token</MenuItem>
+            </TextField>
+            <Typography variant="caption" color="text.secondary">个人 Token：消耗自己的配额；管理员 Token：消耗平台公共额度（需授权）</Typography>
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>头像颜色</Typography>
+              <Stack direction="row" spacing={1}>
+                {COLOR_PRESETS.map(c => (
+                  <Box key={c} onClick={() => setBasicForm({ ...basicForm, avatar_color: c })} sx={{
+                    width: 32, height: 32, borderRadius: '50%', bgcolor: c, cursor: 'pointer',
+                    border: basicForm.avatar_color === c ? '3px solid #fff' : '2px solid transparent',
+                    boxShadow: basicForm.avatar_color === c ? `0 0 0 2px ${c}` : 'none',
+                    transition: 'all 0.2s',
+                    '&:hover': { transform: 'scale(1.15)' },
+                  }} />
+                ))}
+              </Stack>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setBasicEditOpen(false)}>取消</Button>
+          <Button variant="contained" onClick={() => updateBasicMutation.mutate(basicForm)} disabled={!basicForm.name.trim() || updateBasicMutation.isPending}>
+            {updateBasicMutation.isPending ? '保存中...' : '保存'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

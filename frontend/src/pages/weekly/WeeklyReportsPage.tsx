@@ -87,7 +87,7 @@ export default function WeeklyReportsPage() {
       <ReportSidebar items={sidebarItems} activeId={activeId} onSelect={handleSelect} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-end px-6 py-2 bg-white border-b border-gray-200">
+        <div className="flex items-center justify-end px-6 py-2 bg-white border-b border-gray-200 gap-2">
           <button
             onClick={() => { setView('new-report'); setActiveId('builder'); setEditingReport(null); }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -120,6 +120,7 @@ export default function WeeklyReportsPage() {
           </div>
         )}
       </main>
+
     </div>
   );
 }
