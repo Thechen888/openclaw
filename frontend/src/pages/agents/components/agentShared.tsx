@@ -160,7 +160,7 @@ export function AgentCard({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
           <SmartToy sx={{ fontSize: 13, color: 'text.disabled' }} />
           <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 11 }}>
-            {agent.owner_name || '—'} · {agent.owner_type === 'organization' ? '组织' : '个人'}
+            {agent.owner_name || '—'}
           </Typography>
         </Box>
         <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: 'nowrap', fontSize: 11 }}>
@@ -178,10 +178,6 @@ export function AgentCard({
         <MenuItem onClick={act(onEdit)}>
           <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
           <ListItemText>编辑</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={act(onPermission)}>
-          <ListItemIcon><Security fontSize="small" /></ListItemIcon>
-          <ListItemText>权限协作</ListItemText>
         </MenuItem>
         <MenuItem onClick={act(onDelete)} sx={{ color: 'error.main' }}>
           <ListItemIcon><Delete fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>

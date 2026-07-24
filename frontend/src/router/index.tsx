@@ -100,7 +100,7 @@ export const router = createBrowserRouter([
       { path: 'identity/permissions', element: <PermissionsPage /> },
       { path: 'identity/roles', element: <RolesPage /> },
       // Agents
-      { path: 'agents', element: <AgentsPage /> },
+      { path: 'agents', element: <Navigate to="/agents/my" /> },
       { path: 'agents/market', element: <AgentMarketPage /> },
       { path: 'agents/installed', element: <AgentInstalledPage /> },
       { path: 'agents/my', element: <AgentMyPage /> },
@@ -150,7 +150,7 @@ export const router = createBrowserRouter([
       { path: 'stats/usage', element: <UsageStatsPage /> },
       { path: 'stats/audit', element: <AuditLogsPage /> },
       // Reports
-      { path: 'reports', element: <ReportsPage /> },
+      { path: 'reports', element: <Navigate to="/reports/my" /> },
       { path: 'reports/market', element: <ReportMarketPage /> },
       { path: 'reports/installed', element: <ReportInstalledPage /> },
       { path: 'reports/my', element: <ReportMyPage /> },

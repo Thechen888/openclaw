@@ -28,15 +28,6 @@ export default function AgentDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
-  const [basicEditOpen, setBasicEditOpen] = useState(false);
-  const [basicForm, setBasicForm] = useState({ name: '', description: '', owner_type: 'personal', visibility_scope: 'private', token_owner_type: 'self', avatar_color: '#00D4FF' });
-
-  // 检查管理员 Token 权限
-  const { data: whitelistData } = useQuery({
-    queryKey: ['whitelist-check', 'me'],
-    queryFn: () => tokensApi.whitelist.check('me'),
-  });
-  const isAdminTokenAuthorized = whitelistData?.data?.data?.authorized || false;
 
   const COLOR_PRESETS = ['#00D4FF', '#7C3AED', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#06b6d4', '#ef4444'];
 
@@ -68,28 +59,12 @@ export default function AgentDetailPage() {
   });
   const publicQuota = pqData?.data?.data;
 
-  const updateBasicMutation = useMutation({
-    mutationFn: (d: any) => agentsApi.update(id, d),
-    onSuccess: () => { setBasicEditOpen(false); window.location.reload(); },
-  });
-
   if (isLoading || !agent) return <LoadingState />;
 
   const meta = getTypeMeta(agent.agent_type);
   const cfg = agent.chat_config || {};
   const goEdit = () => navigate(isChat ? `/agents/${id}/edit/chat` : `/agents/${id}/edit/workflow`);
-
-  const openBasicEdit = () => {
-    setBasicForm({
-      name: agent.name || '',
-      description: agent.description || '',
-      owner_type: agent.owner_type || 'personal',
-      visibility_scope: agent.visibility_scope || 'private',
-      token_owner_type: agent.token_owner_type || 'self',
-      avatar_color: agent.avatar_color || '#00D4FF',
-    });
-    setBasicEditOpen(true);
-  };
+  const backPath = isChat ? '/agents/my' : '/workflows/my';
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
@@ -97,7 +72,7 @@ export default function AgentDetailPage() {
         <PageHeader
           title="智能体详情"
           subtitle="查看配置概览、协作者与运行记录"
-          actions={<Button startIcon={<ArrowBack />} onClick={() => navigate('/agents')}>返回列表</Button>}
+          actions={<Button startIcon={<ArrowBack />} onClick={() => navigate(backPath)}>返回列表</Button>}
         />
       </Box>
 
@@ -112,7 +87,7 @@ export default function AgentDetailPage() {
           </Box>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{agent.description || '暂无描述'}</Typography>
           <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block' }}>
-            {agent.owner_name || '—'} · {agent.owner_type === 'organization' ? '组织' : '个人'} · 更新于 {formatTime(agent.updated_at)}
+            {agent.owner_name || '—'} · 更新于 {formatTime(agent.updated_at)}
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
@@ -122,7 +97,7 @@ export default function AgentDetailPage() {
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Tab label="概览" />
-        <Tab label={`协作者 (${collaborators.length})`} />
+        <Tab label="权限与额度" />
         <Tab label={`运行记录 (${runs.length})`} />
       </Tabs>
 
@@ -133,7 +108,6 @@ export default function AgentDetailPage() {
             <Card sx={{ p: 2.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>基础配置</Typography>
-                <Button size="small" variant="outlined" startIcon={<Edit />} onClick={openBasicEdit}>编辑基础信息</Button>
               </Box>
               {isChat ? (
                 <>
@@ -200,7 +174,6 @@ export default function AgentDetailPage() {
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>运行概况</Typography>
                 <InfoRow label="上次运行" value={relativeTime(agent.last_run_at)} />
                 <InfoRow label="累计运行" value={`${runs.length} 次`} />
-                <InfoRow label="创建归属" value={agent.owner_type === 'organization' ? '组织' : '个人'} />
               </Card>
             </Grid>
           )}
@@ -350,61 +323,6 @@ export default function AgentDetailPage() {
 
 
 
-      {/* =================== 编辑基础信息弹窗 =================== */}
-      <Dialog open={basicEditOpen} onClose={() => setBasicEditOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>编辑基础信息</Typography>
-          <IconButton size="small" onClick={() => setBasicEditOpen(false)}><Close fontSize="small" /></IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ px: 3, py: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-            <TextField fullWidth label="名称" required value={basicForm.name} onChange={e => setBasicForm({ ...basicForm, name: e.target.value })} />
-            <TextField fullWidth label="描述" multiline rows={3} value={basicForm.description} onChange={e => setBasicForm({ ...basicForm, description: e.target.value })} />
-            <Grid container spacing={2}>
-              <Grid size={6}>
-                <TextField fullWidth select label="归属类型" value={basicForm.owner_type} onChange={e => setBasicForm({ ...basicForm, owner_type: e.target.value })}>
-                  <MenuItem value="personal">个人</MenuItem>
-                  <MenuItem value="organization">组织</MenuItem>
-                </TextField>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>个人：仅自己可见；组织：可添加协作者</Typography>
-              </Grid>
-              <Grid size={6}>
-                <TextField fullWidth select label="可见范围" value={basicForm.visibility_scope} onChange={e => setBasicForm({ ...basicForm, visibility_scope: e.target.value })}>
-                  <MenuItem value="private">私有（仅自己）</MenuItem>
-                  <MenuItem value="department">部门</MenuItem>
-                  <MenuItem value="public">公开</MenuItem>
-                </TextField>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>私有：仅自己；部门：绑定部门成员；公开：全员可见</Typography>
-              </Grid>
-            </Grid>
-            <TextField fullWidth select label="Token 计费方式" value={basicForm.token_owner_type} onChange={e => setBasicForm({ ...basicForm, token_owner_type: e.target.value })} disabled={!isAdminTokenAuthorized && basicForm.token_owner_type !== 'self'}>
-              <MenuItem value="self">个人 Token</MenuItem>
-              <MenuItem value="admin" disabled={!isAdminTokenAuthorized}>管理员 Token</MenuItem>
-            </TextField>
-            <Typography variant="caption" color="text.secondary">个人 Token：消耗自己的配额；管理员 Token：消耗平台公共额度（需授权）</Typography>
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>头像颜色</Typography>
-              <Stack direction="row" spacing={1}>
-                {COLOR_PRESETS.map(c => (
-                  <Box key={c} onClick={() => setBasicForm({ ...basicForm, avatar_color: c })} sx={{
-                    width: 32, height: 32, borderRadius: '50%', bgcolor: c, cursor: 'pointer',
-                    border: basicForm.avatar_color === c ? '3px solid #fff' : '2px solid transparent',
-                    boxShadow: basicForm.avatar_color === c ? `0 0 0 2px ${c}` : 'none',
-                    transition: 'all 0.2s',
-                    '&:hover': { transform: 'scale(1.15)' },
-                  }} />
-                ))}
-              </Stack>
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setBasicEditOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={() => updateBasicMutation.mutate(basicForm)} disabled={!basicForm.name.trim() || updateBasicMutation.isPending}>
-            {updateBasicMutation.isPending ? '保存中...' : '保存'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

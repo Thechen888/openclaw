@@ -5,6 +5,7 @@ export default function AgentMarketPage() {
   return (
     <ResourceMarketPage
       resourceType="agent"
+      category="chat"
       title="智能体市场"
       subtitle="浏览和安装企业内已上架的智能体"
       listEndpoint="/market"

@@ -35,6 +35,8 @@ export interface ResourceMarketPageProps {
   resourceType: 'skill' | 'agent' | 'workflow' | 'report';
   title: string;
   subtitle: string;
+  /** 按 agent 子类型过滤：'chat' | 'workflow' */
+  category?: 'chat' | 'workflow';
   /** 卡片数据查询 API 路径（不含 basePath），如 '/market' => GET /skills/market */
   listEndpoint?: string;
   /** 安装 API mutation fn */
@@ -56,6 +58,7 @@ export default function ResourceMarketPage({
   resourceType,
   title,
   subtitle,
+  category,
   listEndpoint,
   installMutationFn,
   installSuccessMsg,
@@ -77,8 +80,8 @@ export default function ResourceMarketPage({
 
   // 正式市场数据
   const { data, isLoading, refetch } = useQuery({
-    queryKey: [`${resourceType}-market`, { search, scope: scopeTab }],
-    queryFn: () => api.get(`${basePath}${marketPath}`, { params: { page_size: 50, search, status: 'published' } }),
+    queryKey: [`${resourceType}-market`, { search, scope: scopeTab, category }],
+    queryFn: () => api.get(`${basePath}${marketPath}`, { params: { page_size: 50, search, status: 'published', category } }),
     enabled: scopeTab !== 'beta',
   });
 

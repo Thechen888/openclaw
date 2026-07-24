@@ -3175,12 +3175,17 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // 必须置于 /:id 路由之前，否则 "market" 会被误当作资源 ID
   if (/^\/(skills|agents|workflows|reports)\/market$/.test(path) && method === 'get') {
     const rType = path.split('/')[1].replace(/s$/, '');
+    const category = p.category; // 'chat' | 'workflow' | undefined
     let sourceData: any[] = [];
     if (rType === 'skill') {
       sourceData = skills.filter((s: any) => s.status === 'published');
     } else if (rType === 'agent') {
+      // 按 category 过滤：chat 或 workflow
+      const catFilter = category === 'workflow'
+        ? (a: any) => a.category === 'workflow'
+        : (a: any) => a.category !== 'workflow'; // 默认 chat
       sourceData = agents
-        .filter((a: any) => a.category !== 'workflow' && a.status === 'active')
+        .filter((a: any) => catFilter(a) && a.status === 'active')
         .map((a: any) => ({ ...a, scope: a.owner_type === 'organization' ? 'company' : 'private', version: '1.0.0', install_count: a.triggers_count ?? 0, owner_dept: a.owner_type === 'organization' ? '组织' : '个人' }));
     } else if (rType === 'workflow') {
       sourceData = agents

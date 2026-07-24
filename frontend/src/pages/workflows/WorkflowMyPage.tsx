@@ -12,7 +12,7 @@ import { AgentCard } from '../agents/components/agentShared';
 
 const STATUS_TABS = [
   { label: '全部', value: '' },
-  { label: '运行中', value: 'active' },
+  { label: '已上架', value: 'published' },
   { label: '草稿', value: 'draft' },
 ];
 
@@ -23,7 +23,7 @@ export default function WorkflowMyPage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['workflows-my', 'card'],
-    queryFn: () => agentsApi.list({ page_size: 200, owner: 'me', category: 'workflow' }),
+    queryFn: () => agentsApi.list({ page_size: 200, owner: 'me' }),
   });
   const allItems: any[] = data?.data?.data || [];
 

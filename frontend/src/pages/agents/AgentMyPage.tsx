@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Box, Tabs, Tab, IconButton, Tooltip, Button, Grid, TextField,
+  Box, IconButton, Tooltip, Button, Grid, TextField,
   InputAdornment,
 } from '@mui/material';
 import { Add, Refresh, Search } from '@mui/icons-material';
@@ -10,15 +10,8 @@ import { PageHeader, EmptyState, LoadingState } from '../../components/shared';
 import { agentsApi } from '../../api/client';
 import { AgentCard } from './components/agentShared';
 
-const TYPE_TABS = [
-  { label: '全部', value: '' },
-  { label: '对话 Agent', value: 'chat' },
-  { label: '工作流 Agent', value: 'workflow' },
-];
-
 export default function AgentMyPage() {
   const navigate = useNavigate();
-  const [typeTab, setTypeTab] = useState('');
   const [search, setSearch] = useState('');
 
   const { data, isLoading, refetch } = useQuery({
@@ -28,13 +21,13 @@ export default function AgentMyPage() {
   const allItems: any[] = data?.data?.data || [];
 
   const items = allItems.filter((a) => {
-    if (typeTab && a.agent_type !== typeTab) return false;
+    if (a.agent_type !== 'chat') return false;
     if (search && !`${a.name} ${a.description || ''}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
   const goEdit = (agent: any) => {
-    navigate(agent.agent_type === 'chat' ? `/agents/${agent.id}/edit/chat` : `/agents/${agent.id}/edit/workflow`);
+    navigate(`/agents/${agent.id}/edit/chat`);
   };
 
   return (
@@ -42,11 +35,11 @@ export default function AgentMyPage() {
       <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
         <PageHeader
           title="我创建的智能体"
-          subtitle="管理你创建的智能体，支持对话与工作流两种类型"
+          subtitle="管理你创建的对话智能体"
           actions={
             <>
               <Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>
-              <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/agents/create')}>
+              <Button variant="contained" startIcon={<Add />} onClick={() => navigate('/agents/create?type=chat')}>
                 新建智能体
               </Button>
             </>
@@ -55,10 +48,6 @@ export default function AgentMyPage() {
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2.5 }}>
-        <Tabs value={typeTab} onChange={(_, v) => setTypeTab(v)}
-          sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40, fontSize: 13, fontWeight: 500, textTransform: 'none' }, '& .Mui-selected': { color: '#00D4FF' }, '& .MuiTabs-indicator': { bgcolor: '#00D4FF' } }}>
-          {TYPE_TABS.map(t => <Tab key={t.value} label={t.label} value={t.value} />)}
-        </Tabs>
         <TextField size="small" placeholder="搜索..." value={search} onChange={e => setSearch(e.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search fontSize="small" sx={{ color: 'rgba(0,212,255,0.5)' }} /></InputAdornment> } }}
           sx={{ minWidth: 220, '& .MuiOutlinedInput-root': { bgcolor: 'rgba(5,5,7,0.5)' } }} />

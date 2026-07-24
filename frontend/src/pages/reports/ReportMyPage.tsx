@@ -1,5 +1,17 @@
+import { Box } from '@mui/material';
+import { PageHeader } from '../../components/shared';
+import WeeklyReportsPage from '../weekly/WeeklyReportsPage';
+
 /**
- * 我创建的报告 — 直接复用 WeeklyReportsPage 的完整功能
- * 报告中心的所有内容均归入"我创建的"模块
+ * 我创建的报告 — 复用 WeeklyReportsPage 的完整功能，顶部添加页面标题
  */
-export { default } from '../weekly/WeeklyReportsPage';
+export default function ReportMyPage() {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <PageHeader title="我创建的报告" subtitle="管理你创建的报告模板与生成任务" />
+      <Box sx={{ flex: 1, overflow: 'hidden' }}>
+        <WeeklyReportsPage />
+      </Box>
+    </Box>
+  );
+}

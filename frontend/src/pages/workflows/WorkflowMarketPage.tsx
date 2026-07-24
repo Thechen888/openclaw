@@ -4,7 +4,8 @@ import { AccountTree } from '@mui/icons-material';
 export default function WorkflowMarketPage() {
   return (
     <ResourceMarketPage
-      resourceType="workflow"
+      resourceType="agent"
+      category="workflow"
       title="工作流市场"
       subtitle="浏览和安装企业内已上架的工作流"
       listEndpoint="/market"
