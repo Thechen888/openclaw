@@ -3171,6 +3171,34 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const execId = path.split('/').pop() as string;
     return ok(buildRunDetail(execId));
   }
+  // Agent 发布/下架/撤回
+  if (/^\/agents\/[^/]+\/publish$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const idx = agents.findIndex((a: any) => a.id === id);
+    if (idx >= 0) {
+      agents[idx] = { ...agents[idx], ...data, status: 'pending', updated_at: new Date().toISOString() };
+      reviewRecords.unshift({
+        id: 'rv-' + Date.now(), type: 'agent_publish', target_id: id, target_name: agents[idx].name,
+        applicant: agents[idx].owner_id || 'u-1', applicant_name: agents[idx].owner_name || 'Admin',
+        applicant_dept: '技术部',
+        scope: 'company', version: data.version || '1.0.0', changelog: data.changelog || '',
+        submitted_at: new Date().toISOString(), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null,
+      });
+    }
+    return ok({ status: 'pending' });
+  }
+  if (/^\/agents\/[^/]+\/delist$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const idx = agents.findIndex((a: any) => a.id === id);
+    if (idx >= 0) agents[idx] = { ...agents[idx], status: 'delisted', updated_at: new Date().toISOString() };
+    return ok(null);
+  }
+  if (/^\/agents\/[^/]+\/cancel$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const idx = agents.findIndex((a: any) => a.id === id);
+    if (idx >= 0) agents[idx] = { ...agents[idx], status: 'draft', updated_at: new Date().toISOString() };
+    return ok(null);
+  }
   // ===== 通用资源市场 GET /{resourceType}/market =====
   // 必须置于 /:id 路由之前，否则 "market" 会被误当作资源 ID
   if (/^\/(skills|agents|workflows|reports)\/market$/.test(path) && method === 'get') {
@@ -4091,6 +4119,42 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // 部门列表（复用）
   if (path === '/reports/departments' && method === 'get') {
     return ok(organizations.filter((o: any) => o.type !== 'company'));
+  }
+  // 报告 发布/下架/撤回
+  if (/^\/reports\/[^/]+\/publish$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const idx = reports.findIndex((r: any) => r.id === id);
+    if (idx >= 0) {
+      reports[idx] = { ...reports[idx], ...data, status: 'pending', updated_at: new Date().toISOString() };
+      reviewRecords.unshift({
+        id: 'rv-' + Date.now(), type: 'report_publish', target_id: id, target_name: reports[idx].title,
+        applicant: 'u-1', applicant_name: 'Admin', applicant_dept: '技术部',
+        scope: 'department', version: data.version || '1.0.0', changelog: data.changelog || '',
+        submitted_at: new Date().toISOString(), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null,
+      });
+    }
+    return ok({ status: 'pending' });
+  }
+  if (/^\/reports\/[^/]+\/delist$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const idx = reports.findIndex((r: any) => r.id === id);
+    if (idx >= 0) reports[idx] = { ...reports[idx], status: 'delisted', updated_at: new Date().toISOString() };
+    return ok(null);
+  }
+  if (/^\/reports\/[^/]+\/cancel$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const idx = reports.findIndex((r: any) => r.id === id);
+    if (idx >= 0) reports[idx] = { ...reports[idx], status: 'draft', updated_at: new Date().toISOString() };
+    return ok(null);
+  }
+  // 报告 我创建的
+  if (path === '/reports/my' && method === 'get') {
+    const myReports = reports.filter(r => r.owner_id === 'u-1' || !r.owner_id);
+    return paginate(myReports, p.page, p.page_size, p.search);
+  }
+  // 报告 我安装的
+  if (path === '/reports/installed' && method === 'get') {
+    return paginate(reports.filter((r: any) => r.status === 'published'), p.page, p.page_size, p.search);
   }
 
   // =================== RAG 知识库 ===================

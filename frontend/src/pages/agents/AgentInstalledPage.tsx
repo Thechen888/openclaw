@@ -42,7 +42,7 @@ export default function AgentInstalledPage() {
           {items.map((item: any) => (
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid rgba(0,212,255,0.06)', '&:hover': { boxShadow: '0 0 20px rgba(0,212,255,0.12)' }, cursor: 'pointer' }}
-                onClick={() => navigate('/chat')}>
+                onClick={() => navigate(`/chat?agent=${item.id}`)}>
                 <CardContent sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                     <Avatar sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: 'rgba(0,212,255,0.1)', color: '#00D4FF', fontSize: 18, fontWeight: 700 }}>
@@ -56,11 +56,11 @@ export default function AgentInstalledPage() {
                       size="small"
                       variant="contained"
                       startIcon={<Chat fontSize="small" />}
-                      onClick={(e) => { e.stopPropagation(); navigate('/chat'); }}
-                      sx={{ fontSize: 12, textTransform: 'none', minWidth: 72, height: 28,
+                      onClick={(e) => { e.stopPropagation(); navigate(`/chat?agent=${item.id}`); }}
+                      sx={{ fontSize: 12, textTransform: 'none', minWidth: 80, height: 28,
                         bgcolor: '#7C3AED', '&:hover': { bgcolor: '#6D28D9' } }}
                     >
-                      对话
+                      发起对话
                     </Button>
                   </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mb: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

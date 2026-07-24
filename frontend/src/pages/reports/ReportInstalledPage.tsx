@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import {
-  Box, Grid, Card, CardContent, Typography, Chip, TextField,
+  Box, Grid, Card, CardContent, Typography, Chip, Button, TextField,
   InputAdornment, IconButton, Tooltip, Skeleton, Avatar,
 } from '@mui/material';
-import { Search, Refresh, AutoStories } from '@mui/icons-material';
+import { Search, Refresh, AutoStories, Visibility } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/shared';
 import api from '../../api/client';
 
 export default function ReportInstalledPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
 
   const { data, isLoading, refetch } = useQuery({
@@ -40,16 +42,25 @@ export default function ReportInstalledPage() {
           {items.map((item: any) => (
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid rgba(0,212,255,0.06)', '&:hover': { boxShadow: '0 0 20px rgba(0,212,255,0.12)' }, cursor: 'pointer' }}
-                onClick={() => window.location.href = `/reports/${item.id}`}>
+                onClick={() => navigate(`/reports/${item.id}`)}>
                 <CardContent sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                     <Avatar sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: 'rgba(0,212,255,0.1)', color: '#00D4FF', fontSize: 18, fontWeight: 700 }}>
-                      {(item.name || '?').slice(0, 1).toUpperCase()}
+                      {(item.name || item.title || '?').slice(0, 1).toUpperCase()}
                     </Avatar>
-                    <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 14 }}>{item.name}</Typography>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 14 }}>{item.name || item.title}</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{item.owner_name}</Typography>
                     </Box>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Visibility fontSize="small" />}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/reports/${item.id}`); }}
+                      sx={{ fontSize: 12, textTransform: 'none', minWidth: 60, height: 28 }}
+                    >
+                      查看
+                    </Button>
                   </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mb: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {item.description || '暂无描述'}

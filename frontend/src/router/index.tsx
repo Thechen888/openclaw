@@ -27,6 +27,7 @@ import AgentChatEditPage from '../pages/agents/AgentChatEditPage';
 import AgentMarketPage from '../pages/agents/AgentMarketPage';
 import AgentInstalledPage from '../pages/agents/AgentInstalledPage';
 import AgentMyPage from '../pages/agents/AgentMyPage';
+import AgentPublishPage from '../pages/agents/AgentPublishPage';
 import MarketplacePage from '../pages/skills/MarketplacePage';
 import SkillMarketPage from '../pages/skills/SkillMarketPage';
 import MyInstalledSkillsPage from '../pages/skills/MyInstalledSkillsPage';
@@ -64,6 +65,7 @@ import ReportMyPage from '../pages/reports/ReportMyPage';
 import WorkflowMarketPage from '../pages/workflows/WorkflowMarketPage';
 import WorkflowInstalledPage from '../pages/workflows/WorkflowInstalledPage';
 import WorkflowMyPage from '../pages/workflows/WorkflowMyPage';
+import WorkflowPublishPage from '../pages/workflows/WorkflowPublishPage';
 import KnowledgeBasesPage from '../pages/rag/KnowledgeBasesPage';
 import KnowledgeBaseWorkbenchPage from '../pages/rag/KnowledgeBaseWorkbenchPage';
 import KBDetailPage from '../pages/rag/KBDetailPage';
@@ -109,10 +111,12 @@ export const router = createBrowserRouter([
       { path: 'agents/:id', element: <AgentDetailPage /> },
       { path: 'agents/:id/edit/workflow', element: <AgentWorkflowEditPage /> },
       { path: 'agents/:id/edit/chat', element: <AgentChatEditPage /> },
+      { path: 'agents/publish/:id', element: <AgentPublishPage /> },
       // Workflows
       { path: 'workflows/market', element: <WorkflowMarketPage /> },
       { path: 'workflows/installed', element: <WorkflowInstalledPage /> },
       { path: 'workflows/my', element: <WorkflowMyPage /> },
+      { path: 'workflows/publish/:id', element: <WorkflowPublishPage /> },
       // Skills
       { path: 'skills/market', element: <SkillMarketPage /> },
       { path: 'skills/marketplace', element: <MarketplacePage /> },

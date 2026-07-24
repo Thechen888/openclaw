@@ -86,7 +86,7 @@ export function AgentAvatar({ agent, size = 44 }: { agent: any; size?: number })
 
 // ===================== Agent 卡片 =====================
 export function AgentCard({
-  agent, onClick, onEdit, onDelete, onPermission, onRun,
+  agent, onClick, onEdit, onDelete, onPermission, onRun, actionsMenu,
 }: {
   agent: any;
   onClick?: () => void;
@@ -94,6 +94,7 @@ export function AgentCard({
   onDelete?: () => void;
   onPermission?: () => void;
   onRun?: () => void;
+  actionsMenu?: React.ReactNode;
 }) {
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
   const meta = getTypeMeta(agent.agent_type);
@@ -143,6 +144,11 @@ export function AgentCard({
         >
           <MoreVert fontSize="small" />
         </IconButton>
+        {actionsMenu && (
+          <Box className="card-menu-btn" sx={{ opacity: 0, transition: 'opacity 0.2s' }} onClick={(e) => e.stopPropagation()}>
+            {actionsMenu}
+          </Box>
+        )}
       </Box>
 
       <Typography
