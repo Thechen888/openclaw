@@ -997,19 +997,19 @@ const reports: any[] = [
 // =================== Agent ===================
 // agent_type: 'workflow'（工作流编排，拖拽画布）| 'chat'（对话，右侧调试预览）
 const agents = [
-  { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。', editable_roles: ['技术部成员'], viewable_roles: ['普通用户'] },
-  { id: 'a-2', name: '设备巡检', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), updated_at: ago(240), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
-  { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
-  { id: 'a-4', name: '每日总结', agent_type: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), updated_at: ago(360), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
-  { id: 'a-5', name: '个人提醒', agent_type: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), updated_at: ago(400), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
-  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', editable_roles: ['技术部成员', '产品部成员'], viewable_roles: ['普通用户', '运营部成员'], chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
-  { id: 'a-7', name: '技术研发部周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
-  { id: 'a-8', name: 'AI平台组周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
-  { id: 'a-9', name: '销售部周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
-  { id: 'a-10', name: '智慧客服项目周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
-  { id: 'a-11', name: '运营汇总周报Agent', agent_type: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
-  { id: 'a-12', name: '智能客服助手', agent_type: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#00D4FF', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 0, last_run_at: ago(8), updated_at: ago(30), description: '面向客户的售前售后对话客服', system_prompt: '你是一名专业、友好的客服助手，请耐心解答客户关于产品与订单的问题。', chat_config: { welcome: '您好！我是智能客服，很高兴为您服务～', temperature: 0.7, max_tokens: 1024, model_policy_id: 'mp-2', authorized_skills: ['sk-8'], knowledge_base_ids: [], variables: [], opening_questions: ['如何查询我的订单？', '产品保修政策是什么？'] } },
-  { id: 'a-13', name: '研发问答助手', agent_type: 'chat', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#7C3AED', status: 'draft', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: '', updated_at: ago(15), description: '辅助研发团队快速查询技术文档与规范', system_prompt: '你是研发问答助手，请结合内部技术文档回答研发相关问题。', chat_config: { welcome: '嗨，我可以帮你查研发文档和规范～', temperature: 0.4, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5', 'sk-1'], knowledge_base_ids: ['kb-1'], variables: [], opening_questions: [] } },
+  { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。', editable_roles: ['技术部成员'], viewable_roles: ['普通用户'] },
+  { id: 'a-2', name: '设备巡检', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), updated_at: ago(240), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
+  { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
+  { id: 'a-4', name: '每日总结', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), updated_at: ago(360), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
+  { id: 'a-5', name: '个人提醒', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), updated_at: ago(400), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
+  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', editable_roles: ['技术部成员', '产品部成员'], viewable_roles: ['普通用户', '运营部成员'], chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
+  { id: 'a-7', name: '技术研发部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
+  { id: 'a-8', name: 'AI平台组周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
+  { id: 'a-9', name: '销售部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
+  { id: 'a-10', name: '智慧客服项目周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
+  { id: 'a-11', name: '运营汇总周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
+  { id: 'a-12', name: '智能客服助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#00D4FF', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 0, last_run_at: ago(8), updated_at: ago(30), description: '面向客户的售前售后对话客服', system_prompt: '你是一名专业、友好的客服助手，请耐心解答客户关于产品与订单的问题。', chat_config: { welcome: '您好！我是智能客服，很高兴为您服务～', temperature: 0.7, max_tokens: 1024, model_policy_id: 'mp-2', authorized_skills: ['sk-8'], knowledge_base_ids: [], variables: [], opening_questions: ['如何查询我的订单？', '产品保修政策是什么？'] } },
+  { id: 'a-13', name: '研发问答助手', agent_type: 'chat', category: 'chat', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#7C3AED', status: 'draft', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: '', updated_at: ago(15), description: '辅助研发团队快速查询技术文档与规范', system_prompt: '你是研发问答助手，请结合内部技术文档回答研发相关问题。', chat_config: { welcome: '嗨，我可以帮你查研发文档和规范～', temperature: 0.4, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5', 'sk-1'], knowledge_base_ids: ['kb-1'], variables: [], opening_questions: [] } },
 ];
 
 // =================== Agent 协作者（权限）===================
@@ -1643,13 +1643,17 @@ const installedSkills: any[] = [
   { id: 'inst-6', skill_id: 'sk-14', skill_name: 'sales-report', skill_slug: 'sales-report', description: '销售数据报表生成（内测版）', version: '0.1-test', version_id: null, installed_at: dayAgo(2), installed_by: 'u-1', owner_name: '张伟', scope: 'private', has_update: false, latest_version: '2.0.0', is_beta: true },
 ];
 
-// =================== 技能定向授权（内测分享/白名单） ===================
+// =================== 通用资源定向授权（内测分享/白名单） ===================
+// resource_type: skill / agent / workflow / report
 // share_type: test（测试分享，作者发起，免审）/ release（发布白名单，管理员配置）
 // target_type: user / role
-const skillShares: any[] = [
-  { id: 'ss-1', skill_id: 'sk-1', skill_name: 'kingdee-erp-query', target_type: 'user', target_id: 'u-2', target_name: '李思', target_dept: '产品部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(5) },
-  { id: 'ss-2', skill_id: 'sk-1', skill_name: 'kingdee-erp-query', target_type: 'user', target_id: 'u-4', target_name: '赵敏', target_dept: '设计部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(3) },
-  { id: 'ss-3', skill_id: 'sk-14', skill_name: 'sales-report', target_type: 'user', target_id: 'u-3', target_name: '王五', target_dept: '技术研发部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(1) },
+const resourceShares: any[] = [
+  { id: 'rs-1', resource_type: 'skill', resource_id: 'sk-1', resource_name: 'kingdee-erp-query', target_type: 'user', target_id: 'u-2', target_name: '李思', target_dept: '产品部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(5) },
+  { id: 'rs-2', resource_type: 'skill', resource_id: 'sk-1', resource_name: 'kingdee-erp-query', target_type: 'user', target_id: 'u-4', target_name: '赵敏', target_dept: '设计部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(3) },
+  { id: 'rs-3', resource_type: 'skill', resource_id: 'sk-14', resource_name: 'sales-report', target_type: 'user', target_id: 'u-3', target_name: '王五', target_dept: '技术研发部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(1) },
+  { id: 'rs-4', resource_type: 'agent', resource_id: 'a-6', resource_name: '知识库问答助手', target_type: 'user', target_id: 'u-2', target_name: '李思', target_dept: '产品部', share_type: 'test', granted_by: 'u-2', granted_by_name: '李娜', created_at: dayAgo(2) },
+  { id: 'rs-5', resource_type: 'workflow', resource_id: 'a-1', resource_name: 'CRM销售通知', target_type: 'user', target_id: 'u-3', target_name: '王五', target_dept: '技术研发部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(4) },
+  { id: 'rs-6', resource_type: 'report', resource_id: 'rpt-1', resource_name: '2026年第20周运营周报', target_type: 'user', target_id: 'u-4', target_name: '赵敏', target_dept: '设计部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(1) },
 ];
 
 // =================== 发布审核记录 ===================
@@ -3167,6 +3171,66 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const execId = path.split('/').pop() as string;
     return ok(buildRunDetail(execId));
   }
+  // ===== 通用资源市场 GET /{resourceType}/market =====
+  // 必须置于 /:id 路由之前，否则 "market" 会被误当作资源 ID
+  if (/^\/(skills|agents|workflows|reports)\/market$/.test(path) && method === 'get') {
+    const rType = path.split('/')[1].replace(/s$/, '');
+    let sourceData: any[] = [];
+    if (rType === 'skill') {
+      sourceData = skills.filter((s: any) => s.status === 'published');
+    } else if (rType === 'agent') {
+      sourceData = agents
+        .filter((a: any) => a.category !== 'workflow' && a.status === 'active')
+        .map((a: any) => ({ ...a, scope: a.owner_type === 'organization' ? 'company' : 'private', version: '1.0.0', install_count: a.triggers_count ?? 0, owner_dept: a.owner_type === 'organization' ? '组织' : '个人' }));
+    } else if (rType === 'workflow') {
+      sourceData = agents
+        .filter((a: any) => a.category === 'workflow' && a.status === 'active')
+        .map((a: any) => ({ ...a, scope: a.owner_type === 'organization' ? 'company' : 'private', version: '1.0.0', install_count: a.triggers_count ?? 0, owner_dept: a.owner_type === 'organization' ? '组织' : '个人' }));
+    } else if (rType === 'report') {
+      sourceData = reports
+        .filter((r: any) => r.status === 'published')
+        .map((r: any) => ({ id: r.id, name: r.title, description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}，由 ${r.agent_name || '系统'} 自动生成`, owner_name: r.agent_name || '系统', owner_dept: r.department_name || '', scope: r.scope || 'department', version: '', install_count: undefined }));
+    }
+    return paginate(sourceData, p.page, p.page_size, p.search);
+  }
+  // ===== 通用资源 — 获取内测分享的资源（给市场用） GET /{resourceType}/shared-to-me =====
+  // 必须置于 /:id 路由之前，否则 "shared-to-me" 会被误当作资源 ID
+  if (/^\/(skills|agents|workflows|reports)\/shared-to-me$/.test(path) && method === 'get') {
+    const rType = path.split('/')[1].replace(/s$/, '');
+    const myShares = resourceShares.filter(s => s.resource_type === rType && (s.target_id === 'u-1' || s.target_id === 'dept-1'));
+    const sharedIds = [...new Set(myShares.map(s => s.resource_id))];
+    // 根据 resourceType 从对应数据集查找
+    let srcData: any[] = [];
+    if (rType === 'skill') srcData = skills;
+    else if (rType === 'agent' || rType === 'workflow') srcData = agents;
+    else srcData = []; // reports 暂无统一数据源
+    const sharedItems = srcData.filter(s => sharedIds.includes(s.id));
+    return paginate(sharedItems, p.page, p.page_size, p.search);
+  }
+  // ===== 通用资源 — 我安装的 GET /{resourceType}/installed =====
+  // 必须置于 /:id 路由之前，否则 "installed" 会被误当作资源 ID
+  if (/^\/(agents|workflows|reports)\/installed$/.test(path) && method === 'get') {
+    const rType = path.split('/')[1].replace(/s$/, '');
+    let installedData: any[] = [];
+    if (rType === 'agent') {
+      // 安装他人发布的对话类智能体
+      installedData = agents
+        .filter((a: any) => a.category !== 'workflow' && a.owner_id !== 'u-1')
+        .map((a: any, i: number) => ({ ...a, installed_at: dayAgo(i + 1), is_beta: i === 0 }));
+    } else if (rType === 'workflow') {
+      // 安装他人发布的工作流类智能体
+      installedData = agents
+        .filter((a: any) => a.category === 'workflow' && a.owner_id !== 'u-1')
+        .map((a: any, i: number) => ({ ...a, installed_at: dayAgo(i + 2), is_beta: false }));
+    } else if (rType === 'report') {
+      // 安装他人发布的报告
+      installedData = reports
+        .filter((r: any) => r.status === 'published')
+        .slice(0, 3)
+        .map((r: any, i: number) => ({ id: r.id, name: r.title, description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}`, owner_name: r.agent_name || '系统', agent_type: 'report', installed_at: dayAgo(i + 1), is_beta: false }));
+    }
+    return paginate(installedData, p.page, p.page_size, p.search);
+  }
   if (/^\/agents\/[^/]+$/.test(path) && method === 'get') {
     const id = path.split('/').pop() as string;
     const agent = agents.find((a: any) => a.id === id) || agents[0];
@@ -3264,20 +3328,21 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok(newVersion);
   }
 
-  // Skills — 分享（定向授权）
-  if (/^\/skills\/[^/]+\/share$/.test(path) && method === 'post') {
-    const sid = path.split('/')[2];
-    const skill = skills.find(s => s.id === sid);
-    if (!skill) return { status: 404, data: { error: 'Skill not found' } };
-    const targets = data.targets || []; // [{ target_type, target_id, target_name, target_dept }]
-    const existing = skillShares.filter(s => s.skill_id === sid);
+  // 通用资源 — 分享（定向授权） POST /{resourceType}/:id/shares
+  if (/^\/(skills|agents|workflows|reports)\/[^/]+\/shares$/.test(path) && method === 'post') {
+    const parts = path.split('/');
+    const rType = parts[1].replace(/s$/, ''); // skills->skill, agents->agent, etc.
+    const rid = parts[2];
+    const targets = data.targets || [];
+    const existing = resourceShares.filter(s => s.resource_type === rType && s.resource_id === rid);
     if (existing.length + targets.length > 20) {
       return { status: 400, data: { error: '内测分享仅限小范围（最多20人/角色），如需更大范围请走发布流程' } };
     }
     const newShares = targets.map((t: any) => ({
-      id: 'ss-' + Date.now() + '-' + t.target_id,
-      skill_id: sid,
-      skill_name: skill.name,
+      id: 'rs-' + Date.now() + '-' + t.target_id,
+      resource_type: rType,
+      resource_id: rid,
+      resource_name: t.resource_name || rid,
       target_type: t.target_type || 'user',
       target_id: t.target_id,
       target_name: t.target_name,
@@ -3287,22 +3352,24 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       granted_by_name: '张伟',
       created_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
     }));
-    skillShares.push(...newShares);
+    resourceShares.push(...newShares);
     return ok(newShares);
   }
 
-  // Skills — 移除分享
-  if (/^\/skills\/[^/]+\/share\/[^/]+$/.test(path) && method === 'delete') {
+  // 通用资源 — 移除分享 DELETE /{resourceType}/:id/shares/:shareId
+  if (/^\/(skills|agents|workflows|reports)\/[^/]+\/shares\/[^/]+$/.test(path) && method === 'delete') {
     const shareId = path.split('/')[4];
-    const idx = skillShares.findIndex(s => s.id === shareId);
-    if (idx >= 0) skillShares.splice(idx, 1);
+    const idx = resourceShares.findIndex(s => s.id === shareId);
+    if (idx >= 0) resourceShares.splice(idx, 1);
     return ok(null);
   }
 
-  // Skills — 获取分享列表
-  if (/^\/skills\/[^/]+\/share$/.test(path) && method === 'get') {
-    const sid = path.split('/')[2];
-    const shares = skillShares.filter(s => s.skill_id === sid);
+  // 通用资源 — 获取分享列表 GET /{resourceType}/:id/shares
+  if (/^\/(skills|agents|workflows|reports)\/[^/]+\/shares$/.test(path) && method === 'get') {
+    const parts = path.split('/');
+    const rType = parts[1].replace(/s$/, '');
+    const rid = parts[2];
+    const shares = resourceShares.filter(s => s.resource_type === rType && s.resource_id === rid);
     return ok(shares);
   }
 
@@ -3314,15 +3381,6 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       skills[idx] = { ...skills[idx], status: 'published', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
     }
     return ok(idx >= 0 ? skills[idx] : null);
-  }
-
-  // Skills — 获取内测分享的技能（给技能市场用）
-  if (path === '/skills/shared-to-me' && method === 'get') {
-    // 当前用户 u-1 收到的分享
-    const myShares = skillShares.filter(s => s.target_id === 'u-1' || s.target_id === 'dept-1');
-    const sharedSkillIds = [...new Set(myShares.map(s => s.skill_id))];
-    const sharedSkills = skills.filter(s => sharedSkillIds.includes(s.id));
-    return paginate(sharedSkills, p.page, p.page_size, p.search);
   }
 
   // Skills — 后台 CRUD

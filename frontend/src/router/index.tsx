@@ -24,6 +24,9 @@ import AgentCreatePage from '../pages/agents/AgentCreatePage';
 import AgentDetailPage from '../pages/agents/AgentDetailPage';
 import AgentWorkflowEditPage from '../pages/agents/AgentWorkflowEditPage';
 import AgentChatEditPage from '../pages/agents/AgentChatEditPage';
+import AgentMarketPage from '../pages/agents/AgentMarketPage';
+import AgentInstalledPage from '../pages/agents/AgentInstalledPage';
+import AgentMyPage from '../pages/agents/AgentMyPage';
 import MarketplacePage from '../pages/skills/MarketplacePage';
 import SkillMarketPage from '../pages/skills/SkillMarketPage';
 import MyInstalledSkillsPage from '../pages/skills/MyInstalledSkillsPage';
@@ -55,6 +58,12 @@ import AgentsMdPage from '../pages/resources/AgentsMdPage';
 import UsageStatsPage from '../pages/stats/UsageStatsPage';
 import AuditLogsPage from '../pages/stats/AuditLogsPage';
 import ReportsPage from '../pages/weekly/WeeklyReportsPage';
+import ReportMarketPage from '../pages/reports/ReportMarketPage';
+import ReportInstalledPage from '../pages/reports/ReportInstalledPage';
+import ReportMyPage from '../pages/reports/ReportMyPage';
+import WorkflowMarketPage from '../pages/workflows/WorkflowMarketPage';
+import WorkflowInstalledPage from '../pages/workflows/WorkflowInstalledPage';
+import WorkflowMyPage from '../pages/workflows/WorkflowMyPage';
 import KnowledgeBasesPage from '../pages/rag/KnowledgeBasesPage';
 import KnowledgeBaseWorkbenchPage from '../pages/rag/KnowledgeBaseWorkbenchPage';
 import KBDetailPage from '../pages/rag/KBDetailPage';
@@ -92,11 +101,18 @@ export const router = createBrowserRouter([
       { path: 'identity/roles', element: <RolesPage /> },
       // Agents
       { path: 'agents', element: <AgentsPage /> },
+      { path: 'agents/market', element: <AgentMarketPage /> },
+      { path: 'agents/installed', element: <AgentInstalledPage /> },
+      { path: 'agents/my', element: <AgentMyPage /> },
       { path: 'agents/create', element: <AgentCreatePage /> },
       { path: 'agents/runs', element: <AgentRunsPage /> },
       { path: 'agents/:id', element: <AgentDetailPage /> },
       { path: 'agents/:id/edit/workflow', element: <AgentWorkflowEditPage /> },
       { path: 'agents/:id/edit/chat', element: <AgentChatEditPage /> },
+      // Workflows
+      { path: 'workflows/market', element: <WorkflowMarketPage /> },
+      { path: 'workflows/installed', element: <WorkflowInstalledPage /> },
+      { path: 'workflows/my', element: <WorkflowMyPage /> },
       // Skills
       { path: 'skills/market', element: <SkillMarketPage /> },
       { path: 'skills/marketplace', element: <MarketplacePage /> },
@@ -135,6 +151,9 @@ export const router = createBrowserRouter([
       { path: 'stats/audit', element: <AuditLogsPage /> },
       // Reports
       { path: 'reports', element: <ReportsPage /> },
+      { path: 'reports/market', element: <ReportMarketPage /> },
+      { path: 'reports/installed', element: <ReportInstalledPage /> },
+      { path: 'reports/my', element: <ReportMyPage /> },
       // RAG
       { path: 'rag/workbench', element: <KnowledgeBaseWorkbenchPage /> },
       { path: 'rag/knowledge-bases', element: <KnowledgeBasesPage /> },

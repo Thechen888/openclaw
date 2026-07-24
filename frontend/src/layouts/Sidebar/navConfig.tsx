@@ -60,14 +60,25 @@ export const frontNavConfig: NavSection[] = [
   {
     label: '智能体',
     items: [
-      { title: '全部智能体', path: '/agents', icon: <SmartToyIcon fontSize="small" /> },
-      { title: '运行记录', path: '/agents/runs', icon: <BarChartIcon fontSize="small" /> },
+      { title: '智能体市场', path: '/agents/market', icon: <Storefront fontSize="small" /> },
+      { title: '我安装的', path: '/agents/installed', icon: <DownloadIcon fontSize="small" /> },
+      { title: '我创建的', path: '/agents/my', icon: <SmartToyIcon fontSize="small" /> },
     ],
   },
   {
-    label: '智能报告',
+    label: '工作流',
     items: [
-      { title: '报告中心', path: '/reports', icon: <AutoStories fontSize="small" /> },
+      { title: '工作流市场', path: '/workflows/market', icon: <Storefront fontSize="small" /> },
+      { title: '我安装的', path: '/workflows/installed', icon: <DownloadIcon fontSize="small" /> },
+      { title: '我创建的', path: '/workflows/my', icon: <AccountTree fontSize="small" /> },
+    ],
+  },
+  {
+    label: '报告',
+    items: [
+      { title: '报告市场', path: '/reports/market', icon: <Storefront fontSize="small" /> },
+      { title: '我安装的', path: '/reports/installed', icon: <DownloadIcon fontSize="small" /> },
+      { title: '我创建的', path: '/reports/my', icon: <AutoStories fontSize="small" /> },
     ],
   },
   {
@@ -83,12 +94,6 @@ export const frontNavConfig: NavSection[] = [
       { title: '我安装的', path: '/skills/my-installed', icon: <DownloadIcon fontSize="small" /> },
       { title: '我创建的', path: '/skills/my', icon: <ExtensionIcon fontSize="small" /> },
       { title: '技能管理', path: '/skills/admin', icon: <Build fontSize="small" /> },
-    ],
-  },
-  {
-    label: 'Token 转售',
-    items: [
-      { title: 'Token 转售', path: '/tokens/resale', icon: <Storefront fontSize="small" /> },
     ],
   },
 ];

@@ -9,6 +9,7 @@ import {
   AutoStories, Search, Settings, Logout,
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
+  AccountTree, Build,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useViewModeStore } from '../stores/viewModeStore';
@@ -17,11 +18,55 @@ import { useThemeStore } from '../stores/themeStore';
 
 const SIDEBAR_WIDTH = 280;
 
-// 导航项
-const NAV_ITEMS = [
-  { icon: <SmartToy fontSize="small" />, label: '智能体', path: '/agents' },
-  { icon: <AutoStories fontSize="small" />, label: '报告中心', path: '/reports' },
-  { icon: <MenuBook fontSize="small" />, label: '知识库', path: '/rag/knowledge-bases' },
+// 导航分区：三模块九页 + 知识库/技能/Token转售
+interface NavSubItem { icon: React.ReactNode; label: string; path: string; }
+interface NavSectionDef { label: string; icon: React.ReactNode; items: NavSubItem[]; }
+
+const NAV_SECTIONS: NavSectionDef[] = [
+  {
+    label: '智能体',
+    icon: <SmartToy fontSize="small" />,
+    items: [
+      { icon: <Storefront sx={{ fontSize: 14 }} />, label: '智能体市场', path: '/agents/market' },
+      { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/agents/installed' },
+      { icon: <SmartToy sx={{ fontSize: 14 }} />, label: '我创建的', path: '/agents/my' },
+    ],
+  },
+  {
+    label: '工作流',
+    icon: <AccountTree fontSize="small" />,
+    items: [
+      { icon: <Storefront sx={{ fontSize: 14 }} />, label: '工作流市场', path: '/workflows/market' },
+      { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/workflows/installed' },
+      { icon: <AccountTree sx={{ fontSize: 14 }} />, label: '我创建的', path: '/workflows/my' },
+    ],
+  },
+  {
+    label: '报告',
+    icon: <AutoStories fontSize="small" />,
+    items: [
+      { icon: <Storefront sx={{ fontSize: 14 }} />, label: '报告市场', path: '/reports/market' },
+      { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/reports/installed' },
+      { icon: <AutoStories sx={{ fontSize: 14 }} />, label: '我创建的', path: '/reports/my' },
+    ],
+  },
+  {
+    label: '知识库',
+    icon: <MenuBook fontSize="small" />,
+    items: [
+      { icon: <MenuBook sx={{ fontSize: 14 }} />, label: '知识库列表', path: '/rag/knowledge-bases' },
+    ],
+  },
+  {
+    label: '技能',
+    icon: <Extension fontSize="small" />,
+    items: [
+      { icon: <Storefront sx={{ fontSize: 14 }} />, label: '技能市场', path: '/skills/market' },
+      { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/skills/my-installed' },
+      { icon: <Extension sx={{ fontSize: 14 }} />, label: '我创建的', path: '/skills/my' },
+      { icon: <Build sx={{ fontSize: 14 }} />, label: '技能管理', path: '/skills/admin' },
+    ],
+  },
 ];
 
 // Mock 数据
@@ -58,7 +103,12 @@ export default function FrontLayout() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [spacesExpanded, setSpacesExpanded] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
-  const [skillsExpanded, setSkillsExpanded] = useState(true);
+  // 各导航分区展开状态（默认全部展开）
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(NAV_SECTIONS.map((s) => [s.label, true]))
+  );
+  const toggleSection = (label: string) =>
+    setExpandedSections((prev) => ({ ...prev, [label]: !prev[label] }));
   const [activeId, setActiveId] = useState<string>('');
 
   const isDark = themeMode === 'dark';
@@ -139,80 +189,63 @@ export default function FrontLayout() {
             <Typography sx={{ fontWeight: 600, fontSize: 13 }}>新建对话</Typography>
           </Box>
 
-          {/* 导航项 */}
+          {/* 导航分区：三模块九页 + 知识库/技能/Token转售（均可折叠） */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-            {NAV_ITEMS.map((item) => (
-              <Box
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                sx={{
-                  display: 'flex', alignItems: 'center', gap: 1.25,
-                  px: 1.5, py: 0.85, borderRadius: 1.5,
-                  cursor: 'pointer',
-                  bgcolor: isNavActive(item.path) ? c.navActive : 'transparent',
-                  color: isNavActive(item.path) ? c.accent : c.text2,
-                  transition: 'all 0.15s',
-                  '&:hover': { bgcolor: c.navHover, color: c.text1 },
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', width: 20, justifyContent: 'center' }}>
-                  {item.icon}
-                </Box>
-                <Typography sx={{ fontSize: 13, fontWeight: isNavActive(item.path) ? 600 : 400 }}>
-                  {item.label}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-
-          {/* 技能（可折叠子菜单） */}
-          <Box sx={{ mt: 0.5 }}>
-            <Box
-              onClick={() => setSkillsExpanded(!skillsExpanded)}
-              sx={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                px: 1.5, py: 0.85, cursor: 'pointer', borderRadius: 1.5,
-                '&:hover': { bgcolor: c.navHover },
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                <Extension sx={{ fontSize: 'small', color: c.text2 }} />
-                <Typography sx={{ fontSize: 13, fontWeight: 600, color: c.text2 }}>
-                  技能
-                </Typography>
-              </Box>
-              {skillsExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
-            </Box>
-            <Collapse in={skillsExpanded}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, pl: 1 }}>
-                {[
-                  { icon: <Storefront sx={{ fontSize: 14 }} />, label: '技能市场', path: '/skills/market' },
-                  { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/skills/my-installed' },
-                  { icon: <Extension sx={{ fontSize: 14 }} />, label: '我创建的', path: '/skills/my' },
-                ].map((item) => (
+            {NAV_SECTIONS.map((section) => {
+              const expanded = expandedSections[section.label] ?? true;
+              // 分区下任一子项激活时，分区标题高亮
+              const sectionActive = section.items.some((it) => isNavActive(it.path));
+              return (
+                <Box key={section.label}>
+                  {/* 分区标题（点击折叠/展开） */}
                   <Box
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
+                    onClick={() => toggleSection(section.label)}
                     sx={{
-                      display: 'flex', alignItems: 'center', gap: 1.25,
-                      px: 1.5, py: 0.7, borderRadius: 1.5,
-                      cursor: 'pointer',
-                      bgcolor: isNavActive(item.path) ? c.navActive : 'transparent',
-                      color: isNavActive(item.path) ? c.accent : c.text3,
-                      transition: 'all 0.15s',
-                      '&:hover': { bgcolor: c.navHover, color: c.text1 },
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      px: 1.5, py: 0.85, cursor: 'pointer', borderRadius: 1.5,
+                      '&:hover': { bgcolor: c.navHover },
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: 20, justifyContent: 'center', opacity: 0.7 }}>
-                      {item.icon}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: 20, justifyContent: 'center', color: sectionActive ? c.accent : c.text2 }}>
+                        {section.icon}
+                      </Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: sectionActive ? c.accent : c.text2 }}>
+                        {section.label}
+                      </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 12.5, fontWeight: isNavActive(item.path) ? 600 : 400 }}>
-                      {item.label}
-                    </Typography>
+                    {expanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
                   </Box>
-                ))}
-              </Box>
-            </Collapse>
+                  {/* 子项 */}
+                  <Collapse in={expanded}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, pl: 1 }}>
+                      {section.items.map((item) => (
+                        <Box
+                          key={item.path}
+                          onClick={() => navigate(item.path)}
+                          sx={{
+                            display: 'flex', alignItems: 'center', gap: 1.25,
+                            px: 1.5, py: 0.7, borderRadius: 1.5,
+                            cursor: 'pointer',
+                            bgcolor: isNavActive(item.path) ? c.navActive : 'transparent',
+                            color: isNavActive(item.path) ? c.accent : c.text3,
+                            transition: 'all 0.15s',
+                            '&:hover': { bgcolor: c.navHover, color: c.text1 },
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: 20, justifyContent: 'center', opacity: 0.7 }}>
+                            {item.icon}
+                          </Box>
+                          <Typography sx={{ fontSize: 12.5, fontWeight: isNavActive(item.path) ? 600 : 400 }}>
+                            {item.label}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Collapse>
+                </Box>
+              );
+            })}
           </Box>
         </Box>
 
