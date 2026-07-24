@@ -997,18 +997,18 @@ const reports: any[] = [
 // =================== Agent ===================
 // agent_type: 'workflow'（工作流编排，拖拽画布）| 'chat'（对话，右侧调试预览）
 const agents = [
-  { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。', editable_roles: ['技术部成员'], viewable_roles: ['普通用户'] },
-  { id: 'a-2', name: '设备巡检', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), updated_at: ago(240), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
-  { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
-  { id: 'a-4', name: '每日总结', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), updated_at: ago(360), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
-  { id: 'a-5', name: '个人提醒', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), updated_at: ago(400), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
-  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', editable_roles: ['技术部成员', '产品部成员'], viewable_roles: ['普通用户', '运营部成员'], chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
-  { id: 'a-7', name: '技术研发部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#3b82f6', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
-  { id: 'a-8', name: 'AI平台组周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#06b6d4', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
-  { id: 'a-9', name: '销售部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#f59e0b', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
-  { id: 'a-10', name: '智慧客服项目周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#10b981', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
-  { id: 'a-11', name: '运营汇总周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#a855f7', status: 'active', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
-  { id: 'a-12', name: '智能客服助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#00D4FF', status: 'active', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 0, last_run_at: ago(8), updated_at: ago(30), description: '面向客户的售前售后对话客服', system_prompt: '你是一名专业、友好的客服助手，请耐心解答客户关于产品与订单的问题。', chat_config: { welcome: '您好！我是智能客服，很高兴为您服务～', temperature: 0.7, max_tokens: 1024, model_policy_id: 'mp-2', authorized_skills: ['sk-8'], knowledge_base_ids: [], variables: [], opening_questions: ['如何查询我的订单？', '产品保修政策是什么？'] } },
+  { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。', editable_roles: ['技术部成员'], viewable_roles: ['普通用户'] },
+  { id: 'a-2', name: '设备巡检', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#06b6d4', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), updated_at: ago(240), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
+  { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'published', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
+  { id: 'a-4', name: '每日总结', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#10b981', status: 'published', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), updated_at: ago(360), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
+  { id: 'a-5', name: '个人提醒', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#a855f7', status: 'published', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), updated_at: ago(400), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
+  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', editable_roles: ['技术部成员', '产品部成员'], viewable_roles: ['普通用户', '运营部成员'], chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
+  { id: 'a-7', name: '技术研发部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#3b82f6', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
+  { id: 'a-8', name: 'AI平台组周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#06b6d4', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
+  { id: 'a-9', name: '销售部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#f59e0b', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
+  { id: 'a-10', name: '智慧客服项目周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#10b981', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
+  { id: 'a-11', name: '运营汇总周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#a855f7', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
+  { id: 'a-12', name: '智能客服助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#00D4FF', status: 'published', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 0, last_run_at: ago(8), updated_at: ago(30), description: '面向客户的售前售后对话客服', system_prompt: '你是一名专业、友好的客服助手，请耐心解答客户关于产品与订单的问题。', chat_config: { welcome: '您好！我是智能客服，很高兴为您服务～', temperature: 0.7, max_tokens: 1024, model_policy_id: 'mp-2', authorized_skills: ['sk-8'], knowledge_base_ids: [], variables: [], opening_questions: ['如何查询我的订单？', '产品保修政策是什么？'] } },
   { id: 'a-13', name: '研发问答助手', agent_type: 'chat', category: 'chat', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#7C3AED', status: 'draft', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: '', updated_at: ago(15), description: '辅助研发团队快速查询技术文档与规范', system_prompt: '你是研发问答助手，请结合内部技术文档回答研发相关问题。', chat_config: { welcome: '嗨，我可以帮你查研发文档和规范～', temperature: 0.4, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5', 'sk-1'], knowledge_base_ids: ['kb-1'], variables: [], opening_questions: [] } },
 ];
 
@@ -1043,6 +1043,10 @@ const workflows: Record<string, any> = {
     max_iterations: 1,
     timeout_seconds: 60,
     on_error: 'stop',
+    input_params: [
+      { key: 'customer_id', label: '客户ID', type: 'text', required: true },
+      { key: 'notify_email', label: '通知邮箱', type: 'text', required: false },
+    ],
     nodes: [
       {
         id: 'wn-1-1', name: '解析事件', type: 'starlark',
@@ -1072,6 +1076,9 @@ const workflows: Record<string, any> = {
     max_iterations: 3,
     timeout_seconds: 120,
     on_error: 'retry',
+    input_params: [
+      { key: 'device_count', label: '巡检设备数量', type: 'number', required: false },
+    ],
     nodes: [
       {
         id: 'wn-2-1', name: '获取设备列表', type: 'starlark',
@@ -3213,11 +3220,11 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         ? (a: any) => a.category === 'workflow'
         : (a: any) => a.category !== 'workflow'; // 默认 chat
       sourceData = agents
-        .filter((a: any) => catFilter(a) && a.status === 'active')
+        .filter((a: any) => catFilter(a) && a.status === 'published')
         .map((a: any) => ({ ...a, scope: a.owner_type === 'organization' ? 'company' : 'private', version: '1.0.0', install_count: a.triggers_count ?? 0, owner_dept: a.owner_type === 'organization' ? '组织' : '个人' }));
     } else if (rType === 'workflow') {
       sourceData = agents
-        .filter((a: any) => a.category === 'workflow' && a.status === 'active')
+        .filter((a: any) => a.category === 'workflow' && a.status === 'published')
         .map((a: any) => ({ ...a, scope: a.owner_type === 'organization' ? 'company' : 'private', version: '1.0.0', install_count: a.triggers_count ?? 0, owner_dept: a.owner_type === 'organization' ? '组织' : '个人' }));
     } else if (rType === 'report') {
       sourceData = reports
@@ -3225,6 +3232,23 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         .map((r: any) => ({ id: r.id, name: r.title, description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}，由 ${r.agent_name || '系统'} 自动生成`, owner_name: r.agent_name || '系统', owner_dept: r.department_name || '', scope: r.scope || 'department', version: '', install_count: undefined }));
     }
     return paginate(sourceData, p.page, p.page_size, p.search);
+  }
+  // ===== 通用资源市场详情 GET /{resourceType}/market/:id =====
+  if (/^\/(agents|workflows|skills)\/market\/[^/]+$/.test(path) && method === 'get') {
+    const parts = path.split('/');
+    const rType = parts[1].replace(/s$/, '');
+    const itemId = parts[3];
+    let sourceData: any[] = [];
+    if (rType === 'skill') {
+      sourceData = skills.filter((s: any) => s.status === 'published');
+    } else {
+      sourceData = agents
+        .filter((a: any) => a.status === 'active' || a.status === 'published')
+        .map((a: any) => ({ ...a, scope: a.owner_type === 'organization' ? 'company' : 'private', version: '1.0.0', install_count: a.triggers_count ?? 0, owner_dept: a.owner_type === 'organization' ? '技术部' : '个人', publish_description: a.description, changelog: '初始版本发布', published_at: a.updated_at }));
+    }
+    const found = sourceData.find((s: any) => s.id === itemId);
+    if (found) return ok(found);
+    return ok(sourceData[0] || null);
   }
   // ===== 通用资源 — 获取内测分享的资源（给市场用） GET /{resourceType}/shared-to-me =====
   // 必须置于 /:id 路由之前，否则 "shared-to-me" 会被误当作资源 ID

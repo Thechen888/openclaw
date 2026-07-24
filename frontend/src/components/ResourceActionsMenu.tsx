@@ -3,7 +3,7 @@ import {
   Menu, MenuItem, ListItemIcon, ListItemText, IconButton, Tooltip,
 } from '@mui/material';
 import {
-  MoreVert, Edit, Delete, Send, CloudOff, PersonAdd, PlayArrow,
+  MoreVert, Edit, Delete, Send, CloudOff, PersonAdd, PlayArrow, History,
 } from '@mui/icons-material';
 
 /**
@@ -30,6 +30,7 @@ export const ACTION_META: Record<string, { icon: React.ReactNode; label: string;
   delete: { icon: <Delete fontSize="small" />, label: '删除', color: 'error.main' },
   run: { icon: <PlayArrow fontSize="small" />, label: '立即运行', color: 'success.main' },
   debug: { icon: <PlayArrow fontSize="small" />, label: '调试', color: 'info.main' },
+  run_records: { icon: <History fontSize="small" />, label: '运行记录', color: 'text.secondary' },
 };
 
 export interface ResourceActionsMenuProps {

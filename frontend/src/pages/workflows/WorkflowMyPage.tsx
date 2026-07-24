@@ -80,6 +80,7 @@ export default function WorkflowMyPage() {
       case 'cancel': cancelMutation.mutate(item.id); break;
       case 'share': setShareItem(item); break;
       case 'debug': setDebugItem(item); break;
+      case 'run_records': navigate('/agents/runs'); break;
       case 'delete': setDeleteConfirm(item); break;
     }
   };
@@ -124,7 +125,7 @@ export default function WorkflowMyPage() {
                 actionsMenu={
                   <ResourceActionsMenu
                     status={agent.status || 'draft'}
-                    extraActions={['debug']}
+                    extraActions={['debug', 'run_records']}
                     onAction={(action) => handleAction(action, agent)}
                   />
                 }

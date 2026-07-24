@@ -25,6 +25,7 @@ import AgentDetailPage from '../pages/agents/AgentDetailPage';
 import AgentWorkflowEditPage from '../pages/agents/AgentWorkflowEditPage';
 import AgentChatEditPage from '../pages/agents/AgentChatEditPage';
 import AgentMarketPage from '../pages/agents/AgentMarketPage';
+import ResourceMarketDetailPage from '../components/ResourceMarketDetailPage';
 import AgentInstalledPage from '../pages/agents/AgentInstalledPage';
 import AgentMyPage from '../pages/agents/AgentMyPage';
 import AgentPublishPage from '../pages/agents/AgentPublishPage';
@@ -104,6 +105,7 @@ export const router = createBrowserRouter([
       // Agents
       { path: 'agents', element: <Navigate to="/agents/my" /> },
       { path: 'agents/market', element: <AgentMarketPage /> },
+      { path: 'agents/market/:id', element: <ResourceMarketDetailPage resourceType="agent" backPath="/agents/market" installSuccessMsg="已安装到智能体库" /> },
       { path: 'agents/installed', element: <AgentInstalledPage /> },
       { path: 'agents/my', element: <AgentMyPage /> },
       { path: 'agents/create', element: <AgentCreatePage /> },
@@ -114,6 +116,7 @@ export const router = createBrowserRouter([
       { path: 'agents/publish/:id', element: <AgentPublishPage /> },
       // Workflows
       { path: 'workflows/market', element: <WorkflowMarketPage /> },
+      { path: 'workflows/market/:id', element: <ResourceMarketDetailPage resourceType="workflow" backPath="/workflows/market" installSuccessMsg="已安装到工作流库" /> },
       { path: 'workflows/installed', element: <WorkflowInstalledPage /> },
       { path: 'workflows/my', element: <WorkflowMyPage /> },
       { path: 'workflows/publish/:id', element: <WorkflowPublishPage /> },

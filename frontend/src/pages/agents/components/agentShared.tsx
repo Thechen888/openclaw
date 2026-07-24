@@ -136,18 +136,38 @@ export function AgentCard({
             <StatusBadge status={agent.status} />
           </Box>
         </Box>
-        <IconButton
-          size="small"
-          className="card-menu-btn"
-          onClick={(e) => { e.stopPropagation(); setAnchor(e.currentTarget); }}
-          sx={{ opacity: 0, transition: 'opacity 0.2s' }}
-        >
-          <MoreVert fontSize="small" />
-        </IconButton>
-        {actionsMenu && (
+        {/* 操作菜单：传入 actionsMenu 时只渲染它，否则用内置菜单 */}
+        {actionsMenu ? (
           <Box className="card-menu-btn" sx={{ opacity: 0, transition: 'opacity 0.2s' }} onClick={(e) => e.stopPropagation()}>
             {actionsMenu}
           </Box>
+        ) : (
+          <>
+            <IconButton
+              size="small"
+              className="card-menu-btn"
+              onClick={(e) => { e.stopPropagation(); setAnchor(e.currentTarget); }}
+              sx={{ opacity: 0, transition: 'opacity 0.2s' }}
+            >
+              <MoreVert fontSize="small" />
+            </IconButton>
+            <Menu anchorEl={anchor} open={!!anchor} onClose={closeMenu} onClick={(e) => e.stopPropagation()}>
+              {onRun && (
+                <MenuItem onClick={act(onRun)}>
+                  <ListItemIcon><PlayArrow fontSize="small" /></ListItemIcon>
+                  <ListItemText>立即运行</ListItemText>
+                </MenuItem>
+              )}
+              <MenuItem onClick={act(onEdit)}>
+                <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
+                <ListItemText>编辑</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={act(onDelete)} sx={{ color: 'error.main' }}>
+                <ListItemIcon><Delete fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
+                <ListItemText>删除</ListItemText>
+              </MenuItem>
+            </Menu>
+          </>
         )}
       </Box>
 
@@ -173,23 +193,6 @@ export function AgentCard({
           {relativeTime(agent.last_run_at)}
         </Typography>
       </Box>
-
-      <Menu anchorEl={anchor} open={!!anchor} onClose={closeMenu} onClick={(e) => e.stopPropagation()}>
-        {onRun && (
-          <MenuItem onClick={act(onRun)}>
-            <ListItemIcon><PlayArrow fontSize="small" /></ListItemIcon>
-            <ListItemText>立即运行</ListItemText>
-          </MenuItem>
-        )}
-        <MenuItem onClick={act(onEdit)}>
-          <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
-          <ListItemText>编辑</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={act(onDelete)} sx={{ color: 'error.main' }}>
-          <ListItemIcon><Delete fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
-          <ListItemText>删除</ListItemText>
-        </MenuItem>
-      </Menu>
     </Card>
   );
 }

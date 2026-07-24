@@ -65,12 +65,15 @@ export default function AgentDetailPage() {
   const cfg = agent.chat_config || {};
   const goEdit = () => navigate(isChat ? `/agents/${id}/edit/chat` : `/agents/${id}/edit/workflow`);
   const backPath = isChat ? '/agents/my' : '/workflows/my';
+  const detailTitle = isChat ? '智能体详情' : '工作流详情';
+  // 判断当前用户是否为拥有者（mock 按 owner_name 判断）
+  const isOwner = agent?.owner_name === currentUser?.name || agent?.owner_id === currentUser?.id;
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
       <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
         <PageHeader
-          title="智能体详情"
+          title={detailTitle}
           subtitle="查看配置概览、协作者与运行记录"
           actions={<Button startIcon={<ArrowBack />} onClick={() => navigate(backPath)}>返回列表</Button>}
         />
@@ -91,7 +94,9 @@ export default function AgentDetailPage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          <Button variant="contained" startIcon={<Edit />} onClick={goEdit}>编辑</Button>
+          {isOwner && (
+            <Button variant="contained" startIcon={<Edit />} onClick={goEdit}>编辑</Button>
+          )}
         </Stack>
       </Card>
 

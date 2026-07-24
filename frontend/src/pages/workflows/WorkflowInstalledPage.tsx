@@ -15,7 +15,7 @@ export default function WorkflowInstalledPage() {
   const { enqueueSnackbar } = useSnackbar();
   const [search, setSearch] = useState('');
   const [runItem, setRunItem] = useState<any>(null);
-  const [runParams, setRunParams] = useState('');
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['workflows-installed', { search }],
@@ -23,13 +23,22 @@ export default function WorkflowInstalledPage() {
   });
   const items: any[] = data?.data?.data || [];
 
+  // 获取工作流配置（含入参声明）
+  const { data: wfConfigData } = useQuery({
+    queryKey: ['workflow-config', runItem?.id],
+    queryFn: () => api.get(`/agents/${runItem.id}/workflow`),
+    enabled: !!runItem,
+  });
+  const wfConfig = wfConfigData?.data?.data;
+  const inputParams: any[] = wfConfig?.input_params || [];
+
   const runMutation = useMutation({
-    mutationFn: ({ id, params }: { id: string; params: string }) =>
+    mutationFn: ({ id, params }: { id: string; params: Record<string, any> }) =>
       api.post(`/agents/${id}/executions`, { input: params }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workflows-installed'] });
       setRunItem(null);
-      setRunParams('');
+      setFormValues({});
       enqueueSnackbar('工作流已启动运行', { variant: 'success' });
     },
     onError: () => enqueueSnackbar('运行失败', { variant: 'error' }),
@@ -37,7 +46,17 @@ export default function WorkflowInstalledPage() {
 
   const handleRun = () => {
     if (!runItem) return;
-    runMutation.mutate({ id: runItem.id, params: runParams });
+    runMutation.mutate({ id: runItem.id, params: formValues });
+  };
+
+  const handleOpenRun = (item: any) => {
+    setRunItem(item);
+    setFormValues({});
+  };
+
+  const handleCloseRun = () => {
+    setRunItem(null);
+    setFormValues({});
   };
 
   return (
@@ -77,7 +96,7 @@ export default function WorkflowInstalledPage() {
                       size="small"
                       variant="contained"
                       startIcon={<PlayArrow fontSize="small" />}
-                      onClick={(e) => { e.stopPropagation(); setRunItem(item); }}
+                      onClick={(e) => { e.stopPropagation(); handleOpenRun(item); }}
                       sx={{ fontSize: 12, textTransform: 'none', minWidth: 72, height: 28,
                         bgcolor: '#10b981', '&:hover': { bgcolor: '#059669' } }}
                     >
@@ -96,25 +115,41 @@ export default function WorkflowInstalledPage() {
       )}
 
       {/* 运行弹窗 */}
-      <Dialog open={!!runItem} onClose={() => { setRunItem(null); setRunParams(''); }} maxWidth="sm" fullWidth>
+      <Dialog open={!!runItem} onClose={handleCloseRun} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
           <PlayArrow sx={{ color: 'success.main' }} />
           运行工作流 — {runItem?.name}
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            输入运行参数（JSON 格式），留空则使用默认参数
-          </Typography>
-          <TextField
-            fullWidth multiline rows={6} size="small"
-            placeholder='{"input": "示例输入"}'
-            value={runParams}
-            onChange={(e) => setRunParams(e.target.value)}
-            sx={{ fontFamily: 'monospace', fontSize: 13 }}
-          />
+          {inputParams.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                请填写运行参数
+              </Typography>
+              {inputParams.map((param: any) => (
+                <TextField
+                  key={param.key}
+                  label={param.label}
+                  type={param.type === 'number' ? 'number' : 'text'}
+                  required={param.required}
+                  size="small"
+                  fullWidth
+                  value={formValues[param.key] ?? ''}
+                  onChange={(e) => setFormValues({ ...formValues, [param.key]: e.target.value })}
+                  placeholder={`请输入${param.label}`}
+                />
+              ))}
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="body1" color="text.secondary">
+                该工作流无需参数，确认运行？
+              </Typography>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setRunItem(null); setRunParams(''); }}>取消</Button>
+          <Button onClick={handleCloseRun}>取消</Button>
           <Button
             variant="contained"
             startIcon={<PlayArrow />}

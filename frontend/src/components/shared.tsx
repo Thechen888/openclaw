@@ -19,8 +19,19 @@ import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider
 const statusColors: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
   active: 'success', healthy: 'success', matched: 'success', completed: 'success', approved: 'success', published: 'success',
   degraded: 'warning', pending: 'warning', pending_review: 'warning',
-  unhealthy: 'error', error: 'error', failed: 'error', conflict: 'error', revoked: 'error', disabled: 'error',
-  inactive: 'default', draft: 'default', unmatched: 'default', archived: 'default',
+  unhealthy: 'error', error: 'error', failed: 'error', conflict: 'error', revoked: 'error', disabled: 'error', delisted: 'error',
+  inactive: 'default', draft: 'default', unmatched: 'default', archived: 'default', modified: 'warning',
+};
+
+// 状态中文映射
+const statusLabels: Record<string, string> = {
+  published: '已上架',
+  pending: '审核中',
+  modified: '已修改',
+  draft: '草稿',
+  delisted: '已下架',
+  active: '已上架',
+  rejected: '已驳回',
 };
 
 const statusGlow: Record<string, string> = {
@@ -33,9 +44,10 @@ const statusGlow: Record<string, string> = {
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
   const color = statusColors[status] || 'default';
+  const displayLabel = label || statusLabels[status] || status;
   return (
     <Chip
-      label={label || status}
+      label={displayLabel}
       size="small"
       color={color}
       variant="outlined"
