@@ -1005,7 +1005,7 @@ const reportMeta: any[] = [
 
 // =================== Agent ===================
 // agent_type: 'workflow'（工作流编排，拖拽画布）| 'chat'（对话，右侧调试预览）
-const agents = [
+const agents: any[] = [
   { id: 'a-1', name: 'CRM销售通知', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#3b82f6', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 2, last_run_at: ago(5), updated_at: ago(120), description: '监控CRM系统销售事件并发送通知', system_prompt: '你是一个销售助手，负责监控和通知销售相关事件。', editable_roles: ['技术部成员'], viewable_roles: ['普通用户'] },
   { id: 'a-2', name: '设备巡检', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#06b6d4', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(15), updated_at: ago(240), description: '定期检查设备状态并生成报告', system_prompt: '你是一个设备巡检助手，负责检查设备运行状态。' },
   { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'published', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
@@ -1725,11 +1725,11 @@ const resourceShares: any[] = [
 
 // =================== 发布审核记录 ===================
 const reviewRecords: any[] = [
-  { id: 'rv-1', type: 'skill_publish', target_id: 'sk-10', target_name: 'wecom-send-media', applicant: 'u-3', applicant_name: '王强', applicant_dept: '技术研发部', scope: 'department', scope_dept_ids: ['dept-1'], version: '1.0.0', changelog: '首次提交发布', submitted_at: dayAgo(2), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null, auto_check: { has_skill_md: true, file_count: 3, total_size: 4500, danger_keywords: [], slug_conflict: false } },
+  { id: 'rv-1', type: 'skill_publish', target_id: 'sk-10', target_name: 'wecom-send-media', target_slug: 'wecom-send-media', target_desc: '企业微信发送文件 图片等', applicant: 'u-3', applicant_name: '王强', applicant_dept: '技术研发部', scope: 'department', scope_dept_ids: ['dept-1'], version: '1.0.0', changelog: '首次提交发布', submitted_at: dayAgo(2), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null, auto_check: { has_skill_md: true, file_count: 3, total_size: 4500, danger_keywords: [], slug_conflict: false } },
   { id: 'rv-2', type: 'skill_publish', target_id: 'sk-11', target_name: 'gen-image', applicant: 'u-4', applicant_name: '赵敏', applicant_dept: '设计部', scope: 'company', version: '0.2.0', changelog: '', submitted_at: dayAgo(5), status: 'rejected', reviewer: 'u-admin', review_reason: '缺少 SKILL.md 中的安全声明，请补充后重新提交', reviewed_at: dayAgo(3), auto_check: { has_skill_md: false, file_count: 2, total_size: 1200, danger_keywords: [], slug_conflict: false } },
   { id: 'rv-3', type: 'skill_publish', target_id: 'sk-13', target_name: 'meeting-notes', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.1.0', changelog: '新增语音转文字支持', submitted_at: dayAgo(60), status: 'approved', reviewer: 'u-admin', review_reason: null, reviewed_at: dayAgo(58), auto_check: { has_skill_md: true, file_count: 5, total_size: 8900, danger_keywords: [], slug_conflict: false } },
-  { id: 'rv-4', type: 'report_publish', target_id: 'rpt-1', target_name: '2026年第20周运营周报', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', submitted_at: dayAgo(4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
-  { id: 'rv-5', type: 'agent_share', target_id: 'a-6', target_name: '知识库问答助手', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', submitted_at: dayAgo(1), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
+  { id: 'rv-4', type: 'report_publish', target_id: 'rpt-1', target_name: '2026年第20周运营周报', target_slug: 'rpt-1', target_desc: '运营数据周报，包含核心指标、趋势图表与 AI 智能分析', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', version: '1.0.0', changelog: '首次提交发布', submitted_at: dayAgo(4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
+  { id: 'rv-5', type: 'agent_publish', target_id: 'a-6', target_name: '知识库问答助手', target_slug: 'a-6', target_desc: '基于企业知识库的智能问答对话助手', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.2.0', changelog: '优化检索策略，提升回答准确率', submitted_at: dayAgo(1), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
 ];
 
 // =================== 统一资源权限（resource_acl） ===================
@@ -3295,6 +3295,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       agents[idx] = { ...agents[idx], ...data, status: 'pending', updated_at: new Date().toISOString() };
       reviewRecords.unshift({
         id: 'rv-' + Date.now(), type: 'agent_publish', target_id: id, target_name: agents[idx].name,
+        target_slug: (agents[idx] as any).slug || id, target_desc: (agents[idx] as any).description || '',
         applicant: agents[idx].owner_id || 'u-1', applicant_name: agents[idx].owner_name || 'Admin',
         applicant_dept: '技术部',
         scope: 'company', version: data.version || '1.0.0', changelog: data.changelog || '',
@@ -3531,6 +3532,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       skills[idx] = { ...skills[idx], ...data, status: 'pending', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
       reviewRecords.unshift({
         id: 'rv-' + Date.now(), type: 'skill_publish', target_id: sid, target_name: skills[idx].name,
+        target_slug: skills[idx].slug || sid, target_desc: skills[idx].description || '',
         applicant: skills[idx].owner_id, applicant_name: skills[idx].owner_name, applicant_dept: skills[idx].owner_dept,
         scope: data.scope || 'department', version: data.version || '1.0.0', changelog: data.changelog || '',
         submitted_at: new Date().toISOString(), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null,
@@ -3718,17 +3720,25 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const rid = path.split('/')[2];
     const idx = reviewRecords.findIndex(r => r.id === rid);
     if (idx >= 0) {
-      reviewRecords[idx] = { ...reviewRecords[idx], status: 'approved', reviewer: 'u-admin', reviewed_at: new Date().toISOString(), review_reason: null };
-      const skillIdx = skills.findIndex(s => s.id === reviewRecords[idx].target_id);
-      if (skillIdx >= 0) {
-        const scopeType = data?.scope_type || 'all';
-        const scopeRoleIds = data?.scope_role_ids || [];
-        skills[skillIdx] = {
-          ...skills[skillIdx], status: 'published',
-          scope: scopeType === 'all' ? 'company' : 'private',
-          scope_role_ids: scopeType === 'roles' ? scopeRoleIds : undefined,
-          updated_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
-        };
+      const rec = reviewRecords[idx];
+      reviewRecords[idx] = { ...rec, status: 'approved', reviewer: 'u-admin', reviewed_at: new Date().toISOString(), review_reason: null };
+      const scopeType = data?.scope_type || 'all';
+      const scopeRoleIds = data?.scope_role_ids || [];
+      const scopeValue = scopeType === 'roles' ? 'roles' : 'company';
+      const roleIdsVal = scopeType === 'roles' ? scopeRoleIds : undefined;
+      const nowIso = new Date().toISOString();
+      const nowStr = nowIso.slice(0, 16).replace('T', ' ');
+      if (rec.type === 'skill_publish') {
+        const si = skills.findIndex(s => s.id === rec.target_id);
+        if (si >= 0) skills[si] = { ...skills[si], status: 'published', scope: scopeValue, scope_role_ids: roleIdsVal, reject_reason: null, updated_at: nowStr };
+        if (rec.is_new_version) skillVersions.forEach((v: any) => { if (v.skill_id === rec.target_id && v.status === 'published') v.status = 'history'; });
+      } else if (rec.type === 'agent_publish' || rec.type === 'agent_share') {
+        const ai = agents.findIndex(a => a.id === rec.target_id);
+        if (ai >= 0) agents[ai] = { ...agents[ai], status: 'published', scope: scopeValue, scope_role_ids: roleIdsVal, reject_reason: null, has_unpublished_changes: false, updated_at: nowIso };
+        if (rec.is_new_version) agentVersions.forEach((v: any) => { if (v.agent_id === rec.target_id && v.status === 'published') v.status = 'history'; });
+      } else if (rec.type === 'report_publish') {
+        const ri = reports.findIndex(r => r.id === rec.target_id);
+        if (ri >= 0) reports[ri] = { ...reports[ri], status: 'published', scope: scopeValue, scope_role_ids: roleIdsVal, reject_reason: null, published_at: nowIso, updated_at: nowIso };
       }
     }
     return ok(idx >= 0 ? reviewRecords[idx] : null);
@@ -3737,9 +3747,21 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const rid = path.split('/')[2];
     const idx = reviewRecords.findIndex(r => r.id === rid);
     if (idx >= 0) {
-      reviewRecords[idx] = { ...reviewRecords[idx], status: 'rejected', reviewer: 'u-admin', reviewed_at: new Date().toISOString(), review_reason: data?.reason || '审核未通过' };
-      const skillIdx = skills.findIndex(s => s.id === reviewRecords[idx].target_id);
-      if (skillIdx >= 0) skills[skillIdx] = { ...skills[skillIdx], status: 'rejected', reject_reason: data?.reason || '审核未通过', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
+      const rec = reviewRecords[idx];
+      const reason = data?.reason || '审核未通过';
+      reviewRecords[idx] = { ...rec, status: 'rejected', reviewer: 'u-admin', reviewed_at: new Date().toISOString(), review_reason: reason };
+      const nowIso = new Date().toISOString();
+      const nowStr = nowIso.slice(0, 16).replace('T', ' ');
+      if (rec.type === 'skill_publish') {
+        const si = skills.findIndex(s => s.id === rec.target_id);
+        if (si >= 0) skills[si] = { ...skills[si], status: 'rejected', reject_reason: reason, updated_at: nowStr };
+      } else if (rec.type === 'agent_publish' || rec.type === 'agent_share') {
+        const ai = agents.findIndex(a => a.id === rec.target_id);
+        if (ai >= 0) agents[ai] = { ...agents[ai], status: 'rejected', reject_reason: reason, updated_at: nowIso };
+      } else if (rec.type === 'report_publish') {
+        const ri = reports.findIndex(r => r.id === rec.target_id);
+        if (ri >= 0) reports[ri] = { ...reports[ri], status: 'rejected', reject_reason: reason, updated_at: nowIso };
+      }
     }
     return ok(idx >= 0 ? reviewRecords[idx] : null);
   }
@@ -4370,6 +4392,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       reports[idx] = { ...reports[idx], ...data, status: 'pending', updated_at: new Date().toISOString() };
       reviewRecords.unshift({
         id: 'rv-' + Date.now(), type: 'report_publish', target_id: id, target_name: reports[idx].title,
+        target_slug: (reports[idx] as any).slug || id, target_desc: (reports[idx] as any).description || reports[idx].title || '',
         applicant: 'u-1', applicant_name: 'Admin', applicant_dept: '技术部',
         scope: 'department', version: data.version || '1.0.0', changelog: data.changelog || '',
         submitted_at: new Date().toISOString(), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null,

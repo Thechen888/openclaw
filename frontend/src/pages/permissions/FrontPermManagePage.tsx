@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { PageHeader, FilterBar, DataTable, useTableState, EmptyState, LoadingState, StatusBadge } from '../../components/shared';
+import { PageHeader, FilterBar, DataTable, useTableState, EmptyState, LoadingState } from '../../components/shared';
 import { frontPermApi, reviewApi, skillsApi, agentsApi, ragApi, reportConfigsApi, tokenAccountsApi, publicQuotaApi } from '../../api/client';
 import api from '../../api/client';
 
@@ -55,7 +55,7 @@ export default function FrontPermManagePage() {
   const qc = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   const [typeTab, setTypeTab] = useState('agent');
-  const [skillSegment, setSkillSegment] = useState<'all' | 'pending'>('all');
+  const [segment, setSegment] = useState<'all' | 'pending'>('all');
   const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
   const [idleFilter, setIdleFilter] = useState(false);
   const [drawerTarget, setDrawerTarget] = useState<any>(null);
@@ -83,21 +83,26 @@ export default function FrontPermManagePage() {
   const items: any[] = data?.data?.data || [];
   const total: number = data?.data?.pagination?.total || 0;
 
+  // 各 Tab 对应的审核类型（无审核机制的 Tab 为 null，不显示待审核分段）
+  const REVIEW_TYPE_BY_TAB: Record<string, string | null> = { agent: 'agent_publish', report: 'report_publish', skill: 'skill_publish', kb: null };
+  const reviewType = REVIEW_TYPE_BY_TAB[typeTab] || null;
+  const hasReview = !!reviewType;
+
   // 获取待审核数量
   const { data: pendingCountData } = useQuery({
-    queryKey: ['review-pending-count', 'skill_publish'],
-    queryFn: () => reviewApi.list({ page_size: 1, type: 'skill_publish', status: 'pending' }),
-    enabled: typeTab === 'skill',
+    queryKey: ['review-pending-count', reviewType],
+    queryFn: () => reviewApi.list({ page_size: 1, type: reviewType as string, status: 'pending' }),
+    enabled: hasReview,
   });
   const pendingCount = pendingCountData?.data?.pagination?.total || 0;
 
-  // 获取审核记录
+  // 获取审核记录（默认按提交时间正序）
   const { data: reviewData } = useQuery({
-    queryKey: ['review-records', 'skill_publish'],
-    queryFn: () => reviewApi.list({ page_size: 50, type: 'skill_publish', status: 'pending' }),
-    enabled: typeTab === 'skill' && skillSegment === 'pending',
+    queryKey: ['review-records', reviewType],
+    queryFn: () => reviewApi.list({ page_size: 50, type: reviewType as string, status: 'pending' }),
+    enabled: hasReview && segment === 'pending',
   });
-  const reviewRecords: any[] = reviewData?.data?.data || [];
+  const reviewRecords: any[] = (reviewData?.data?.data || []).slice().sort((a: any, b: any) => new Date(a.submitted_at || 0).getTime() - new Date(b.submitted_at || 0).getTime());
 
   // 审核 mutations
   const approveMutation = useMutation({
@@ -147,19 +152,19 @@ export default function FrontPermManagePage() {
     setReviewScopeRoles([]);
   };
 
-  // 审核详情 — 获取技能基本信息
+  // 审核详情 — 获取技能基本信息（仅技能类审核需要）
   const { data: detailSkillData } = useQuery({
     queryKey: ['review-detail-skill', detailRecord?.target_id],
     queryFn: () => skillsApi.get(detailRecord.target_id),
-    enabled: !!detailRecord?.target_id,
+    enabled: !!detailRecord?.target_id && detailRecord?.type === 'skill_publish',
   });
   const detailSkill: any = detailSkillData?.data?.data || null;
 
-  // 审核详情 — 获取技能文件列表
+  // 审核详情 — 获取技能文件列表（仅技能类审核需要）
   const { data: detailFilesData } = useQuery({
     queryKey: ['review-detail-files', detailRecord?.target_id],
     queryFn: () => api.get(`/skills/${detailRecord.target_id}/files`),
-    enabled: !!detailRecord?.target_id,
+    enabled: !!detailRecord?.target_id && detailRecord?.type === 'skill_publish',
   });
   const detailFiles: any[] = detailFilesData?.data?.data || [];
 
@@ -202,7 +207,7 @@ export default function FrontPermManagePage() {
 
       <Tabs
         value={typeTab}
-        onChange={(_, v) => { setTypeTab(v); setPage(1); setSkillSegment('all'); }}
+        onChange={(_, v) => { setTypeTab(v); setPage(1); setSegment('all'); }}
         sx={{
           mb: 2, minHeight: 40,
           '& .MuiTab-root': { minHeight: 40, fontSize: 13, fontWeight: 600, '&.Mui-selected': { color: '#00D4FF' } },
@@ -212,16 +217,16 @@ export default function FrontPermManagePage() {
         {TYPE_TABS.map(t => <Tab key={t.value} label={t.label} value={t.value} />)}
       </Tabs>
 
-      {/* 技能 Tab 的分段切换 */}
-      {typeTab === 'skill' && (
+      {/* 有审核机制的 Tab（智能体/报告/技能）的分段切换 */}
+      {hasReview && (
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          <Button size="small" variant={skillSegment === 'all' ? 'contained' : 'outlined'}
-            onClick={() => { setSkillSegment('all'); setPage(1); }}
+          <Button size="small" variant={segment === 'all' ? 'contained' : 'outlined'}
+            onClick={() => { setSegment('all'); setPage(1); }}
             sx={{ textTransform: 'none', fontSize: 12, fontWeight: 600 }}>
-            全部技能
+            全部资源
           </Button>
-          <Button size="small" variant={skillSegment === 'pending' ? 'contained' : 'outlined'}
-            onClick={() => { setSkillSegment('pending'); setPage(1); }}
+          <Button size="small" variant={segment === 'pending' ? 'contained' : 'outlined'}
+            onClick={() => { setSegment('pending'); setPage(1); }}
             sx={{ textTransform: 'none', fontSize: 12, fontWeight: 600 }}>
             待审核
             {pendingCount > 0 && (
@@ -247,37 +252,33 @@ export default function FrontPermManagePage() {
         </Button>
       </Box>
 
-      {/* 技能 Tab 的待审核视图 */}
-      {typeTab === 'skill' && skillSegment === 'pending' ? (
+      {/* 待审核视图（有审核机制的 Tab：智能体/报告/技能） */}
+      {hasReview && segment === 'pending' ? (
         <DataTable>
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>名称</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>申请人</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 80 }}>部门</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 80 }}>范围</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 90 }}>部门</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 80 }}>版本</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 130 }}>提交时间</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 80 }}>状态</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 150 }}>提交时间</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 160 }}>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {reviewRecords.length === 0 ? (
-              <TableRow><TableCell colSpan={8}><EmptyState title="暂无待审核记录" description="当前没有待处理的技能发布申请" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={6}><EmptyState title="暂无待审核记录" description="当前没有待处理的发布申请" /></TableCell></TableRow>
             ) : reviewRecords.map((item: any) => (
               <TableRow key={item.id} hover>
                 <TableCell><Typography variant="body2" sx={{ fontWeight: 700 }}>{item.target_name}</Typography></TableCell>
                 <TableCell><Typography variant="body2" sx={{ fontSize: 12 }}>{item.applicant_name}</Typography></TableCell>
                 <TableCell><Typography variant="caption" color="text.secondary">{item.applicant_dept}</Typography></TableCell>
-                <TableCell><Chip label={item.scope === 'company' ? '全公司' : item.scope === 'department' ? '权限分享' : '私有'} size="small" sx={{ fontSize: 10, height: 20 }} /></TableCell>
                 <TableCell><Chip label={`v${item.version || '0.0.0'}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20, fontFamily: 'monospace' }} /></TableCell>
                 <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{item.submitted_at ? new Date(item.submitted_at).toLocaleString() : '-'}</TableCell>
-                <TableCell><StatusBadge status="pending" label="待审核" /></TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Tooltip title="查看详情"><IconButton size="small" onClick={() => setDetailRecord(item)}><Visibility fontSize="small" /></IconButton></Tooltip>
-                    <Tooltip title="通过"><IconButton size="small" color="success" onClick={() => approveMutation.mutate(item.id)} disabled={approveMutation.isPending}><CheckCircle fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title="查看详情"><IconButton size="small" onClick={() => { setReviewScopeType('all'); setReviewScopeRoles([]); setPreviewFile(null); setDetailRecord(item); }}><Visibility fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title="通过"><IconButton size="small" color="success" onClick={() => approveMutation.mutate({ id: item.id, scopeConfig: { scope_type: 'all' } })} disabled={approveMutation.isPending}><CheckCircle fontSize="small" /></IconButton></Tooltip>
                     <Tooltip title="驳回"><IconButton size="small" color="error" onClick={() => setRejectDialog({ open: true, recordId: item.id, recordName: item.target_name })}><Cancel fontSize="small" /></IconButton></Tooltip>
                   </Box>
                 </TableCell>
@@ -455,82 +456,70 @@ export default function FrontPermManagePage() {
         </DialogActions>
       </Dialog>
 
-      {/* 审核详情弹窗 */}
-      <Dialog open={!!detailRecord} onClose={() => { setDetailRecord(null); setPreviewFile(null); }} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 2 }}>
+      {/* 审核详情抽屉（右侧滑出，适用于智能体/报告/技能） */}
+      <Drawer anchor="right" open={!!detailRecord} onClose={() => { setDetailRecord(null); setPreviewFile(null); setReviewScopeType('all'); setReviewScopeRoles([]); }}
+        slotProps={{ paper: { sx: { width: 640, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' } } }}
+      >
+        {/* 头部 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>审核详情 — {detailRecord?.target_name}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 16 }}>审核详情 — {detailRecord?.target_name}</Typography>
             <Typography variant="caption" color="text.secondary">申请人：{detailRecord?.applicant_name} · {detailRecord?.applicant_dept}</Typography>
           </Box>
-          <IconButton size="small" onClick={() => { setDetailRecord(null); setPreviewFile(null); }}><Close fontSize="small" /></IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ px: 3, py: 1 }}>
+          <IconButton size="small" onClick={() => { setDetailRecord(null); setPreviewFile(null); setReviewScopeType('all'); setReviewScopeRoles([]); }}><Close fontSize="small" /></IconButton>
+        </Box>
+
+        {/* 内容区 */}
+        <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 3 }}>
           {detailRecord && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {/* 基本信息 */}
+            <>
+              {/* 上半部分：发布信息 */}
               <Box>
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700, color: 'text.primary' }}>基本信息</Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <TextField fullWidth label="技能名称" size="small" value={detailSkill?.name || detailRecord?.target_name || ''} disabled />
-                  <TextField fullWidth label="描述" multiline rows={3} size="small" value={detailSkill?.description || '-'} disabled />
-                  {/* 可见范围配置 */}
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>可见范围</Typography>
-                    <RadioGroup row value={reviewScopeType} onChange={e => { setReviewScopeType(e.target.value as 'all' | 'roles'); if (e.target.value === 'all') setReviewScopeRoles([]); }}>
-                      <FormControlLabel value="all" control={<Radio size="small" />} label="全员" sx={{ mr: 2 }} />
-                      <FormControlLabel value="roles" control={<Radio size="small" />} label="指定角色" />
-                    </RadioGroup>
-                    {reviewScopeType === 'roles' && (
-                      <Autocomplete
-                        multiple size="small" sx={{ mt: 1 }}
-                        options={allRolesList} value={reviewScopeRoles}
-                        onChange={(_, v) => setReviewScopeRoles(v)}
-                        getOptionLabel={(o: any) => o.name || o.id}
-                        renderInput={(params) => <TextField {...params} label="选择角色" placeholder="至少选一个角色" />}
-                      />
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>发布信息</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <InfoRow label="名称" value={detailRecord.target_name || '-'} />
+                  <InfoRow label="Slug" value={<code style={{ fontFamily: 'monospace', fontSize: 12 }}>{detailRecord.target_slug || detailRecord.target_id || '-'}</code>} />
+                  <InfoRow label="描述" value={detailRecord.target_desc || detailSkill?.description || '-'} />
+                  <InfoRow label="版本" value={`v${detailRecord.version || '0.0.0'}`} />
+                  <InfoRow label="变更说明" value={detailRecord.changelog || '-'} />
+                  <InfoRow label="申请人" value={`${detailRecord.applicant_name || '-'}（${detailRecord.applicant_dept || '-'}）`} />
+                </Box>
+              </Box>
+
+              {/* 技能文件夹内容（仅技能类审核） */}
+              {detailRecord.type === 'skill_publish' && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>技能文件夹内容</Typography>
+                  <Typography variant="caption" color="text.secondary">已有 {detailFiles.length} 个文件</Typography>
+                  <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 240, overflow: 'auto', mt: 0.5, bgcolor: 'background.paper' }}>
+                    {detailFiles.length === 0 ? (
+                      <Box sx={{ p: 3, textAlign: 'center' }}><Typography variant="body2" color="text.secondary">暂无文件</Typography></Box>
+                    ) : (
+                      <List dense sx={{ p: 0 }}>
+                        {detailFiles.map((f: any) => (
+                          <ListItemButton key={f.path} onClick={() => {
+                            api.get(`/skills/${detailRecord.target_id}/files/${f.path}`).then((res: any) => {
+                              const content = res.data?.data?.content ?? res.data?.content ?? '';
+                              setPreviewFile({ path: f.path, content: typeof content === 'string' ? content : '（无法加载文件内容）' });
+                            }).catch(() => {
+                              setPreviewFile({ path: f.path, content: '（无法加载文件内容）' });
+                            });
+                          }} sx={{ py: 0.5 }}>
+                            <ListItemIcon sx={{ minWidth: 28 }}><Article fontSize="small" sx={{ color: 'primary.main' }} /></ListItemIcon>
+                            <ListItemText primary={f.path} secondary={`${f.size} bytes · ${f.updatedAt}`}
+                              slotProps={{ primary: { variant: 'body2', sx: { fontFamily: 'monospace', fontSize: 13 } }, secondary: { variant: 'caption' } }} />
+                          </ListItemButton>
+                        ))}
+                      </List>
                     )}
                   </Box>
                 </Box>
-              </Box>
-              {/* 技能文件夹内容 */}
-              <Box>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700, color: 'text.primary' }}>技能文件夹内容</Typography>
-                <Typography variant="caption" color="text.secondary">已有 {detailFiles.length} 个文件</Typography>
-                <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, maxHeight: 240, overflow: 'auto', mt: 0.5, bgcolor: 'background.paper' }}>
-                  {detailFiles.length === 0 ? (
-                    <Box sx={{ p: 3, textAlign: 'center' }}><Typography variant="body2" color="text.secondary">暂无文件</Typography></Box>
-                  ) : (
-                    <List dense sx={{ p: 0 }}>
-                      {detailFiles.map((f: any) => (
-                        <ListItemButton key={f.path} onClick={() => {
-                          api.get(`/skills/${detailRecord.target_id}/files/${f.path}`).then((res: any) => {
-                            const content = res.data?.data?.content ?? res.data?.content ?? '';
-                            setPreviewFile({ path: f.path, content: typeof content === 'string' ? content : '（无法加载文件内容）' });
-                          }).catch(() => {
-                            setPreviewFile({ path: f.path, content: '（无法加载文件内容）' });
-                          });
-                        }} sx={{ py: 0.5 }}>
-                          <ListItemIcon sx={{ minWidth: 28 }}><Article fontSize="small" sx={{ color: 'primary.main' }} /></ListItemIcon>
-                          <ListItemText primary={f.path} secondary={`${f.size} bytes · ${f.updatedAt}`}
-                            slotProps={{ primary: { variant: 'body2', sx: { fontFamily: 'monospace', fontSize: 13 } }, secondary: { variant: 'caption' } }} />
-                        </ListItemButton>
-                      ))}
-                    </List>
-                  )}
-                </Box>
-              </Box>
-              {/* 发布信息 & 自动检查 */}
-              <Box sx={{ display: 'flex', gap: 3 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>发布信息</Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <InfoRow label="范围" value={reviewScopeType === 'all' ? '全员' : `指定角色（${reviewScopeRoles.length} 个）`} />
-                    <InfoRow label="版本" value={`v${detailRecord.version || '0.0.0'}`} />
-                    <InfoRow label="变更说明" value={detailRecord.changelog || '-'} />
-                  </Box>
-                </Box>
-                <Box sx={{ width: 260 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>自动检查</Typography>
+              )}
+
+              {/* 自动检查（仅技能类审核） */}
+              {detailRecord.type === 'skill_publish' && detailRecord.auto_check && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>自动检查</Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <AutoCheckItem pass={detailRecord.auto_check?.has_skill_md} label="SKILL.md" />
                     <AutoCheckItem pass={(detailRecord.auto_check?.file_count || 0) <= 200} label={`文件数 ${detailRecord.auto_check?.file_count || 0}`} />
@@ -539,18 +528,42 @@ export default function FrontPermManagePage() {
                     <AutoCheckItem pass={!detailRecord.auto_check?.slug_conflict} label="Slug 唯一" />
                   </Box>
                 </Box>
+              )}
+
+              {/* 下半部分：可见范围配置 */}
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>可见范围配置</Typography>
+                <RadioGroup row value={reviewScopeType} onChange={e => { setReviewScopeType(e.target.value as 'all' | 'roles'); if (e.target.value === 'all') setReviewScopeRoles([]); }}>
+                  <FormControlLabel value="all" control={<Radio size="small" />} label="全员" sx={{ mr: 2 }} />
+                  <FormControlLabel value="roles" control={<Radio size="small" />} label="指定角色" />
+                </RadioGroup>
+                {reviewScopeType === 'roles' && (
+                  <Autocomplete
+                    multiple size="small" sx={{ mt: 1 }}
+                    options={allRolesList} value={reviewScopeRoles}
+                    onChange={(_, v) => setReviewScopeRoles(v)}
+                    getOptionLabel={(o: any) => o.name || o.id}
+                    renderInput={(params) => <TextField {...params} label="选择角色" placeholder="至少选一个角色" />}
+                  />
+                )}
+                {reviewScopeType === 'roles' && reviewScopeRoles.length === 0 && (
+                  <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>至少选择 1 个角色后「通过」才可用</Typography>
+                )}
               </Box>
-            </Box>
+            </>
           )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        </Box>
+
+        {/* 底部按钮 */}
+        <Box sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={() => { setDetailRecord(null); setPreviewFile(null); setReviewScopeType('all'); setReviewScopeRoles([]); }}>关闭</Button>
-          <Button variant="contained" color="success" startIcon={<CheckCircle />}
-            onClick={handleApprove} disabled={approveMutation.isPending}>通过</Button>
           <Button variant="contained" color="error" startIcon={<Cancel />}
             onClick={() => { setRejectDialog({ open: true, recordId: detailRecord?.id || '', recordName: detailRecord?.target_name || '' }); setDetailRecord(null); }}>驳回</Button>
-        </DialogActions>
-      </Dialog>
+          <Button variant="contained" color="success" startIcon={<CheckCircle />}
+            onClick={handleApprove}
+            disabled={approveMutation.isPending || (reviewScopeType === 'roles' && reviewScopeRoles.length === 0)}>通过</Button>
+        </Box>
+      </Drawer>
 
       {/* 文件预览弹窗（只读） */}
       <Dialog open={!!previewFile} onClose={() => setPreviewFile(null)} maxWidth="sm" fullWidth>
