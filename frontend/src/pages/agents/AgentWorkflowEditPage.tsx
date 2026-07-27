@@ -9,11 +9,11 @@ import {
   Box, Typography, Button, IconButton, TextField, MenuItem, Tooltip, Switch,
   FormControlLabel, Divider, Autocomplete, Chip, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
-import { ArrowBack, Save, PlayArrow, Delete, DragIndicator } from '@mui/icons-material';
+import { ArrowBack, Save, PlayArrow, Delete, DragIndicator, Add } from '@mui/icons-material';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
-import { agentsApi, skillsApi } from '../../api/client';
+import { agentsApi, skillsApi, outputDeclarationsApi } from '../../api/client';
 import { PALETTE, getNodeMeta, nodeTypes } from './components/workflowNodeMeta';
 import WorkflowDebugDrawer from './components/WorkflowDebugDrawer';
 
@@ -33,6 +33,7 @@ function nodeSummary(d: any): string {
     case 'loop': return d.max_loop ? `最多循环 ${d.max_loop} 次` : '';
     case 'webhook': return '触发即启动流程';
     case 'end': return '流程结束';
+    case 'report_output': return d.dataKey ? `识别名: ${d.dataKey}` : '发送到报告';
     default: return '';
   }
 }
@@ -73,7 +74,9 @@ function Editor() {
       data: {
         nodeType: n.type, name: n.name, enabled: n.enabled !== false, on_error: n.on_error || 'inherit',
         script: n.script, prompt: n.prompt, skill_id: n.skill_id, skill_name: n.skill_name,
-        condition: n.condition, max_loop: n.max_loop, summary: nodeSummary({ nodeType: n.type, ...n }),
+        condition: n.condition, max_loop: n.max_loop,
+        dataKey: n.dataKey, output_desc: n.output_desc, output_fields: n.output_fields,
+        summary: nodeSummary({ nodeType: n.type, ...n }),
       },
     })));
     setEdges((wf.edges || []).map((e: any) => ({ ...e, animated: true })));
@@ -122,7 +125,34 @@ function Editor() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      // 收集所有 report_output 节点的识别名
+      const reportOutputNodes = nodes.filter((n) => (n.data as any).nodeType === 'report_output');
+      for (const node of reportOutputNodes) {
+        const d = node.data as any;
+        if (!d.dataKey) {
+          throw new Error('“发送到报告”节点必须填写识别名');
+        }
+        if (!/^[a-z0-9_]+$/.test(d.dataKey)) {
+          throw new Error(`识别名 "${d.dataKey}" 格式无效，仅允许小写字母、数字和下划线`);
+        }
+        // 冲突检测
+        const checkRes = await outputDeclarationsApi.check({ dataKey: d.dataKey, workflow_id: id });
+        if (checkRes.data?.data && !checkRes.data.data.available) {
+          throw new Error(`识别名 "${d.dataKey}" 已被工作流 "${checkRes.data.data.conflict_with}" 使用`);
+        }
+      }
+      // 登记所有识别名
+      for (const node of reportOutputNodes) {
+        const d = node.data as any;
+        await outputDeclarationsApi.register({
+          dataKey: d.dataKey,
+          workflow_id: id,
+          workflow_name: wfMeta.name || agent?.name || '',
+          description: d.output_desc || '',
+          output_fields: d.output_fields || [],
+        });
+      }
       const payload = {
         ...wfMeta,
         nodes: nodes.map((n) => ({
@@ -131,6 +161,8 @@ function Editor() {
           script: (n.data as any).script, prompt: (n.data as any).prompt,
           skill_id: (n.data as any).skill_id, skill_name: (n.data as any).skill_name,
           condition: (n.data as any).condition, max_loop: (n.data as any).max_loop,
+          dataKey: (n.data as any).dataKey, output_desc: (n.data as any).output_desc,
+          output_fields: (n.data as any).output_fields,
           position: n.position,
         })),
         edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
@@ -138,6 +170,7 @@ function Editor() {
       return agentsApi.saveWorkflow(id, payload);
     },
     onSuccess: () => { enqueueSnackbar('工作流已保存', { variant: 'success' }); setDirty(false); },
+    onError: (err: any) => { enqueueSnackbar(err?.message || '保存失败', { variant: 'error' }); },
   });
 
   // 判断来源：从市场进入则返回市场，否则返回「我创建的」
@@ -271,7 +304,61 @@ function Editor() {
                 <TextField fullWidth size="small" type="number" label="最大循环次数" sx={{ mb: 2 }} value={sd.max_loop || 1} onChange={(e) => updateSelected({ max_loop: Number(e.target.value) })} />
               )}
 
-              {sd.nodeType !== 'webhook' && sd.nodeType !== 'end' && (
+              {sd.nodeType === 'report_output' && (
+                <Box sx={{ mb: 2 }}>
+                  {/* 识别名 */}
+                  <TextField
+                    fullWidth size="small" label="识别名 (dataKey)" required sx={{ mb: 2 }}
+                    value={sd.dataKey || ''}
+                    onChange={(e) => updateSelected({ dataKey: e.target.value })}
+                    placeholder="小写字母/数字/下划线"
+                    error={!!sd.dataKey && !/^[a-z0-9_]+$/.test(sd.dataKey)}
+                    helperText={sd.dataKey && !/^[a-z0-9_]+$/.test(sd.dataKey) ? '仅允许小写字母、数字和下划线' : '唯一标识，供报告模板引用'}
+                  />
+                  {/* 数据说明 */}
+                  <TextField fullWidth size="small" label="数据说明" sx={{ mb: 2 }} multiline minRows={2}
+                    value={sd.output_desc || ''} onChange={(e) => updateSelected({ output_desc: e.target.value })}
+                    placeholder="描述该输出节点提供的数据内容" />
+                  {/* 输出字段 Schema 编辑器 */}
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1 }}>输出字段 Schema</Typography>
+                  {((sd.output_fields as any[]) || []).map((field: any, fi: number) => (
+                    <Box key={fi} sx={{ display: 'flex', gap: 0.5, mb: 1, alignItems: 'center' }}>
+                      <TextField size="small" label="字段名" value={field.name || ''} sx={{ flex: 1 }}
+                        onChange={(e) => {
+                          const fields = [...(sd.output_fields || [])];
+                          fields[fi] = { ...fields[fi], name: e.target.value };
+                          updateSelected({ output_fields: fields });
+                        }} />
+                      <TextField size="small" label="标签" value={field.label || ''} sx={{ flex: 1 }}
+                        onChange={(e) => {
+                          const fields = [...(sd.output_fields || [])];
+                          fields[fi] = { ...fields[fi], label: e.target.value };
+                          updateSelected({ output_fields: fields });
+                        }} />
+                      <TextField size="small" select label="类型" value={field.type || 'single'} sx={{ width: 100 }}
+                        onChange={(e) => {
+                          const fields = [...(sd.output_fields || [])];
+                          fields[fi] = { ...fields[fi], type: e.target.value };
+                          updateSelected({ output_fields: fields });
+                        }}>
+                        <MenuItem value="single">single</MenuItem>
+                        <MenuItem value="kv">kv</MenuItem>
+                        <MenuItem value="array">array</MenuItem>
+                      </TextField>
+                      <IconButton size="small" color="error" onClick={() => {
+                        const fields = (sd.output_fields || []).filter((_: any, j: number) => j !== fi);
+                        updateSelected({ output_fields: fields });
+                      }}><Delete fontSize="small" /></IconButton>
+                    </Box>
+                  ))}
+                  <Button size="small" startIcon={<Add />} onClick={() => {
+                    const fields = [...(sd.output_fields || []), { name: '', label: '', type: 'single' }];
+                    updateSelected({ output_fields: fields });
+                  }}>添加字段</Button>
+                </Box>
+              )}
+
+              {sd.nodeType !== 'webhook' && sd.nodeType !== 'end' && sd.nodeType !== 'report_output' && (
                 <TextField fullWidth size="small" select label="错误策略" sx={{ mb: 2 }} value={sd.on_error || 'inherit'} onChange={(e) => updateSelected({ on_error: e.target.value })}>
                   {ON_ERROR_OPTS.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </TextField>

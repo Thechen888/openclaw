@@ -184,6 +184,12 @@ export const agentsApi = {
   debugWorkflow: (id: string, data: any) => api.post(`/agents/${id}/debug/workflow`, data),
 };
 
+export const outputDeclarationsApi = {
+  list: (params?: any) => api.get('/output-declarations', { params }),
+  register: (data: any) => api.post('/output-declarations/register', data),
+  check: (data: any) => api.post('/output-declarations/check', data),
+};
+
 export const tokensApi = {
   list: (params?: ListParams) => api.get('/tokens', { params }),
   get: (id: string) => api.get(`/tokens/${id}`),

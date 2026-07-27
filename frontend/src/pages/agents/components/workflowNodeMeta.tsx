@@ -1,7 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Box, Typography } from '@mui/material';
 import {
-  Code, Lightbulb, Extension, CallSplit, Loop, Webhook, Stop, Settings,
+  Code, Lightbulb, Extension, CallSplit, Loop, Webhook, Stop, Settings, Assessment,
 } from '@mui/icons-material';
 
 // ===================== 工作流节点类型元数据 =====================
@@ -20,7 +20,8 @@ export const WF_NODE_META: Record<string, WfNodeMeta> = {
   skill:     { label: 'Skill调用',    color: '#10b981', icon: <Extension />, desc: '执行已注册的 Skill',          category: 'process' },
   condition: { label: '条件判断',     color: '#f59e0b', icon: <CallSplit />, desc: '根据条件决定分支流向',       category: 'logic' },
   loop:      { label: '循环',        color: '#06b6d4', icon: <Loop />,      desc: '对集合或区间循环处理',       category: 'logic' },
-  end:       { label: '结束',        color: '#64748b', icon: <Stop />,      desc: '流程结束节点',              category: 'end' },
+  end:            { label: '结束',        color: '#64748b', icon: <Stop />,      desc: '流程结束节点',              category: 'end' },
+  report_output:  { label: '发送到报告',  color: '#0ea5e9', icon: <Assessment />, desc: '将数据输出到报告模板',       category: 'end' },
 };
 
 export const FALLBACK_META: WfNodeMeta = {
@@ -37,6 +38,7 @@ export const PALETTE: { type: string; group: string }[] = [
   { type: 'condition', group: '逻辑' },
   { type: 'loop', group: '逻辑' },
   { type: 'end', group: '结束' },
+  { type: 'report_output', group: '结束' },
 ];
 
 // ===================== 自定义画布节点 =====================
@@ -85,7 +87,7 @@ export function FlowNode({ data, selected }: NodeProps) {
           </Typography>
         </Box>
       )}
-      {d.nodeType !== 'end' && (
+      {d.nodeType !== 'end' && d.nodeType !== 'report_output' && (
         <Handle type="source" position={Position.Bottom} style={{ background: meta.color, width: 10, height: 10 }} />
       )}
     </Box>

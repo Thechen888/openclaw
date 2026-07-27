@@ -15,8 +15,10 @@ import {
 import SectionRenderer from './SectionRenderer';
 import DataEditor from './DataEditor';
 import LayoutEditor from './LayoutEditor';
-import { CalendarClock, Clock, Database, Download, Eye, History, Layout, RefreshCw, Settings, Share2, Send } from 'lucide-react';
+import { CalendarClock, Clock, Database, Download, Eye, History, Layout, RefreshCw, Settings, Share2, Send, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { agentsApi, outputDeclarationsApi } from '../../../api/client';
 
 // 将 ISO 时间格式化为“YYYY-MM-DD HH:mm”（供 tooltip 完整展示）
 function formatFullTime(iso: string): string {
@@ -215,6 +217,51 @@ export default function ReportViewer({ report, onEditConfig, meta, onShare, onPu
     toast.success('数据已刷新');
   };
 
+  // ===== 立即生成：运行工作流产生新数据 =====
+  const { data: declListData } = useQuery({
+    queryKey: ['output-declarations-viewer'],
+    queryFn: () => outputDeclarationsApi.list(),
+  });
+  const allDeclarations: any[] = declListData?.data?.data || [];
+  const sourceDeclaration = allDeclarations.find(d => d.dataKey === report.dataId);
+
+  const generateMutation = useMutation({
+    mutationFn: () => {
+      if (!sourceDeclaration?.workflow_id) throw new Error('数据源不可用');
+      return agentsApi.debugWorkflow(sourceDeclaration.workflow_id, { input: { trigger: 'manual_report_generate' } });
+    },
+    onSuccess: (res: any) => {
+      const result = res?.data?.data || res?.data;
+      const reportSnapshots = result?.report_snapshots || [];
+      if (reportSnapshots.length > 0) {
+        const snap = reportSnapshots.find((s: any) => s.dataKey === report.dataId);
+        if (snap?.data) {
+          setReportData(dataKey, snap.data, snap.note || '工作流运行生成', period);
+        } else {
+          // 快照中没有匹配的 dataKey，用第一个快照的数据
+          const first = reportSnapshots[0];
+          setReportData(dataKey, first.data || {}, first.note || '工作流运行生成', period);
+        }
+      } else {
+        // 没有快照，仍然刷新一下数据
+        refreshReportData(dataKey, currentData, period, '工作流运行完成（无输出节点）');
+      }
+      setViewingSnapshotId(null);
+      toast.success('报告已刷新');
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || '生成失败');
+    },
+  });
+
+  const handleGenerateNow = () => {
+    if (!sourceDeclaration?.workflow_id) {
+      toast.error('数据源不可用，请联系管理员');
+      return;
+    }
+    generateMutation.mutate();
+  };
+
   const renderHeader = () => (
     <div className="flex items-start justify-between mb-4 gap-4">
       <div className="min-w-0">
@@ -343,10 +390,19 @@ export default function ReportViewer({ report, onEditConfig, meta, onShare, onPu
         >
           <Eye size={14} /> 预览
         </button>
+        {/* 立即生成：运行工作流产生新数据 */}
+        <button
+          onClick={handleGenerateNow}
+          disabled={generateMutation.isPending}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+          title={'立即生成 = 运行工作流产生新数据（与“刷新”不同：刷新仅重新渲染最新数据）'}
+        >
+          <Zap size={14} /> {generateMutation.isPending ? '生成中...' : '立即生成'}
+        </button>
         <button
           onClick={handleRefresh}
           className="flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 rounded-lg transition-colors"
-          title="重新拉取最新数据，归档一条新快照"
+          title="刷新 = 重新渲染最新数据（不运行工作流）"
         >
           <RefreshCw size={14} /> 刷新
         </button>

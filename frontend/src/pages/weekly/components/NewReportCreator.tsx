@@ -1,6 +1,6 @@
 
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   ReportDefinition, ReportViewMode, ReportSection, ChartType,
@@ -13,6 +13,8 @@ import { createReportDataContext } from '../report-engine/template-engine';
 import { validateReportDefinition, type ValidationIssue } from '../report-engine/validation';
 import { Plus, X, BarChart2, PieChart as PieIcon, Table, Type, CreditCard, Trash2, GripVertical, ArrowUp, ArrowDown, Settings, FileText, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
+import { outputDeclarationsApi } from '../../../api/client';
 
 const STYLE_PRESETS = [
   { name: '蓝色商务', header: { backgroundColor: '#1e40af', color: '#fff' } },
@@ -178,6 +180,35 @@ export default function NewReportCreator({ onCreate, onCancel, initialReport }: 
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldType, setNewFieldType] = useState<BindingValueType>('single');
   const [creationIssues, setCreationIssues] = useState<ValidationIssue[]>([]);
+
+  // ===== 工作流输出声明（报告联动） =====
+  const { data: declData } = useQuery({ queryKey: ['output-declarations'], queryFn: () => outputDeclarationsApi.list() });
+  const declarations: any[] = declData?.data?.data || [];
+  // 判断初始 dataId 是否在登记表中，不在则视为“自定义”
+  const initialIsCustom = !!initialReport?.dataId && !declarations.some(d => d.dataKey === initialReport.dataId);
+  const [isCustomDataId, setIsCustomDataId] = useState(initialIsCustom || declarations.length === 0);
+  // 当登记表加载完成后，若当前 dataId 不在登记表中且非自定义模式，则切为自定义
+  useEffect(() => {
+    if (declarations.length > 0 && dataId && !declarations.some(d => d.dataKey === dataId)) {
+      setIsCustomDataId(true);
+    }
+  }, [declarations]);
+
+  const handleSelectDeclaration = (dk: string) => {
+    if (dk === '__custom__') {
+      setIsCustomDataId(true);
+      return;
+    }
+    setIsCustomDataId(false);
+    const decl = declarations.find(d => d.dataKey === dk);
+    if (decl) {
+      updateDataId(decl.dataKey);
+      // 自动带出 Schema 填入 bindingFields
+      if (decl.output_fields?.length) {
+        setBindingFields(decl.output_fields.map((f: any) => ({ name: f.name, label: f.label || f.name, type: f.type || 'single' })));
+      }
+    }
+  };
 
   // 切换报告类型时同步重置 schedule 为对应默认值
   const changeReportType = (nextType: ReportType) => {
@@ -532,8 +563,28 @@ export default function NewReportCreator({ onCreate, onCancel, initialReport }: 
               </div>
               <div>
                 <label htmlFor="new-report-data-id" className="block text-xs text-gray-500 mb-1">Data ID</label>
-                <input id="new-report-data-id" type="text" value={dataId} onChange={e => updateDataId(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-mono" placeholder="report_agent" />
+                {isCustomDataId ? (
+                  <div>
+                    <input id="new-report-data-id" type="text" value={dataId} onChange={e => updateDataId(e.target.value)}
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-mono" placeholder="report_agent" />
+                    {declarations.length > 0 && (
+                      <button type="button" onClick={() => setIsCustomDataId(false)}
+                        className="text-[10px] text-blue-600 hover:text-blue-800 mt-0.5">切换到工作流输出</button>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <select id="new-report-data-id" value={dataId} onChange={e => handleSelectDeclaration(e.target.value)}
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-xs font-mono">
+                      {declarations.map(d => (
+                        <option key={d.dataKey} value={d.dataKey}>
+                          {d.dataKey} — {d.description || '无说明'} ({d.workflow_name || '未知工作流'})
+                        </option>
+                      ))}
+                      <option value="__custom__">自定义...</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <div>
                 <label htmlFor="new-report-view-mode" className="block text-xs text-gray-500 mb-1">展示模式</label>

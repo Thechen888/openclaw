@@ -1303,6 +1303,13 @@ const workflows: Record<string, any> = {
   },
 };
 
+// =================== 工作流输出声明（报告联动） ===================
+// 每个工作流的 report_output 节点登记的识别名，供报告模板下拉引用
+const outputDeclarations: any[] = [
+  { dataKey: 'crm_sales_data', workflow_id: 'a-1', workflow_name: 'CRM通知流程', description: 'CRM销售数据汇总', output_fields: [{ name: 'total_revenue', label: '总营收', type: 'single' }, { name: 'deals', label: '成交列表', type: 'array' }] },
+  { dataKey: 'device_inspection', workflow_id: 'a-2', workflow_name: '设备巡检', description: '设备巡检结果数据', output_fields: [{ name: 'device_status', label: '设备状态', type: 'kv' }, { name: 'alerts', label: '告警列表', type: 'array' }] },
+];
+
 // =================== Agent 运行记录 ===================
 const agentRuns = [
   { id: 'ar-1', agent_id: 'a-1', agent_name: 'CRM销售通知', trigger_type: 'event', status: 'completed', duration_ms: 2300, model_tokens: 1240, input_tokens: 820, output_tokens: 420, cost: 0.0234, created_at: ago(5) },
@@ -1358,21 +1365,49 @@ function debugChat(data: any) {
 // 工作流调试：逐节点生成执行结果
 function debugWorkflow(id: string, data: any) {
   const wf = workflows[id] || { nodes: [] };
-  const node_executions = (wf.nodes || []).map((n: any, i: number) => ({
-    node_id: n.id, name: n.name, type: n.type,
-    status: 'success',
-    duration_ms: 200 + Math.floor(Math.random() * 900),
-    input: i === 0 ? (data?.input || { trigger_payload: { demo: true } }) : { from: wf.nodes[i - 1]?.name },
-    output: { ok: true, summary: `${n.name} 执行完成` },
-    tokens: n.type === 'model' ? 400 + Math.floor(Math.random() * 800) : 0,
-    logs: [`[${n.name}] 开始执行`, `[${n.name}] 执行成功`],
-  }));
+  const report_snapshots: any[] = [];
+  const node_executions = (wf.nodes || []).map((n: any, i: number) => {
+    const isReportOutput = n.type === 'report_output';
+    // report_output 节点：根据 output_fields 生成 mock 数据
+    let nodeOutput: any;
+    if (isReportOutput) {
+      const fields = n.output_fields || [];
+      const mockPayload: any = {};
+      fields.forEach((f: any) => {
+        if (f.type === 'array') mockPayload[f.name] = [{ sample: 'mock_value', value: Math.floor(Math.random() * 1000) }];
+        else if (f.type === 'kv') mockPayload[f.name] = { key1: 'value1', key2: Math.floor(Math.random() * 100) };
+        else mockPayload[f.name] = Math.floor(Math.random() * 10000);
+      });
+      nodeOutput = { ok: true, data: mockPayload, dataKey: n.dataKey };
+      // 生成报告快照数据
+      if (n.dataKey) {
+        report_snapshots.push({
+          dataKey: n.dataKey,
+          data: mockPayload,
+          note: `工作流 ${wf.name || id} 调试运行生成`,
+          trigger: 'debug',
+        });
+      }
+    } else {
+      nodeOutput = { ok: true, summary: `${n.name} 执行完成` };
+    }
+    return {
+      node_id: n.id, name: n.name, type: n.type,
+      status: 'success',
+      duration_ms: 200 + Math.floor(Math.random() * 900),
+      input: i === 0 ? (data?.input || { trigger_payload: { demo: true } }) : { from: wf.nodes[i - 1]?.name },
+      output: nodeOutput,
+      tokens: n.type === 'model' ? 400 + Math.floor(Math.random() * 800) : 0,
+      logs: [`[${n.name}] 开始执行`, isReportOutput ? `[${n.name}] 数据已输出到报告 (${n.dataKey || '未命名'})` : `[${n.name}] 执行成功`],
+    };
+  });
   return {
     run_id: 'debug-' + Date.now(),
     status: 'completed',
     duration_ms: node_executions.reduce((s: number, x: any) => s + x.duration_ms, 0),
     total_tokens: node_executions.reduce((s: number, x: any) => s + x.tokens, 0),
     node_executions,
+    report_snapshots,
   };
 }
 
@@ -3144,6 +3179,31 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const id = path.split('/').pop() as string;
     workflows[id] = { ...(workflows[id] || {}), ...data, agent_id: id };
     return ok(workflows[id]);
+  }
+  // ===== 工作流输出声明（报告联动） =====
+  if (path === '/output-declarations' && method === 'get') {
+    let result = [...outputDeclarations];
+    if (p.workflow_id) result = result.filter((d: any) => d.workflow_id === p.workflow_id);
+    if (p.search) result = result.filter((d: any) => d.dataKey.includes(p.search) || (d.description || '').includes(p.search));
+    return ok(result);
+  }
+  if (path === '/output-declarations/register' && method === 'post') {
+    const { dataKey: dk, workflow_id, workflow_name, description, output_fields } = data || {};
+    if (!dk || !workflow_id) return { code: 400, msg: '缺少 dataKey 或 workflow_id' };
+    // 冲突检测：同识别名被其他工作流占用
+    const conflict = outputDeclarations.find((d: any) => d.dataKey === dk && d.workflow_id !== workflow_id);
+    if (conflict) return { code: 409, msg: `识别名 ${dk} 已被工作流 ${conflict.workflow_name} 使用` };
+    // upsert
+    const idx = outputDeclarations.findIndex((d: any) => d.dataKey === dk && d.workflow_id === workflow_id);
+    const record = { dataKey: dk, workflow_id, workflow_name: workflow_name || '', description: description || '', output_fields: output_fields || [] };
+    if (idx >= 0) outputDeclarations[idx] = record;
+    else outputDeclarations.push(record);
+    return ok(record);
+  }
+  if (path === '/output-declarations/check' && method === 'post') {
+    const { dataKey: dk, workflow_id } = data || {};
+    const conflict = outputDeclarations.find((d: any) => d.dataKey === dk && d.workflow_id !== workflow_id);
+    return ok({ available: !conflict, conflict_with: conflict?.workflow_name });
   }
   // Agent 协作者（权限）
   if (/^\/agents\/[^/]+\/collaborators$/.test(path) && method === 'get') {
