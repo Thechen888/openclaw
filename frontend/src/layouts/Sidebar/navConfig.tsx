@@ -41,7 +41,6 @@ import {
   Workspaces,
   History as HistoryIcon,
   Download as DownloadIcon,
-  Build,
 } from '@mui/icons-material';
 
 export interface NavItem {
@@ -93,7 +92,6 @@ export const frontNavConfig: NavSection[] = [
       { title: '技能市场', path: '/skills/market', icon: <Storefront fontSize="small" /> },
       { title: '我安装的', path: '/skills/my-installed', icon: <DownloadIcon fontSize="small" /> },
       { title: '我创建的', path: '/skills/my', icon: <ExtensionIcon fontSize="small" /> },
-      { title: '技能管理', path: '/skills/admin', icon: <Build fontSize="small" /> },
     ],
   },
 ];

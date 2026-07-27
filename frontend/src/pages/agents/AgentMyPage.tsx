@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
-  Box, IconButton, Tooltip, Button, Grid, TextField,
-  InputAdornment, Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions, Typography,
+  Box, IconButton, Tooltip, Button, Grid, TextField, Typography,
+  InputAdornment, Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import { Add, Refresh, Search } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader, EmptyState, LoadingState, StatusBadge } from '../../components/shared';
 import ResourceActionsMenu from '../../components/ResourceActionsMenu';
 import ResourceShareDialog from '../../components/ResourceShareDialog';
+import VersionHistoryDialog from '../../components/VersionHistoryDialog';
 import { agentsApi } from '../../api/client';
 import api from '../../api/client';
 import { AgentCard } from './components/agentShared';
@@ -31,6 +32,8 @@ export default function AgentMyPage() {
 
   // 分享弹窗
   const [shareItem, setShareItem] = useState<any>(null);
+  // 版本历史弹窗
+  const [versionHistoryItem, setVersionHistoryItem] = useState<any>(null);
 
   // 确认弹窗
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
@@ -75,6 +78,7 @@ export default function AgentMyPage() {
       case 'delist': setDelistConfirm(item); break;
       case 'cancel': cancelMutation.mutate(item.id); break;
       case 'share': setShareItem(item); break;
+      case 'versions': setVersionHistoryItem(item); break;
       case 'delete': setDeleteConfirm(item); break;
     }
   };
@@ -135,6 +139,14 @@ export default function AgentMyPage() {
         resourceId={shareItem?.id || ''}
         resourceName={shareItem?.name || ''}
         onClose={() => setShareItem(null)}
+      />
+
+      {/* 版本历史弹窗 */}
+      <VersionHistoryDialog
+        open={!!versionHistoryItem}
+        resource={versionHistoryItem}
+        resourceType="agent"
+        onClose={() => setVersionHistoryItem(null)}
       />
 
       {/* 下架确认 */}

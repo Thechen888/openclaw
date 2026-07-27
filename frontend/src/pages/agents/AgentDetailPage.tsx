@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, Edit, PlayArrow, Close, AccountBalance, CheckCircle, Info as InfoIcon } from '@mui/icons-material';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { PageHeader, StatusBadge, EmptyState, LoadingState } from '../../components/shared';
 import { agentsApi, tokensApi, publicQuotaApi } from '../../api/client';
 import {
@@ -27,6 +27,8 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export default function AgentDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(0);
 
   const COLOR_PRESETS = ['#00D4FF', '#7C3AED', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#06b6d4', '#ef4444'];
@@ -64,7 +66,11 @@ export default function AgentDetailPage() {
   const meta = getTypeMeta(agent.agent_type);
   const cfg = agent.chat_config || {};
   const goEdit = () => navigate(isChat ? `/agents/${id}/edit/chat` : `/agents/${id}/edit/workflow`);
-  const backPath = isChat ? '/agents/my' : '/workflows/my';
+  // 动态返回列表：根据来源（市场 / 我创建的）
+  const fromMarket = searchParams.get('from') === 'market' || (location.state as any)?.from === 'market';
+  const backPath = fromMarket
+    ? (isChat ? '/agents/market' : '/workflows/market')
+    : (isChat ? '/agents/my' : '/workflows/my');
   const detailTitle = isChat ? '智能体详情' : '工作流详情';
   // 判断当前用户是否为拥有者（mock 按 owner_name 判断）
   const isOwner = agent?.owner_name === currentUser?.name || agent?.owner_id === currentUser?.id;

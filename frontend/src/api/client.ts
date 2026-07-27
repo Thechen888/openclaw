@@ -166,6 +166,7 @@ export const agentsApi = {
   get: (id: string) => api.get(`/agents/${id}`),
   create: (data: any) => api.post('/agents', data),
   update: (id: string, data: any) => api.put(`/agents/${id}`, data),
+  save: (id: string, data: any) => api.post(`/agents/${id}/save`, data),
   delete: (id: string) => api.delete(`/agents/${id}`),
   executions: (id: string, params?: ListParams) => api.get(`/agents/${id}/executions`, { params }),
   execution: (execId: string) => api.get(`/agents/executions/${execId}`),

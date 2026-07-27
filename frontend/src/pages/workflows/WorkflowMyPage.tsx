@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader, EmptyState, LoadingState } from '../../components/shared';
 import ResourceActionsMenu from '../../components/ResourceActionsMenu';
 import ResourceShareDialog from '../../components/ResourceShareDialog';
+import VersionHistoryDialog from '../../components/VersionHistoryDialog';
 import { agentsApi } from '../../api/client';
 import api from '../../api/client';
 import { AgentCard } from '../agents/components/agentShared';
@@ -32,6 +33,8 @@ export default function WorkflowMyPage() {
 
   // 分享弹窗
   const [shareItem, setShareItem] = useState<any>(null);
+  // 版本历史弹窗
+  const [versionHistoryItem, setVersionHistoryItem] = useState<any>(null);
 
   // 调试弹窗
   const [debugItem, setDebugItem] = useState<any>(null);
@@ -79,6 +82,7 @@ export default function WorkflowMyPage() {
       case 'delist': setDelistConfirm(item); break;
       case 'cancel': cancelMutation.mutate(item.id); break;
       case 'share': setShareItem(item); break;
+      case 'versions': setVersionHistoryItem(item); break;
       case 'debug': setDebugItem(item); break;
       case 'run_records': navigate('/agents/runs'); break;
       case 'delete': setDeleteConfirm(item); break;
@@ -142,6 +146,14 @@ export default function WorkflowMyPage() {
         resourceId={shareItem?.id || ''}
         resourceName={shareItem?.name || ''}
         onClose={() => setShareItem(null)}
+      />
+
+      {/* 版本历史弹窗 */}
+      <VersionHistoryDialog
+        open={!!versionHistoryItem}
+        resource={versionHistoryItem}
+        resourceType="agent"
+        onClose={() => setVersionHistoryItem(null)}
       />
 
       {/* 调试抽屉 */}

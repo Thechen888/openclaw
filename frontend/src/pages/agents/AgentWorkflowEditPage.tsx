@@ -7,11 +7,11 @@ import {
 import '@xyflow/react/dist/style.css';
 import {
   Box, Typography, Button, IconButton, TextField, MenuItem, Tooltip, Switch,
-  FormControlLabel, Divider, Autocomplete, Chip,
+  FormControlLabel, Divider, Autocomplete, Chip, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import { ArrowBack, Save, PlayArrow, Delete, DragIndicator } from '@mui/icons-material';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { agentsApi, skillsApi } from '../../api/client';
 import { PALETTE, getNodeMeta, nodeTypes } from './components/workflowNodeMeta';
@@ -43,6 +43,7 @@ const genId = () => `wn-${Date.now()}-${idSeq++}`;
 function Editor() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { enqueueSnackbar } = useSnackbar();
   const { screenToFlowPosition } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,9 @@ function Editor() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [wfMeta, setWfMeta] = useState<any>({ name: '', max_iterations: 1, timeout_seconds: 60, on_error: 'stop' });
   const [debugOpen, setDebugOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
+  const pendingNav = useRef<(() => void) | null>(null);
 
   const { data: agentData } = useQuery({ queryKey: ['agent', id], queryFn: () => agentsApi.get(id) });
   const agent = agentData?.data?.data;
@@ -75,7 +79,7 @@ function Editor() {
     setEdges((wf.edges || []).map((e: any) => ({ ...e, animated: true })));
   }, [wfData, setNodes, setEdges]);
 
-  const onConnect = useCallback((c: Connection) => setEdges((eds) => addEdge({ ...c, animated: true }, eds)), [setEdges]);
+  const onConnect = useCallback((c: Connection) => { setEdges((eds) => addEdge({ ...c, animated: true }, eds)); setDirty(true); }, [setEdges]);
 
   const onDragStart = (e: React.DragEvent, type: string) => {
     e.dataTransfer.setData('application/node-type', type);
@@ -94,6 +98,7 @@ function Editor() {
       data: { nodeType: type, name: meta.label, enabled: true, on_error: 'inherit', summary: nodeSummary({ nodeType: type }) },
     }));
     setSelectedId(nid);
+    setDirty(true);
   }, [screenToFlowPosition, setNodes]);
 
   const onDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }, []);
@@ -105,6 +110,7 @@ function Editor() {
       const data = { ...n.data, ...patch };
       return { ...n, data: { ...data, summary: nodeSummary(data) } };
     }));
+    setDirty(true);
   };
 
   const deleteSelected = () => {
@@ -112,6 +118,7 @@ function Editor() {
     setNodes((nds) => nds.filter((n) => n.id !== selectedId));
     setEdges((eds) => eds.filter((e) => e.source !== selectedId && e.target !== selectedId));
     setSelectedId(null);
+    setDirty(true);
   };
 
   const saveMutation = useMutation({
@@ -130,8 +137,15 @@ function Editor() {
       };
       return agentsApi.saveWorkflow(id, payload);
     },
-    onSuccess: () => enqueueSnackbar('工作流已保存', { variant: 'success' }),
+    onSuccess: () => { enqueueSnackbar('工作流已保存', { variant: 'success' }); setDirty(false); },
   });
+
+  // 判断来源：从市场进入则返回市场，否则返回「我创建的」
+  const fromMarket = searchParams.get('from') === 'market';
+  const backToList = () => {
+    if (dirty) { pendingNav.current = () => navigate(fromMarket ? '/workflows/market' : '/workflows/my'); setLeaveConfirm(true); }
+    else navigate(fromMarket ? '/workflows/market' : '/workflows/my');
+  };
 
   const selected = nodes.find((n) => n.id === selectedId);
   const sd: any = selected?.data;
@@ -140,7 +154,7 @@ function Editor() {
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* 顶部工具栏 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2.5, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <IconButton onClick={() => navigate(`/agents/${id}`)}><ArrowBack /></IconButton>
+        <IconButton onClick={backToList}><ArrowBack /></IconButton>
         <Box sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{agent?.name || '工作流编辑'}</Typography>
           <Typography variant="caption" color="text.secondary">工作流 Agent · 拖拽节点到画布并连线编排</Typography>
@@ -273,6 +287,18 @@ function Editor() {
       </Box>
 
       <WorkflowDebugDrawer open={debugOpen} onClose={() => setDebugOpen(false)} agentId={id} />
+
+      {/* 未保存确认弹窗 */}
+      <Dialog open={leaveConfirm} onClose={() => setLeaveConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>修改尚未保存</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">当前修改尚未保存，确定要离开吗？</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLeaveConfirm(false)}>继续编辑</Button>
+          <Button variant="contained" color="warning" onClick={() => { setLeaveConfirm(false); setDirty(false); pendingNav.current?.(); }}>确定离开</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

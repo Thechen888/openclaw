@@ -994,6 +994,15 @@ const reports: any[] = [
   },
 ];
 
+// =================== 报告元数据（分发能力增强 ①） ====================
+// 每条含 report_id、owner、status（draft/pending/published/modified）、scope、version、changelog、has_unpublished_changes
+// 为 3 个内置报告（公司综合报告/部门季度报告/预算执行报告）生成元数据：owner=平台、status=published、scope=company
+const reportMeta: any[] = [
+  { report_id: 'company-overview', owner: '平台', status: 'published', scope: 'company', version: '1.0.0', changelog: '初始版本发布', has_unpublished_changes: false },
+  { report_id: 'dept-quarterly', owner: '平台', status: 'published', scope: 'company', version: '1.0.0', changelog: '初始版本发布', has_unpublished_changes: false },
+  { report_id: 'budget-report', owner: '平台', status: 'published', scope: 'company', version: '1.0.0', changelog: '初始版本发布', has_unpublished_changes: false },
+];
+
 // =================== Agent ===================
 // agent_type: 'workflow'（工作流编排，拖拽画布）| 'chat'（对话，右侧调试预览）
 const agents = [
@@ -1002,14 +1011,30 @@ const agents = [
   { id: 'a-3', name: '摄像头监控#12', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#f59e0b', status: 'published', model_policy_id: 'mp-3', policy_name: '视觉理解策略', triggers_count: 1, last_run_at: ago(32), updated_at: ago(300), description: '监控12号摄像头的异常情况', system_prompt: '你是一个视觉监控助手，负责分析摄像头画面。' },
   { id: 'a-4', name: '每日总结', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#10b981', status: 'published', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 1, last_run_at: ago(60), updated_at: ago(360), description: '每日自动汇总工作日志和待办事项', system_prompt: '你是日报生成助手，负责汇总和整理工作日志。' },
   { id: 'a-5', name: '个人提醒', agent_type: 'workflow', category: 'workflow', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#a855f7', status: 'published', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 3, last_run_at: ago(120), updated_at: ago(400), description: '个人待办和日程提醒', system_prompt: '你是个人助理，负责提醒待办事项和日程安排。' },
-  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', editable_roles: ['技术部成员', '产品部成员'], viewable_roles: ['普通用户', '运营部成员'], chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
+  { id: 'a-6', name: '知识库问答助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#7C3AED', status: 'published', has_unpublished_changes: true, model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: ago(20), updated_at: ago(60), description: '基于企业知识库的智能问答对话助手', system_prompt: '你是知识库问答助手，请依据检索到的资料准确、简洁地回答用户问题。', editable_roles: ['技术部成员', '产品部成员'], viewable_roles: ['普通用户', '运营部成员'], chat_config: { welcome: '你好，我是知识库问答助手，请问有什么可以帮你？', temperature: 0.3, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5'], knowledge_base_ids: ['kb-1'], variables: [{ key: 'department', label: '部门', type: 'text', required: false }], opening_questions: ['公司报销流程是怎样的？', '研发规范在哪里查看？'] } },
   { id: 'a-7', name: '技术研发部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#3b82f6', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取技术研发部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总技术研发部本周运营数据，生成结构化周报。' },
   { id: 'a-8', name: 'AI平台组周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#06b6d4', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取AI平台组运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总AI平台组本周运营数据，生成结构化周报。' },
   { id: 'a-9', name: '销售部周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#f59e0b', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取销售部运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总销售部本周运营数据，生成结构化周报。' },
   { id: 'a-10', name: '智慧客服项目周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#10b981', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '自动拉取智慧客服项目运营数据并生成周报', system_prompt: '你是周报生成助手，负责汇总智慧客服项目本周运营数据，生成结构化周报。' },
   { id: 'a-11', name: '运营汇总周报Agent', agent_type: 'workflow', category: 'workflow', owner_type: 'organization', owner_id: 'u-3', owner_name: '王强', avatar_color: '#a855f7', status: 'published', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 1, last_run_at: ago(2880), updated_at: ago(3000), description: '聚合各部门周报数据生成运营汇总周报', system_prompt: '你是运营周报生成助手，负责汇总各部门周报数据，生成跨部门运营汇总周报。' },
-  { id: 'a-12', name: '智能客服助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#00D4FF', status: 'published', model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 0, last_run_at: ago(8), updated_at: ago(30), description: '面向客户的售前售后对话客服', system_prompt: '你是一名专业、友好的客服助手，请耐心解答客户关于产品与订单的问题。', chat_config: { welcome: '您好！我是智能客服，很高兴为您服务～', temperature: 0.7, max_tokens: 1024, model_policy_id: 'mp-2', authorized_skills: ['sk-8'], knowledge_base_ids: [], variables: [], opening_questions: ['如何查询我的订单？', '产品保修政策是什么？'] } },
+  { id: 'a-12', name: '智能客服助手', agent_type: 'chat', category: 'chat', owner_type: 'organization', owner_id: 'u-2', owner_name: '李娜', avatar_color: '#00D4FF', status: 'published', has_unpublished_changes: true, model_policy_id: 'mp-2', policy_name: '高性价比对话', triggers_count: 0, last_run_at: ago(8), updated_at: ago(30), description: '面向客户的售前售后对话客服', system_prompt: '你是一名专业、友好的客服助手，请耐心解答客户关于产品与订单的问题。', chat_config: { welcome: '您好！我是智能客服，很高兴为您服务～', temperature: 0.7, max_tokens: 1024, model_policy_id: 'mp-2', authorized_skills: ['sk-8'], knowledge_base_ids: [], variables: [], opening_questions: ['如何查询我的订单？', '产品保修政策是什么？'] } },
   { id: 'a-13', name: '研发问答助手', agent_type: 'chat', category: 'chat', owner_type: 'personal', owner_id: 'u-1', owner_name: '张伟', avatar_color: '#7C3AED', status: 'draft', model_policy_id: 'mp-1', policy_name: '通用对话策略', triggers_count: 0, last_run_at: '', updated_at: ago(15), description: '辅助研发团队快速查询技术文档与规范', system_prompt: '你是研发问答助手，请结合内部技术文档回答研发相关问题。', chat_config: { welcome: '嗨，我可以帮你查研发文档和规范～', temperature: 0.4, max_tokens: 2048, model_policy_id: 'mp-1', authorized_skills: ['sk-5', 'sk-1'], knowledge_base_ids: ['kb-1'], variables: [], opening_questions: [] } },
+];
+
+// =================== 智能体/工作流版本历史（不可变快照） ===================
+// status: published | reviewing | rejected | history | deprecated
+// is_rollback: 是否为回滚版本
+// snapshot: chat类存配置JSON，workflow类存flow_json
+const agentVersions: any[] = [
+  // a-1 CRM销售通知 版本历史
+  { id: 'av-1-1', agent_id: 'a-1', version: '2.0.0', status: 'published', is_rollback: false, changelog: '新增客户分级通知策略', published_at: '2026-06-01 10:00', publisher: '张伟', snapshot: JSON.stringify({ nodes: 4, edges: 3 }) },
+  { id: 'av-1-2', agent_id: 'a-1', version: '1.0.0', status: 'history', is_rollback: false, changelog: '首次发布', published_at: '2026-04-15 09:00', publisher: '张伟', snapshot: JSON.stringify({ nodes: 3, edges: 2 }) },
+  // a-6 知识库问答助手 版本历史（有未发布修改）
+  { id: 'av-6-1', agent_id: 'a-6', version: '1.2.0', status: 'published', is_rollback: false, changelog: '优化检索策略，提升回答准确率', published_at: '2026-05-20 14:00', publisher: '李娜', snapshot: JSON.stringify({ welcome: '你好，我是知识库问答助手', temperature: 0.3 }) },
+  { id: 'av-6-2', agent_id: 'a-6', version: '1.0.0', status: 'history', is_rollback: false, changelog: '首次发布', published_at: '2026-03-10 08:00', publisher: '李娜', snapshot: JSON.stringify({ welcome: '你好', temperature: 0.5 }) },
+  // a-12 智能客服助手 版本历史
+  { id: 'av-12-1', agent_id: 'a-12', version: '1.1.0', status: 'published', is_rollback: false, changelog: '新增订单查询技能集成', published_at: '2026-06-10 11:00', publisher: '李娜', snapshot: JSON.stringify({ welcome: '您好！我是智能客服', temperature: 0.7 }) },
+  { id: 'av-12-2', agent_id: 'a-12', version: '1.0.0', status: 'history', is_rollback: false, changelog: '首次发布', published_at: '2026-04-01 09:00', publisher: '李娜', snapshot: JSON.stringify({ welcome: '您好', temperature: 0.7 }) },
 ];
 
 // =================== Agent 协作者（权限）===================
@@ -3170,7 +3195,31 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const id = path.split('/')[2];
     return ok(debugWorkflow(id, data));
   }
-  if (/^\/agents\/[^/]+\/executions$/.test(path)) {
+  if (/^\/agents\/[^/]+\/executions$/.test(path) && method === 'post') {
+    // 工作流运行：读取在架版本快照而非工作副本
+    const id = path.split('/')[2];
+    const agent = agents.find((a: any) => a.id === id);
+    const publishedVer = agentVersions
+      .filter((v: any) => v.agent_id === id && v.status === 'published')
+      .sort((a: any, b: any) => (b.published_at || '').localeCompare(a.published_at || ''))[0];
+    const snapshot = publishedVer ? JSON.parse(publishedVer.snapshot) : null;
+    const newRun = {
+      id: 'run-' + Date.now(),
+      agent_id: id,
+      agent_name: agent?.name || '未知',
+      trigger_type: 'manual',
+      status: 'completed',
+      duration_ms: 300 + Math.floor(Math.random() * 700),
+      model_tokens: 200 + Math.floor(Math.random() * 500),
+      input_tokens: 100 + Math.floor(Math.random() * 300),
+      output_tokens: 100 + Math.floor(Math.random() * 200),
+      cost: 0.01,
+      created_at: new Date().toISOString(),
+    };
+    agentRuns.unshift(newRun);
+    return ok({ ...newRun, snapshot_version: publishedVer?.version || null });
+  }
+  if (/^\/agents\/[^/]+\/executions$/.test(path) && method === 'get') {
     const id = path.split('/')[2];
     return paginate(agentRuns.filter((r: any) => r.agent_id === id), p.page, p.page_size);
   }
@@ -3205,6 +3254,47 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const idx = agents.findIndex((a: any) => a.id === id);
     if (idx >= 0) agents[idx] = { ...agents[idx], status: 'draft', updated_at: new Date().toISOString() };
     return ok(null);
+  }
+  // ===== 智能体/工作流版本历史 =====
+  // GET /agents/:id/versions
+  if (/^\/agents\/[^/]+\/versions$/.test(path) && method === 'get') {
+    const id = path.split('/')[2];
+    const versions = agentVersions.filter(v => v.agent_id === id);
+    return ok(versions);
+  }
+  // POST /agents/:id/versions/:vid/rollback
+  if (/^\/agents\/[^/]+\/versions\/[^/]+\/rollback$/.test(path) && method === 'post') {
+    const agentId = path.split('/')[2];
+    const versionId = path.split('/')[4];
+    const sourceVersion = agentVersions.find(v => v.id === versionId);
+    if (!sourceVersion) return { status: 404, data: { error: '版本不存在' } };
+    const agentVersionsForAgent = agentVersions.filter(v => v.agent_id === agentId);
+    const maxVer = agentVersionsForAgent.reduce((max, v) => {
+      const parts = v.version.split('.').map(Number);
+      return parts[0] > max ? parts[0] : max;
+    }, 0);
+    const newVersion = {
+      id: 'av-' + Date.now(),
+      agent_id: agentId,
+      version: `${maxVer + 1}.0.0`,
+      status: 'history',
+      is_rollback: true,
+      changelog: `基于 v${sourceVersion.version} 回滚`,
+      published_at: null,
+      publisher: '张伟',
+      snapshot: sourceVersion.snapshot,
+    };
+    agentVersions.unshift(newVersion);
+    const idx = agents.findIndex(a => a.id === agentId);
+    if (idx >= 0) (agents[idx] as any) = { ...(agents[idx] as any), status: 'draft', has_unpublished_changes: true, updated_at: new Date().toISOString() };
+    return ok(newVersion);
+  }
+  // POST /agents/:id/save (设置 has_unpublished_changes)
+  if (/^\/agents\/[^/]+\/save$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const idx = agents.findIndex((a: any) => a.id === id);
+    if (idx >= 0) (agents[idx] as any) = { ...(agents[idx] as any), ...data, has_unpublished_changes: true, updated_at: new Date().toISOString() };
+    return ok(idx >= 0 ? agents[idx] : data);
   }
   // ===== 通用资源市场 GET /{resourceType}/market =====
   // 必须置于 /:id 路由之前，否则 "market" 会被误当作资源 ID
@@ -3250,6 +3340,24 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     if (found) return ok(found);
     return ok(sourceData[0] || null);
   }
+  // ===== 报告市场详情 GET /reports/market/:id =====
+  if (/^\/reports\/market\/[^/]+$/.test(path) && method === 'get') {
+    const itemId = path.split('/')[3];
+    const sourceData = reports
+      .filter((r: any) => r.status === 'published')
+      .map((r: any) => ({
+        id: r.id, name: r.title, title: r.title,
+        description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}，由 ${r.agent_name || '系统'} 自动生成`,
+        owner_name: r.agent_name || '系统', owner_dept: r.department_name || '',
+        scope: r.scope || 'department', version: '1.0.0',
+        install_count: 0, is_beta: false,
+        changelog: '初始版本发布', published_at: r.published_at || r.updated_at,
+        period: r.period, department_name: r.department_name,
+      }));
+    const found = sourceData.find((s: any) => s.id === itemId);
+    if (found) return ok(found);
+    return ok(sourceData[0] || null);
+  }
   // ===== 通用资源 — 获取内测分享的资源（给市场用） GET /{resourceType}/shared-to-me =====
   // 必须置于 /:id 路由之前，否则 "shared-to-me" 会被误当作资源 ID
   if (/^\/(skills|agents|workflows|reports)\/shared-to-me$/.test(path) && method === 'get') {
@@ -3270,15 +3378,29 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const rType = path.split('/')[1].replace(/s$/, '');
     let installedData: any[] = [];
     if (rType === 'agent') {
-      // 安装他人发布的对话类智能体
+      // 安装他人发布的对话类智能体（读取在架版本快照）
       installedData = agents
         .filter((a: any) => a.category !== 'workflow' && a.owner_id !== 'u-1')
-        .map((a: any, i: number) => ({ ...a, installed_at: dayAgo(i + 1), is_beta: i === 0 }));
+        .map((a: any, i: number) => {
+          const pubVer = agentVersions
+            .filter((v: any) => v.agent_id === a.id && v.status === 'published')
+            .sort((x: any, y: any) => (y.published_at || '').localeCompare(x.published_at || ''))[0];
+          let snapshotData = {};
+          if (pubVer) { try { snapshotData = JSON.parse(pubVer.snapshot); } catch {} }
+          return { ...a, ...snapshotData, installed_at: dayAgo(i + 1), is_beta: i === 0, installed_version: pubVer?.version || '1.0.0' };
+        });
     } else if (rType === 'workflow') {
-      // 安装他人发布的工作流类智能体
+      // 安装他人发布的工作流类智能体（读取在架版本快照）
       installedData = agents
         .filter((a: any) => a.category === 'workflow' && a.owner_id !== 'u-1')
-        .map((a: any, i: number) => ({ ...a, installed_at: dayAgo(i + 2), is_beta: false }));
+        .map((a: any, i: number) => {
+          const pubVer = agentVersions
+            .filter((v: any) => v.agent_id === a.id && v.status === 'published')
+            .sort((x: any, y: any) => (y.published_at || '').localeCompare(x.published_at || ''))[0];
+          let snapshotData = {};
+          if (pubVer) { try { snapshotData = JSON.parse(pubVer.snapshot); } catch {} }
+          return { ...a, ...snapshotData, installed_at: dayAgo(i + 2), is_beta: false, installed_version: pubVer?.version || '1.0.0' };
+        });
     } else if (rType === 'report') {
       // 安装他人发布的报告
       installedData = reports
@@ -3287,6 +3409,30 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         .map((r: any, i: number) => ({ id: r.id, name: r.title, description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}`, owner_name: r.agent_name || '系统', agent_type: 'report', installed_at: dayAgo(i + 1), is_beta: false }));
     }
     return paginate(installedData, p.page, p.page_size, p.search);
+  }
+  // ===== POST /{resourceType}/:id/install — 安装资源（读取在架版本快照） =====
+  if (/^\/(agents|workflows)\/[^/]+\/install$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const agent = agents.find((a: any) => a.id === id);
+    if (!agent) return { status: 404, data: { error: '资源不存在' } };
+    // 查找最新在架版本的快照
+    const publishedVer = agentVersions
+      .filter((v: any) => v.agent_id === id && v.status === 'published')
+      .sort((a: any, b: any) => (b.published_at || '').localeCompare(a.published_at || ''))[0];
+    if (publishedVer) {
+      try {
+        const snapshot = JSON.parse(publishedVer.snapshot);
+        return ok({ ...agent, installed_snapshot: snapshot, version: publishedVer.version });
+      } catch { /* fallback */ }
+    }
+    return ok({ ...agent, installed_snapshot: null });
+  }
+  // ===== POST /reports/:id/install — 安装报告 =====
+  if (/^\/reports\/[^/]+\/install$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const report = reports.find((r: any) => r.id === id);
+    if (!report) return { status: 404, data: { error: '报告不存在' } };
+    return ok({ ...report, installed_at: new Date().toISOString() });
   }
   if (/^\/agents\/[^/]+$/.test(path) && method === 'get') {
     const id = path.split('/').pop() as string;
@@ -4144,6 +4290,18 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (path === '/reports/departments' && method === 'get') {
     return ok(organizations.filter((o: any) => o.type !== 'company'));
   }
+  // 报告元数据（分发能力增强 ①）
+  if (path === '/report-meta' && method === 'get') {
+    const rid = p.report_id;
+    const meta = reportMeta.find((m: any) => m.report_id === rid) || null;
+    return ok(meta);
+  }
+  if (path === '/report-meta' && method === 'post') {
+    const idx = reportMeta.findIndex((m: any) => m.report_id === data.report_id);
+    if (idx >= 0) reportMeta[idx] = { ...reportMeta[idx], ...data };
+    else reportMeta.push({ ...data });
+    return ok(idx >= 0 ? reportMeta[idx] : reportMeta[reportMeta.length - 1]);
+  }
   // 报告 发布/下架/撤回
   if (/^\/reports\/[^/]+\/publish$/.test(path) && method === 'post') {
     const id = path.split('/')[2];
@@ -4179,6 +4337,26 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // 报告 我安装的
   if (path === '/reports/installed' && method === 'get') {
     return paginate(reports.filter((r: any) => r.status === 'published'), p.page, p.page_size, p.search);
+  }
+  // 报告 我安装的 - 详情
+  if (/^\/reports\/installed\/[^/]+$/.test(path) && method === 'get') {
+    const itemId = path.split('/')[3];
+    const src = reports.filter((r: any) => r.status === 'published');
+    const found = src.find((r: any) => r.id === itemId);
+    const r = found || src[0];
+    if (!r) return ok(null);
+    return ok({
+      id: r.id, name: r.title, title: r.title,
+      description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}，由 ${r.agent_name || '系统'} 自动生成`,
+      owner_name: r.agent_name || '系统', owner_dept: r.department_name || '',
+      scope: r.scope || 'department', version: '1.0.0',
+      is_beta: false, installed_at: r.updated_at || r.published_at,
+      period: r.period, department_name: r.department_name,
+    });
+  }
+  // 报告 卸载
+  if (/^\/reports\/[^/]+\/uninstall$/.test(path) && method === 'post') {
+    return ok(null);
   }
 
   // =================== RAG 知识库 ===================

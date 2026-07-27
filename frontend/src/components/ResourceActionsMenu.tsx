@@ -11,12 +11,12 @@ import {
  * 与 Skill 模块 STATUS_ACTIONS 保持一致
  */
 export const STATUS_ACTIONS: Record<string, string[]> = {
-  draft: ['edit', 'publish', 'share', 'delete'],
+  draft: ['edit', 'publish', 'share', 'versions', 'delete'],
   pending: ['cancel', 'delete'],
-  published: ['edit', 'delist', 'publish_new', 'share', 'delete'],
-  modified: ['edit', 'publish', 'share', 'delete'],
-  rejected: ['edit', 'publish', 'share', 'delete'],
-  delisted: ['edit', 'publish', 'share', 'delete'],
+  published: ['edit', 'delist', 'publish_new', 'share', 'versions', 'delete'],
+  modified: ['edit', 'publish', 'share', 'versions', 'delete'],
+  rejected: ['edit', 'publish', 'share', 'versions', 'delete'],
+  delisted: ['edit', 'publish', 'share', 'versions', 'delete'],
 };
 
 /** 操作按钮元数据 */
@@ -31,6 +31,7 @@ export const ACTION_META: Record<string, { icon: React.ReactNode; label: string;
   run: { icon: <PlayArrow fontSize="small" />, label: '立即运行', color: 'success.main' },
   debug: { icon: <PlayArrow fontSize="small" />, label: '调试', color: 'info.main' },
   run_records: { icon: <History fontSize="small" />, label: '运行记录', color: 'text.secondary' },
+  versions: { icon: <History fontSize="small" />, label: '版本历史', color: 'info.main' },
 };
 
 export interface ResourceActionsMenuProps {

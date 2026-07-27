@@ -134,6 +134,16 @@ export function AgentCard({
               }}
             />
             <StatusBadge status={agent.status} />
+            {agent.has_unpublished_changes && agent.status === 'published' && (
+              <Chip
+                label="有未发布修改"
+                size="small"
+                sx={{
+                  height: 18, fontSize: 10, fontWeight: 600,
+                  color: 'info.main', bgcolor: 'rgba(0,212,255,0.08)', border: '1px solid rgba(0,212,255,0.3)',
+                }}
+              />
+            )}
           </Box>
         </Box>
         {/* 操作菜单：传入 actionsMenu 时只渲染它，否则用内置菜单 */}

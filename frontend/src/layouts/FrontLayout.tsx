@@ -9,7 +9,7 @@ import {
   AutoStories, Search, Settings, Logout,
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
-  AccountTree, Build,
+  AccountTree,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useViewModeStore } from '../stores/viewModeStore';
@@ -64,7 +64,6 @@ const NAV_SECTIONS: NavSectionDef[] = [
       { icon: <Storefront sx={{ fontSize: 14 }} />, label: '技能市场', path: '/skills/market' },
       { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/skills/my-installed' },
       { icon: <Extension sx={{ fontSize: 14 }} />, label: '我创建的', path: '/skills/my' },
-      { icon: <Build sx={{ fontSize: 14 }} />, label: '技能管理', path: '/skills/admin' },
     ],
   },
 ];

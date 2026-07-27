@@ -7,10 +7,12 @@ import {
 import { Search, Refresh, AccountTree, PlayArrow } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/shared';
 import api from '../../api/client';
 
 export default function WorkflowInstalledPage() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   const [search, setSearch] = useState('');
@@ -82,7 +84,7 @@ export default function WorkflowInstalledPage() {
           {items.map((item: any) => (
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid rgba(0,212,255,0.06)', '&:hover': { boxShadow: '0 0 20px rgba(0,212,255,0.12)' }, cursor: 'pointer' }}
-                onClick={() => window.location.href = `/agents/${item.id}`}>
+                onClick={() => navigate(`/workflows/market/${item.id}`)}>
                 <CardContent sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                     <Avatar sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: 'rgba(0,212,255,0.1)', color: '#00D4FF', fontSize: 18, fontWeight: 700 }}>

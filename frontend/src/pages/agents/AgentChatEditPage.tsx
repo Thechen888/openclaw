@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box, Typography, Button, IconButton, TextField, MenuItem, Slider, Autocomplete,
-  Chip, Divider, Stack, Checkbox,
+  Chip, Divider, Stack, Checkbox, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import { ArrowBack, Save, Add, Close } from '@mui/icons-material';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { agentsApi, modelPoliciesApi, skillsApi, ragApi } from '../../api/client';
 import ChatDebugPanel from './components/ChatDebugPanel';
@@ -37,12 +37,16 @@ function Section({ title, desc, children }: { title: string; desc?: string; chil
 export default function AgentChatEditPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { enqueueSnackbar } = useSnackbar();
 
   const [name, setName] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [cfg, setCfg] = useState<any>(emptyConfig);
   const [newQuestion, setNewQuestion] = useState('');
+  const [dirty, setDirty] = useState(false);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
+  const pendingNav = useRef<(() => void) | null>(null);
 
   const { data: agentData } = useQuery({ queryKey: ['agent', id], queryFn: () => agentsApi.get(id) });
   const { data: policiesData } = useQuery({ queryKey: ['model-policies-all'], queryFn: () => modelPoliciesApi.list({ page_size: 200 }) });
@@ -61,11 +65,11 @@ export default function AgentChatEditPage() {
     setCfg({ ...emptyConfig, ...(agent.chat_config || {}) });
   }, [agent]);
 
-  const patch = (p: any) => setCfg((c: any) => ({ ...c, ...p }));
+  const patch = (p: any) => { setCfg((c: any) => ({ ...c, ...p })); setDirty(true); };
 
   const saveMutation = useMutation({
-    mutationFn: () => agentsApi.update(id, { name, system_prompt: systemPrompt, chat_config: cfg }),
-    onSuccess: () => enqueueSnackbar('对话配置已保存', { variant: 'success' }),
+    mutationFn: () => agentsApi.save(id, { name, system_prompt: systemPrompt, chat_config: cfg }),
+    onSuccess: () => { enqueueSnackbar('对话配置已保存', { variant: 'success' }); setDirty(false); },
   });
 
   const addQuestion = () => {
@@ -75,11 +79,18 @@ export default function AgentChatEditPage() {
     setNewQuestion('');
   };
 
+  // 判断来源：从市场进入则返回市场，否则返回「我创建的」
+  const fromMarket = searchParams.get('from') === 'market';
+  const backToList = () => {
+    if (dirty) { pendingNav.current = () => navigate(fromMarket ? '/agents/market' : '/agents/my'); setLeaveConfirm(true); }
+    else navigate(fromMarket ? '/agents/market' : '/agents/my');
+  };
+
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* 顶部工具栏 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2.5, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <IconButton onClick={() => navigate(`/agents/${id}`)}><ArrowBack /></IconButton>
+        <IconButton onClick={backToList}><ArrowBack /></IconButton>
         <Box sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{agent?.name || '对话编辑'}</Typography>
           <Typography variant="caption" color="text.secondary">对话 Agent · 左侧配置，右侧实时调试预览</Typography>
@@ -193,6 +204,18 @@ export default function AgentChatEditPage() {
           <ChatDebugPanel agentId={id} welcome={cfg.welcome} openingQuestions={cfg.opening_questions || []} />
         </Box>
       </Box>
+
+      {/* 未保存确认弹窗 */}
+      <Dialog open={leaveConfirm} onClose={() => setLeaveConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>修改尚未保存</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">当前修改尚未保存，确定要离开吗？</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLeaveConfirm(false)}>继续编辑</Button>
+          <Button variant="contained" color="warning" onClick={() => { setLeaveConfirm(false); setDirty(false); pendingNav.current?.(); }}>确定离开</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

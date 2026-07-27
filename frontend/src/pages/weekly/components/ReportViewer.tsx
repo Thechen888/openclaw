@@ -15,7 +15,7 @@ import {
 import SectionRenderer from './SectionRenderer';
 import DataEditor from './DataEditor';
 import LayoutEditor from './LayoutEditor';
-import { CalendarClock, Clock, Database, Download, Eye, History, Layout, RefreshCw, Settings } from 'lucide-react';
+import { CalendarClock, Clock, Database, Download, Eye, History, Layout, RefreshCw, Settings, Share2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // 将 ISO 时间格式化为“YYYY-MM-DD HH:mm”（供 tooltip 完整展示）
@@ -56,6 +56,17 @@ interface ReportViewerProps {
   report: ReportDefinition;
   // 点击“设置”按钮时回调予上层（打开 NewReportCreator 的编辑模式）；不传则隐藏按钮
   onEditConfig?: (report: ReportDefinition) => void;
+  // ─── 分发能力增强（②③④⑤） ───
+  /** 报告元数据（状态/未发布标记） */
+  meta?: { status?: string; has_unpublished_changes?: boolean } | null;
+  /** 分享按钮回调 */
+  onShare?: () => void;
+  /** 发布按钮回调 */
+  onPublish?: () => void;
+  /** 生成记录按钮回调 */
+  onShowSnapshots?: (snapshots: ReportDataSnapshot[], reportName: string) => void;
+  /** 数据保存成功回调（⑤ 编辑联动） */
+  onDataSaved?: () => void;
 }
 
 const BUILT_IN_REPORT_IDS = new Set(ALL_REPORTS.map(report => report.id));
@@ -125,7 +136,7 @@ export function writeCanvasToPdf(pdf: PdfPageWriter, canvas: CanvasSnapshot): vo
   }
 }
 
-export default function ReportViewer({ report, onEditConfig }: ReportViewerProps) {
+export default function ReportViewer({ report, onEditConfig, meta, onShare, onPublish, onShowSnapshots, onDataSaved }: ReportViewerProps) {
   const [activeTab, setActiveTab] = useState(0);
   const [editMode, setEditMode] = useState<'none' | 'data' | 'layout'>('none');
   const [sectionOverrides, setSectionOverrides] = useState<Record<string, ReportSection[]>>({});
@@ -207,7 +218,17 @@ export default function ReportViewer({ report, onEditConfig }: ReportViewerProps
   const renderHeader = () => (
     <div className="flex items-start justify-between mb-4 gap-4">
       <div className="min-w-0">
-        <h2 className="text-xl font-bold text-gray-800">{report.name}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-800">{report.name}</h2>
+          {meta?.status && (
+            <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] rounded ${
+              meta.status === 'published' ? 'bg-green-50 text-green-700 border border-green-200' :
+              meta.status === 'pending' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+              meta.status === 'modified' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+              'bg-gray-100 text-gray-600 border border-gray-200'
+            }`}>{meta.status === 'published' ? '已上架' : meta.status === 'pending' ? '审核中' : meta.status === 'modified' ? '已修改' : '草稿'}</span>
+          )}
+        </div>
         {report.description && <p className="text-sm text-gray-500 mt-1">{report.description}</p>}
         {/* 元信息行：最后刷新 + 更新频率 + 历史版本入口 */}
         <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 flex-wrap">
@@ -215,6 +236,9 @@ export default function ReportViewer({ report, onEditConfig }: ReportViewerProps
           <span title={formatFullTime(lastRefreshedAt)}>
             最后刷新 {formatRelative(lastRefreshedAt)}
           </span>
+          {meta?.has_unpublished_changes && (
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] bg-orange-50 text-orange-600 border border-orange-200 rounded">有未发布修改</span>
+          )}
           {latestSnapshot?.note && (
             <span className="text-gray-400">· {latestSnapshot.note}</span>
           )}
@@ -326,9 +350,28 @@ export default function ReportViewer({ report, onEditConfig }: ReportViewerProps
         >
           <RefreshCw size={14} /> 刷新
         </button>
+        {onShowSnapshots && (
+          <button
+            onClick={() => onShowSnapshots(snapshots, report.name)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 rounded-lg transition-colors"
+            title="生成记录"
+          >
+            <Clock size={14} />
+          </button>
+        )}
         <button onClick={handleExportPDF} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
           <Download size={14} /> PDF
         </button>
+        {onShare && (
+          <button onClick={onShare} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 rounded-lg transition-colors">
+            <Share2 size={14} /> 分享
+          </button>
+        )}
+        {onPublish && (
+          <button onClick={onPublish} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+            <Send size={14} /> 发布
+          </button>
+        )}
       </div>
     </div>
   );
@@ -380,7 +423,7 @@ export default function ReportViewer({ report, onEditConfig }: ReportViewerProps
               data={currentData}
               report={report}
               validationScope={validationScope}
-              onSave={data => setReportData(dataKey, data, '编辑保存', period)}
+              onSave={data => { setReportData(dataKey, data, '编辑保存', period); onDataSaved?.(); }}
             />
           )}
           {editMode === 'layout' && (
