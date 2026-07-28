@@ -66,6 +66,7 @@ import ReportMarketDetailPage from '../pages/reports/ReportMarketDetailPage';
 import ReportInstalledPage from '../pages/reports/ReportInstalledPage';
 import ReportInstalledDetailPage from '../pages/reports/ReportInstalledDetailPage';
 import ReportMyPage from '../pages/reports/ReportMyPage';
+import ReportViewPage from '../pages/reports/ReportViewPage';
 import WorkflowMarketPage from '../pages/workflows/WorkflowMarketPage';
 import WorkflowInstalledPage from '../pages/workflows/WorkflowInstalledPage';
 import WorkflowInstalledDetailPage from '../pages/workflows/WorkflowInstalledDetailPage';
@@ -169,6 +170,7 @@ export const router = createBrowserRouter([
       { path: 'reports/installed', element: <ReportInstalledPage /> },
       { path: 'reports/installed/:id', element: <ReportInstalledDetailPage /> },
       { path: 'reports/my', element: <ReportMyPage /> },
+      { path: 'reports/view/:id', element: <ReportViewPage /> },
       // RAG
       { path: 'rag/workbench', element: <KnowledgeBaseWorkbenchPage /> },
       { path: 'rag/knowledge-bases', element: <KnowledgeBasesPage /> },

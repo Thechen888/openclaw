@@ -1,5 +1,5 @@
 import {
-  Drawer, Box, Typography, IconButton, Chip, Divider, Button,
+  Drawer, Box, Typography, IconButton, Chip, Divider, Button, Tooltip,
   Accordion, AccordionSummary, AccordionDetails,
 } from '@mui/material';
 import {
@@ -41,6 +41,7 @@ export default function WorkflowRunResultDrawer({
   const nodes = result?.node_executions || [];
   const reportSnapshots = result?.report_snapshots || [];
   const hasReportOutput = reportSnapshots.length > 0;
+  const boundReportId = reportSnapshots.find(s => s.report_id)?.report_id || null;
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: 480 } } }}>
@@ -112,15 +113,20 @@ export default function WorkflowRunResultDrawer({
                     已更新报告数据：{reportSnapshots[0].report_name || reportSnapshots[0].dataKey}
                   </Typography>
                 </Box>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  endIcon={<OpenInNew fontSize="small" />}
-                  onClick={() => navigate(`/reports/view/${reportSnapshots[0].report_id}`)}
-                  sx={{ mt: 0.5, textTransform: 'none', fontWeight: 600 }}
-                >
-                  查看报告
-                </Button>
+                <Tooltip title={!boundReportId ? '暂无报告绑定此数据源' : '打开报告查看器'}>
+                  <span>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      endIcon={<OpenInNew fontSize="small" />}
+                      disabled={!boundReportId}
+                      onClick={() => boundReportId && navigate(`/reports/view/${boundReportId}`)}
+                      sx={{ mt: 0.5, textTransform: 'none', fontWeight: 600 }}
+                    >
+                      查看报告
+                    </Button>
+                  </span>
+                </Tooltip>
               </Box>
             )}
           </>
