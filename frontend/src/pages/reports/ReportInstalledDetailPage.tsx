@@ -1,5 +1,5 @@
 import { Box, Card, Typography, Chip, Button, Avatar, Divider } from '@mui/material';
-import { ArrowBack, Delete, Settings, Groups, Science, CalendarToday, InfoOutlined, History } from '@mui/icons-material';
+import { ArrowBack, Delete, Visibility, Groups, Science, CalendarToday, InfoOutlined, History } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -111,6 +111,14 @@ export default function ReportInstalledDetailPage() {
           {/* 操作按钮 */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <Button
+              variant="contained"
+              startIcon={<Visibility />}
+              onClick={() => navigate(`/reports/view/${id}`)}
+              sx={{ fontWeight: 600, textTransform: 'none', minWidth: 100 }}
+            >
+              查看报告
+            </Button>
+            <Button
               variant="outlined"
               color="error"
               startIcon={<Delete />}
@@ -119,14 +127,6 @@ export default function ReportInstalledDetailPage() {
               sx={{ fontWeight: 600, textTransform: 'none', minWidth: 100 }}
             >
               卸载
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Settings />}
-              onClick={() => navigate(`/reports/my`)}
-              sx={{ fontWeight: 600, textTransform: 'none', minWidth: 100 }}
-            >
-              配置
             </Button>
           </Box>
         </Box>
