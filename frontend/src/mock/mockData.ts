@@ -1209,6 +1209,12 @@ const workflows: Record<string, any> = {
         on_error: 'inherit', enabled: true,
         script: 'report = input["llm_output"]\nresult = http_post(config["report_endpoint"], report)\nlog_info("weekly_report_saved", result)',
       },
+      {
+        id: 'wn-7-4', name: '输出周报数据', type: 'report_output',
+        on_error: 'inherit', enabled: true,
+        dataKey: 'tech_dept_weekly', report_id: 'rpt-1',
+        output_fields: [{ name: 'kpi_metrics', label: '核心指标', type: 'kv' }, { name: 'highlights', label: '本周亮点', type: 'array' }, { name: 'risks', label: '风险问题', type: 'array' }, { name: 'next_plan', label: '下周计划', type: 'array' }],
+      },
     ],
   },
   'a-8': {
@@ -1314,6 +1320,7 @@ const workflows: Record<string, any> = {
 const outputDeclarations: any[] = [
   { dataKey: 'crm_sales_data', workflow_id: 'a-1', workflow_name: 'CRM通知流程', description: 'CRM销售数据汇总', output_fields: [{ name: 'total_revenue', label: '总营收', type: 'single' }, { name: 'deals', label: '成交列表', type: 'array' }] },
   { dataKey: 'device_inspection', workflow_id: 'a-2', workflow_name: '设备巡检', description: '设备巡检结果数据', output_fields: [{ name: 'device_status', label: '设备状态', type: 'kv' }, { name: 'alerts', label: '告警列表', type: 'array' }] },
+  { dataKey: 'tech_dept_weekly', workflow_id: 'a-7', workflow_name: '技术研发部周报Agent', description: '技术研发部周报数据', report_id: 'rpt-1', output_fields: [{ name: 'kpi_metrics', label: '核心指标', type: 'kv' }, { name: 'highlights', label: '本周亮点', type: 'array' }, { name: 'risks', label: '风险问题', type: 'array' }, { name: 'next_plan', label: '下周计划', type: 'array' }] },
 ];
 
 // =================== Agent 运行记录 ===================
@@ -3469,6 +3476,34 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         .map((r: any) => ({ id: r.id, name: r.title, description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}，由 ${r.agent_name || '系统'} 自动生成`, owner_name: r.agent_name || '系统', owner_dept: r.department_name || '', scope: r.scope || 'department', version: '1.0.0', install_count: 0 }));
     }
     return paginate(sharedItems, p.page, p.page_size, p.search);
+  }
+  // ===== 工作流运行 POST /workflows/:id/run =====
+  if (/^\/workflows\/[^/]+\/run$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const wf = workflows[id] || { nodes: [] };
+    const node_executions = (wf.nodes || []).map((n: any, i: number) => ({
+      node_id: n.id, name: n.name, type: n.type,
+      status: 'success',
+      duration_ms: 200 + Math.floor(Math.random() * 900),
+      tokens: n.type === 'model' ? 400 + Math.floor(Math.random() * 800) : 0,
+      output_summary: n.type === 'report_output' ? `数据已输出到报告 (${n.dataKey || '未命名'})` : `${n.name} 执行完成`,
+    }));
+    const totalDuration = node_executions.reduce((s: number, x: any) => s + x.duration_ms, 0);
+    const totalTokens = node_executions.reduce((s: number, x: any) => s + x.tokens, 0);
+    const reportSnapshots: any[] = [];
+    (wf.nodes || []).forEach((n: any) => {
+      if (n.type === 'report_output' && n.dataKey) {
+        reportSnapshots.push({ dataKey: n.dataKey, report_id: n.report_id || null, report_name: '技术研发部周报' });
+      }
+    });
+    return ok({
+      run_id: 'run-' + Date.now(),
+      status: 'completed',
+      duration_ms: totalDuration,
+      total_tokens: totalTokens,
+      node_executions,
+      report_snapshots: reportSnapshots,
+    });
   }
   // ===== 通用资源 — 我安装的 GET /{resourceType}/installed =====
   if (/^\/(agents|workflows|reports)\/installed$/.test(path) && method === 'get') {

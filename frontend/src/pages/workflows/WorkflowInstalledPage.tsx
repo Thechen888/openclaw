@@ -2,14 +2,15 @@ import { useState } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Chip, Button, TextField,
   InputAdornment, IconButton, Tooltip, Skeleton, Avatar, Dialog, DialogTitle,
-  DialogContent, DialogActions,
+  DialogContent, DialogActions, CircularProgress,
 } from '@mui/material';
-import { Search, Refresh, AccountTree, PlayArrow, Delete, SystemUpdateAlt } from '@mui/icons-material';
+import { Search, Refresh, AccountTree, PlayArrow, Delete, SystemUpdateAlt, History, OpenInNew } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/shared';
 import api from '../../api/client';
+import WorkflowRunResultDrawer from './WorkflowRunResultDrawer';
 
 const verNum = (v: string) => {
   const m = String(v).replace(/^v/, '').match(/^(\d+)\.(\d+)\.?(\d+)?/);
@@ -26,6 +27,10 @@ export default function WorkflowInstalledPage() {
   const [runItem, setRunItem] = useState<any>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [confirmUninstall, setConfirmUninstall] = useState<any>(null);
+  const [runningItemId, setRunningItemId] = useState<string | null>(null);
+  const [runningItemName, setRunningItemName] = useState<string>('');
+  const [runResult, setRunResult] = useState<any>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['workflows-installed', { search }],
@@ -53,6 +58,28 @@ export default function WorkflowInstalledPage() {
     },
     onError: () => enqueueSnackbar('运行失败', { variant: 'error' }),
   });
+
+  // 运行工作流（含延时，模拟执行过程）
+  const runWorkflowMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const res = await api.post(`/workflows/${id}/run`);
+      return res.data?.data;
+    },
+    onSuccess: (data, id) => {
+      setRunResult(data);
+      setDrawerOpen(true);
+      enqueueSnackbar('工作流运行完成', { variant: 'success' });
+    },
+    onError: () => enqueueSnackbar('运行失败', { variant: 'error' }),
+    onSettled: () => setRunningItemId(null),
+  });
+
+  const handleRunClick = (item: any) => {
+    setRunningItemId(item.id);
+    setRunningItemName(item.name);
+    runWorkflowMutation.mutate(item.id);
+  };
 
   const upgradeMutation = useMutation({
     mutationFn: (id: string) => api.post(`/workflows/${id}/upgrade`),
@@ -120,16 +147,29 @@ export default function WorkflowInstalledPage() {
                       <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 14 }}>{item.name}</Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{item.owner_name}</Typography>
                     </Box>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      startIcon={<PlayArrow fontSize="small" />}
-                      onClick={(e) => { e.stopPropagation(); handleOpenRun(item); }}
-                      sx={{ fontSize: 12, textTransform: 'none', minWidth: 72, height: 28,
-                        bgcolor: '#10b981', '&:hover': { bgcolor: '#059669' } }}
-                    >
-                      运行
-                    </Button>
+                    {runningItemId === item.id ? (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        disabled
+                        startIcon={<CircularProgress size={12} color="inherit" />}
+                        sx={{ fontSize: 12, textTransform: 'none', minWidth: 72, height: 28,
+                          bgcolor: '#10b981', '&:hover': { bgcolor: '#059669' } }}
+                      >
+                        运行中…
+                      </Button>
+                    ) : (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<PlayArrow fontSize="small" />}
+                        onClick={(e) => { e.stopPropagation(); handleRunClick(item); }}
+                        sx={{ fontSize: 12, textTransform: 'none', minWidth: 72, height: 28,
+                          bgcolor: '#10b981', '&:hover': { bgcolor: '#059669' } }}
+                      >
+                        运行
+                      </Button>
+                    )}
                   </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mb: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {item.description || '暂无描述'}
@@ -149,7 +189,14 @@ export default function WorkflowInstalledPage() {
                     )}
                   </Box>
                   {/* 升级 + 卸载按钮 */}
-                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'primary.main', cursor: 'pointer', fontSize: 11, '&:hover': { textDecoration: 'underline' } }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/agents/runs?agent_id=${item.id}`); }}
+                    >
+                      运行记录
+                    </Typography>
                     {hasUpdate(item) && (
                       <Tooltip title={`升级到 v${item.version}`}>
                         <IconButton size="small" color="info" onClick={(e) => { e.stopPropagation(); upgradeMutation.mutate(item.id); }}>
@@ -217,6 +264,14 @@ export default function WorkflowInstalledPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 运行结果抽屉 */}
+      <WorkflowRunResultDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        workflowName={runningItemName}
+        result={runResult}
+      />
 
       {/* 卸载确认弹窗 */}
       <Dialog open={!!confirmUninstall} onClose={() => setConfirmUninstall(null)} maxWidth="xs" fullWidth>
