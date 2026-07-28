@@ -45,6 +45,8 @@ export interface ResourceMarketPageProps {
   installSuccessMsg?: string;
   /** 卡片点击后的导航路径模板，如 '/skills/:id/detail' */
   detailPathTemplate?: string;
+  /** 内测分享数据 API 路径覆盖（如 '/workflows/shared-to-me'），缺省走 basePath/shared-to-me */
+  sharedToMePath?: string;
   /** 自定义卡片内容渲染器（可选，用于在卡片中显示额外信息） */
   renderCardExtra?: (item: any) => React.ReactNode;
   /** 空状态图标 */
@@ -63,6 +65,7 @@ export default function ResourceMarketPage({
   installMutationFn,
   installSuccessMsg,
   detailPathTemplate,
+  sharedToMePath,
   renderCardExtra,
   emptyIcon,
   emptyTitle,
@@ -88,7 +91,7 @@ export default function ResourceMarketPage({
   // 内测分享数据
   const { data: betaData, isLoading: betaLoading } = useQuery({
     queryKey: [`${resourceType}-shared-to-me`, { search }],
-    queryFn: () => api.get(`${basePath}/shared-to-me`, { params: { page_size: 50, search } }),
+    queryFn: () => api.get(`${sharedToMePath || basePath + '/shared-to-me'}`, { params: { page_size: 50, search, category } }),
     enabled: scopeTab === 'beta',
   });
 

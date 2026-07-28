@@ -1093,6 +1093,12 @@ const workflows: Record<string, any> = {
         on_error: 'inherit', enabled: true,
         script: 'msg = input["llm_output"]\nresp = http_post("https://qyapi.weixin.qq.com/send", {"msg": msg})\nlog_info("send_result", resp)',
       },
+      {
+        id: 'wn-1-5', name: '输出报表数据', type: 'report_output',
+        on_error: 'inherit', enabled: true,
+        dataKey: 'crm_sales_data',
+        output_fields: [{ name: 'total_revenue', label: '总营收', type: 'single' }, { name: 'deals', label: '成交列表', type: 'array' }],
+      },
     ],
   },
   'a-2': {
@@ -1710,6 +1716,25 @@ const installedSkills: any[] = [
   { id: 'inst-6', skill_id: 'sk-14', skill_name: 'sales-report', skill_slug: 'sales-report', description: '销售数据报表生成（内测版）', version: '0.1-test', version_id: null, installed_at: dayAgo(2), installed_by: 'u-1', owner_name: '张伟', scope: 'private', has_update: false, latest_version: '2.0.0', is_beta: true },
 ];
 
+// =================== 我安装的智能体/工作流/报告 ===================
+const installedAgents: any[] = [
+  { id: 'a-6', name: '知识库问答助手', description: '基于企业知识库的智能问答对话助手', owner_name: '李娜', owner_dept: '产品部', agent_type: 'chat', installed_version: '1.0.0', version: '1.2.0', is_beta: false, installed_at: dayAgo(7), scope: 'company' },
+  { id: 'a-12', name: '智能客服助手', description: '面向客户的售前售后对话客服', owner_name: '李娜', owner_dept: '产品部', agent_type: 'chat', installed_version: '0.2-test', version: '0.2-test', is_beta: true, installed_at: dayAgo(3), scope: 'private' },
+];
+
+const installedWorkflows: any[] = [
+  { id: 'a-3', name: '摄像头监控#12', description: '监控12号摄像头的异常情况', owner_name: '李娜', owner_dept: '产品部', agent_type: 'workflow', installed_version: '1.0.0', version: '1.3.0', is_beta: false, installed_at: dayAgo(6), scope: 'company' },
+  { id: 'a-7', name: '技术研发部周报Agent', description: '自动拉取技术研发部运营数据并生成周报', owner_name: '王强', owner_dept: '技术研发部', agent_type: 'workflow', installed_version: '0.3-test', version: '0.3-test', is_beta: true, installed_at: dayAgo(4), scope: 'private' },
+  { id: 'a-8', name: 'AI平台组周报Agent', description: '自动拉取AI平台组运营数据并生成周报', owner_name: '王强', owner_dept: 'AI平台组', agent_type: 'workflow', installed_version: '2.0.0', version: '2.0.0', is_beta: false, installed_at: dayAgo(2), scope: 'company' },
+  { id: 'a-11', name: '运营汇总周报Agent', description: '聚合各部门周报数据生成运营汇总周报', owner_name: '王强', owner_dept: '运营部', agent_type: 'workflow', installed_version: '1.5.0', version: '1.5.0', is_beta: false, installed_at: dayAgo(1), scope: 'company' },
+];
+
+const installedReports: any[] = [
+  { id: 'rpt-1', name: '技术研发部周报', title: '技术研发部周报', description: '技术研发部周报，由技术研发部周报Agent自动生成', owner_name: '技术研发部周报Agent', agent_type: 'report', installed_version: '1.0.0', version: '1.2.0', is_beta: false, installed_at: dayAgo(5), scope: 'department' },
+  { id: 'rpt-2', name: 'AI平台组周报', title: 'AI平台组周报', description: 'AI平台组周报，由AI平台组周报Agent自动生成', owner_name: 'AI平台组周报Agent', agent_type: 'report', installed_version: '0.1-test', version: '0.1-test', is_beta: true, installed_at: dayAgo(3), scope: 'private' },
+  { id: 'rpt-4', name: '全公司运营周报', title: '全公司运营周报', description: '全公司运营周报，由运营汇总周报Agent自动生成', owner_name: '运营汇总周报Agent', agent_type: 'report', installed_version: '2.1.0', version: '2.1.0', is_beta: false, installed_at: dayAgo(1), scope: 'company' },
+];
+
 // =================== 通用资源定向授权（内测分享/白名单） ===================
 // resource_type: skill / agent / workflow / report
 // share_type: test（测试分享，作者发起，免审）/ release（发布白名单，管理员配置）
@@ -1721,6 +1746,8 @@ const resourceShares: any[] = [
   { id: 'rs-4', resource_type: 'agent', resource_id: 'a-6', resource_name: '知识库问答助手', target_type: 'user', target_id: 'u-2', target_name: '李思', target_dept: '产品部', share_type: 'test', granted_by: 'u-2', granted_by_name: '李娜', created_at: dayAgo(2) },
   { id: 'rs-5', resource_type: 'workflow', resource_id: 'a-1', resource_name: 'CRM销售通知', target_type: 'user', target_id: 'u-3', target_name: '王五', target_dept: '技术研发部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(4) },
   { id: 'rs-6', resource_type: 'report', resource_id: 'rpt-1', resource_name: '2026年第20周运营周报', target_type: 'user', target_id: 'u-4', target_name: '赵敏', target_dept: '设计部', share_type: 'test', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(1) },
+  { id: 'rs-7', resource_type: 'workflow', resource_id: 'a-3', resource_name: '摄像头监控#12', target_type: 'user', target_id: 'u-1', target_name: '张伟', target_dept: '技术部', share_type: 'test', granted_by: 'u-2', granted_by_name: '李娜', created_at: dayAgo(2) },
+  { id: 'rs-8', resource_type: 'report', resource_id: 'rpt-3', resource_name: '全公司日报', target_type: 'user', target_id: 'u-1', target_name: '张伟', target_dept: '技术部', share_type: 'test', granted_by: 'u-3', granted_by_name: '王强', created_at: dayAgo(1) },
 ];
 
 // =================== 发布审核记录 ===================
@@ -1729,7 +1756,9 @@ const reviewRecords: any[] = [
   { id: 'rv-2', type: 'skill_publish', target_id: 'sk-11', target_name: 'gen-image', applicant: 'u-4', applicant_name: '赵敏', applicant_dept: '设计部', scope: 'company', version: '0.2.0', changelog: '', submitted_at: dayAgo(5), status: 'rejected', reviewer: 'u-admin', review_reason: '缺少 SKILL.md 中的安全声明，请补充后重新提交', reviewed_at: dayAgo(3), auto_check: { has_skill_md: false, file_count: 2, total_size: 1200, danger_keywords: [], slug_conflict: false } },
   { id: 'rv-3', type: 'skill_publish', target_id: 'sk-13', target_name: 'meeting-notes', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.1.0', changelog: '新增语音转文字支持', submitted_at: dayAgo(60), status: 'approved', reviewer: 'u-admin', review_reason: null, reviewed_at: dayAgo(58), auto_check: { has_skill_md: true, file_count: 5, total_size: 8900, danger_keywords: [], slug_conflict: false } },
   { id: 'rv-4', type: 'report_publish', target_id: 'rpt-1', target_name: '2026年第20周运营周报', target_slug: 'rpt-1', target_desc: '运营数据周报，包含核心指标、趋势图表与 AI 智能分析', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', version: '1.0.0', changelog: '首次提交发布', submitted_at: dayAgo(4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
+  { id: 'rv-0', type: 'agent_publish', target_id: 'a-6', target_name: '知识库问答助手', target_slug: 'kb-qa-assistant', target_desc: '基于企业知识库的智能问答对话助手', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.1.0', changelog: '新增多轮对话能力', submitted_at: dayAgo(10), status: 'rejected', reviewer: 'u-admin', review_reason: '系统提示词中包含内部敏感表述，请脱敏后重新提交', reviewed_at: dayAgo(8) },
   { id: 'rv-5', type: 'agent_publish', target_id: 'a-6', target_name: '知识库问答助手', target_slug: 'a-6', target_desc: '基于企业知识库的智能问答对话助手', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.2.0', changelog: '优化检索策略，提升回答准确率', submitted_at: dayAgo(1), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
+  { id: 'rv-6', type: 'agent_publish', target_id: 'a-1', target_name: 'CRM销售通知', target_slug: 'crm-sales-notify', target_desc: '监控CRM系统销售事件并发送通知', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', version: '2.1.0', changelog: '新增报表数据输出节点', submitted_at: dayAgo(0.4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
 ];
 
 // =================== 统一资源权限（resource_acl） ===================
@@ -3426,50 +3455,52 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const myShares = resourceShares.filter(s => s.resource_type === rType && (s.target_id === 'u-1' || s.target_id === 'dept-1'));
     const sharedIds = [...new Set(myShares.map(s => s.resource_id))];
     // 根据 resourceType 从对应数据集查找
-    let srcData: any[] = [];
-    if (rType === 'skill') srcData = skills;
-    else if (rType === 'agent' || rType === 'workflow') srcData = agents;
-    else srcData = []; // reports 暂无统一数据源
-    const sharedItems = srcData.filter(s => sharedIds.includes(s.id));
+    let sharedItems: any[] = [];
+    if (rType === 'skill') {
+      sharedItems = skills.filter(s => sharedIds.includes(s.id));
+    } else if (rType === 'agent' || rType === 'workflow') {
+      const catFilter = rType === 'workflow' ? (a: any) => a.category === 'workflow' : (a: any) => a.category !== 'workflow';
+      sharedItems = agents
+        .filter(a => sharedIds.includes(a.id) && catFilter(a))
+        .map((a: any) => ({ ...a, scope: a.owner_type === 'organization' ? 'company' : 'private', version: '1.0.0', install_count: a.triggers_count ?? 0, owner_dept: a.owner_type === 'organization' ? '组织' : '个人' }));
+    } else if (rType === 'report') {
+      sharedItems = reports
+        .filter(r => sharedIds.includes(r.id))
+        .map((r: any) => ({ id: r.id, name: r.title, description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}，由 ${r.agent_name || '系统'} 自动生成`, owner_name: r.agent_name || '系统', owner_dept: r.department_name || '', scope: r.scope || 'department', version: '1.0.0', install_count: 0 }));
+    }
     return paginate(sharedItems, p.page, p.page_size, p.search);
   }
   // ===== 通用资源 — 我安装的 GET /{resourceType}/installed =====
-  // 必须置于 /:id 路由之前，否则 "installed" 会被误当作资源 ID
   if (/^\/(agents|workflows|reports)\/installed$/.test(path) && method === 'get') {
     const rType = path.split('/')[1].replace(/s$/, '');
-    let installedData: any[] = [];
-    if (rType === 'agent') {
-      // 安装他人发布的对话类智能体（读取在架版本快照）
-      installedData = agents
-        .filter((a: any) => a.category !== 'workflow' && a.owner_id !== 'u-1')
-        .map((a: any, i: number) => {
-          const pubVer = agentVersions
-            .filter((v: any) => v.agent_id === a.id && v.status === 'published')
-            .sort((x: any, y: any) => (y.published_at || '').localeCompare(x.published_at || ''))[0];
-          let snapshotData = {};
-          if (pubVer) { try { snapshotData = JSON.parse(pubVer.snapshot); } catch {} }
-          return { ...a, ...snapshotData, installed_at: dayAgo(i + 1), is_beta: i === 0, installed_version: pubVer?.version || '1.0.0' };
-        });
-    } else if (rType === 'workflow') {
-      // 安装他人发布的工作流类智能体（读取在架版本快照）
-      installedData = agents
-        .filter((a: any) => a.category === 'workflow' && a.owner_id !== 'u-1')
-        .map((a: any, i: number) => {
-          const pubVer = agentVersions
-            .filter((v: any) => v.agent_id === a.id && v.status === 'published')
-            .sort((x: any, y: any) => (y.published_at || '').localeCompare(x.published_at || ''))[0];
-          let snapshotData = {};
-          if (pubVer) { try { snapshotData = JSON.parse(pubVer.snapshot); } catch {} }
-          return { ...a, ...snapshotData, installed_at: dayAgo(i + 2), is_beta: false, installed_version: pubVer?.version || '1.0.0' };
-        });
-    } else if (rType === 'report') {
-      // 安装他人发布的报告
-      installedData = reports
-        .filter((r: any) => r.status === 'published')
-        .slice(0, 3)
-        .map((r: any, i: number) => ({ id: r.id, name: r.title, description: `${r.department_name || ''}${r.period === 'weekly' ? '周报' : '报告'}`, owner_name: r.agent_name || '系统', agent_type: 'report', installed_at: dayAgo(i + 1), is_beta: false }));
-    }
-    return paginate(installedData, p.page, p.page_size, p.search);
+    const src = rType === 'agent' ? installedAgents : rType === 'workflow' ? installedWorkflows : installedReports;
+    return paginate(src, p.page, p.page_size, p.search);
+  }
+  // ===== 通用资源 — 我安装的详情 GET /{resourceType}/installed/:id =====
+  if (/^\/(agents|workflows|reports)\/installed\/[^/]+$/.test(path) && method === 'get') {
+    const rType = path.split('/')[1].replace(/s$/, '');
+    const id = path.split('/')[3];
+    const src = rType === 'agent' ? installedAgents : rType === 'workflow' ? installedWorkflows : installedReports;
+    const found = src.find((r: any) => r.id === id);
+    return ok(found || null);
+  }
+  // ===== POST /{resourceType}/:id/upgrade — 升级安装版本到最新 =====
+  if (/^\/(agents|workflows|reports)\/[^/]+\/upgrade$/.test(path) && method === 'post') {
+    const rType = path.split('/')[1].replace(/s$/, '');
+    const id = path.split('/')[2];
+    const src = rType === 'agent' ? installedAgents : rType === 'workflow' ? installedWorkflows : installedReports;
+    const rec = src.find((r: any) => r.id === id);
+    if (rec) { rec.installed_version = rec.version; }
+    return ok(rec || null);
+  }
+  // ===== POST /{resourceType}/:id/uninstall — 卸载资源 =====
+  if (/^\/(agents|workflows|reports)\/[^/]+\/uninstall$/.test(path) && method === 'post') {
+    const rType = path.split('/')[1].replace(/s$/, '');
+    const id = path.split('/')[2];
+    const src = rType === 'agent' ? installedAgents : rType === 'workflow' ? installedWorkflows : installedReports;
+    const idx = src.findIndex((r: any) => r.id === id);
+    if (idx >= 0) src.splice(idx, 1);
+    return ok(null);
   }
   // ===== POST /{resourceType}/:id/install — 安装资源（读取在架版本快照） =====
   if (/^\/(agents|workflows)\/[^/]+\/install$/.test(path) && method === 'post') {
@@ -3714,6 +3745,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     let filtered = reviewRecords;
     if (p.type) filtered = filtered.filter(r => r.type === p.type);
     if (p.status) filtered = filtered.filter(r => r.status === p.status);
+    if (p.target_id) filtered = filtered.filter(r => r.target_id === p.target_id);
     return paginate(filtered, p.page, p.page_size, p.search);
   }
   if (/^\/review\/[^/]+\/approve$/.test(path) && method === 'post') {
@@ -4416,10 +4448,6 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (path === '/reports/my' && method === 'get') {
     const myReports = reports.filter(r => r.owner_id === 'u-1' || !r.owner_id);
     return paginate(myReports, p.page, p.page_size, p.search);
-  }
-  // 报告 我安装的
-  if (path === '/reports/installed' && method === 'get') {
-    return paginate(reports.filter((r: any) => r.status === 'published'), p.page, p.page_size, p.search);
   }
   // 报告 我安装的 - 详情
   if (/^\/reports\/installed\/[^/]+$/.test(path) && method === 'get') {

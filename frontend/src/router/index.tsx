@@ -27,6 +27,7 @@ import AgentChatEditPage from '../pages/agents/AgentChatEditPage';
 import AgentMarketPage from '../pages/agents/AgentMarketPage';
 import ResourceMarketDetailPage from '../components/ResourceMarketDetailPage';
 import AgentInstalledPage from '../pages/agents/AgentInstalledPage';
+import AgentInstalledDetailPage from '../pages/agents/AgentInstalledDetailPage';
 import AgentMyPage from '../pages/agents/AgentMyPage';
 import AgentPublishPage from '../pages/agents/AgentPublishPage';
 import MarketplacePage from '../pages/skills/MarketplacePage';
@@ -67,6 +68,7 @@ import ReportInstalledDetailPage from '../pages/reports/ReportInstalledDetailPag
 import ReportMyPage from '../pages/reports/ReportMyPage';
 import WorkflowMarketPage from '../pages/workflows/WorkflowMarketPage';
 import WorkflowInstalledPage from '../pages/workflows/WorkflowInstalledPage';
+import WorkflowInstalledDetailPage from '../pages/workflows/WorkflowInstalledDetailPage';
 import WorkflowMyPage from '../pages/workflows/WorkflowMyPage';
 import WorkflowPublishPage from '../pages/workflows/WorkflowPublishPage';
 import KnowledgeBasesPage from '../pages/rag/KnowledgeBasesPage';
@@ -109,6 +111,7 @@ export const router = createBrowserRouter([
       { path: 'agents/market', element: <AgentMarketPage /> },
       { path: 'agents/market/:id', element: <ResourceMarketDetailPage resourceType="agent" backPath="/agents/market" installSuccessMsg="已安装到智能体库" /> },
       { path: 'agents/installed', element: <AgentInstalledPage /> },
+      { path: 'agents/installed/:id', element: <AgentInstalledDetailPage /> },
       { path: 'agents/my', element: <AgentMyPage /> },
       { path: 'agents/create', element: <AgentCreatePage /> },
       { path: 'agents/runs', element: <AgentRunsPage /> },
@@ -120,6 +123,7 @@ export const router = createBrowserRouter([
       { path: 'workflows/market', element: <WorkflowMarketPage /> },
       { path: 'workflows/market/:id', element: <ResourceMarketDetailPage resourceType="workflow" backPath="/workflows/market" installSuccessMsg="已安装到工作流库" /> },
       { path: 'workflows/installed', element: <WorkflowInstalledPage /> },
+      { path: 'workflows/installed/:id', element: <WorkflowInstalledDetailPage /> },
       { path: 'workflows/my', element: <WorkflowMyPage /> },
       { path: 'workflows/publish/:id', element: <WorkflowPublishPage /> },
       // Skills

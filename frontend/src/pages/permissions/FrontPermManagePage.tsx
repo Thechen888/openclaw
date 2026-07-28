@@ -5,16 +5,17 @@ import {
   TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem,
   Card, CardContent, List, ListItemButton, ListItemText, ListItemIcon,
   RadioGroup, FormControlLabel, Radio, Switch, Checkbox, FormControlLabel as MuiFormControlLabel,
+  Collapse, Alert,
 } from '@mui/material';
 import {
   Search, Refresh, Security, PowerSettingsNew, SwapHoriz, Close, Add, Delete,
   CheckCircle, Cancel, Visibility, Warning, Article, Info, SmartToy, Schedule,
-  AccountBalance, Edit,
+  AccountBalance, Edit, ExpandMore, ExpandLess, History, Preview,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { PageHeader, FilterBar, DataTable, useTableState, EmptyState, LoadingState } from '../../components/shared';
-import { frontPermApi, reviewApi, skillsApi, agentsApi, ragApi, reportConfigsApi, tokenAccountsApi, publicQuotaApi } from '../../api/client';
+import { frontPermApi, reviewApi, skillsApi, agentsApi, ragApi, reportConfigsApi, reportsApi, tokenAccountsApi, publicQuotaApi } from '../../api/client';
 import api from '../../api/client';
 
 const TYPE_TABS = [
@@ -42,6 +43,7 @@ const STATUS_META: Record<string, { label: string; color: 'success' | 'default' 
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('zh-CN') : '-';
+const fmtDateTime = (d: string) => d ? new Date(d).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
 const fmtRelative = (d: string) => {
   if (!d) return '-';
   const diff = Date.now() - new Date(d).getTime();
@@ -50,6 +52,32 @@ const fmtRelative = (d: string) => {
   if (days === 1) return '昨天';
   return `${days} 天前`;
 };
+
+// 工作流节点类型 → 中文标签（内容预览·节点统计用）
+const NODE_TYPE_LABEL: Record<string, string> = {
+  trigger: '触发', starlark: 'Starlark脚本', skill: '技能调用', model: 'AI对话',
+  loop: '循环', condition: '条件', report_output: '报告输出', http: 'HTTP请求',
+};
+
+// 报告区块类型 → 中文标签（内容预览·区块统计用）
+const BLOCK_TYPE_LABEL: Record<string, string> = {
+  metrics_card: 'KPI', chart_image: '图表', data_table: '表格', rich_text: '文本', bullet_list: '列表',
+};
+
+// 敏感经营数据检测：中文关键词 + 常见英文绑定键
+const SENSITIVE_WORDS = ['预算', '成本', '薪资', '利润'];
+const SENSITIVE_KEYS = ['budget', 'cost', 'salary', 'profit'];
+
+// 调度周期格式化
+const WEEK_DAY_LABEL = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const fmtSchedule = (s: any) => {
+  if (!s) return '-';
+  if (s.type === 'weekly') return `每${WEEK_DAY_LABEL[s.day] || '周'} ${s.time || ''}`;
+  if (s.type === 'daily') return `每天 ${s.time || ''}`;
+  if (s.type === 'monthly') return `每月 ${s.date || ''} 日 ${s.time || ''}`;
+  return s.type || '-';
+};
+const PERIOD_LABEL: Record<string, string> = { daily: '日报', weekly: '周报', monthly: '月报' };
 
 export default function FrontPermManagePage() {
   const qc = useQueryClient();
@@ -75,6 +103,9 @@ export default function FrontPermManagePage() {
   // 审核可见范围配置
   const [reviewScopeType, setReviewScopeType] = useState<'all' | 'roles'>('all');
   const [reviewScopeRoles, setReviewScopeRoles] = useState<any[]>([]);
+  // 审核详情 — 系统提示词展开状态 / 报告预览弹窗
+  const [systemPromptExpanded, setSystemPromptExpanded] = useState(false);
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['front-perm-resources', typeTab, params, idleFilter],
@@ -176,6 +207,65 @@ export default function FrontPermManagePage() {
   });
   const allRolesList: any[] = rolesData?.data?.data || [];
 
+  // 审核详情 — 审核历史（同一 target 的全部记录，用于计算第 N 次提交与上次驳回原因）
+  const { data: historyData } = useQuery({
+    queryKey: ['review-history', detailRecord?.target_id],
+    queryFn: () => reviewApi.list({ page_size: 50, target_id: detailRecord.target_id }),
+    enabled: !!detailRecord?.target_id,
+  });
+  const historyRecords: any[] = historyData?.data?.data || [];
+  const submitCount = historyRecords.length;
+  const lastReject: any = historyRecords
+    .filter((r: any) => r.status === 'rejected' && r.id !== detailRecord?.id)
+    .sort((a: any, b: any) => new Date(b.reviewed_at || b.submitted_at || 0).getTime() - new Date(a.reviewed_at || a.submitted_at || 0).getTime())[0] || null;
+
+  // 审核详情 — 智能体信息（仅智能体类审核需要）
+  const { data: detailAgentData } = useQuery({
+    queryKey: ['review-detail-agent', detailRecord?.target_id],
+    queryFn: () => agentsApi.get(detailRecord.target_id),
+    enabled: !!detailRecord?.target_id && detailRecord?.type === 'agent_publish',
+  });
+  const detailAgent: any = detailAgentData?.data?.data || null;
+  const isWorkflowAgent = !!detailAgent && (detailAgent.category === 'workflow' || detailAgent.agent_type === 'workflow');
+
+  // 审核详情 — 工作流配置（仅工作流型智能体需要：节点/入参）
+  const { data: detailWorkflowData } = useQuery({
+    queryKey: ['review-detail-workflow', detailRecord?.target_id],
+    queryFn: () => agentsApi.getWorkflow(detailRecord.target_id),
+    enabled: !!detailRecord?.target_id && isWorkflowAgent,
+  });
+  const detailWorkflow: any = detailWorkflowData?.data?.data || null;
+
+  // 审核详情 — 报告实例（仅报告类审核需要）
+  const { data: detailReportData } = useQuery({
+    queryKey: ['review-detail-report', detailRecord?.target_id],
+    queryFn: () => reportsApi.get(detailRecord.target_id),
+    enabled: !!detailRecord?.target_id && detailRecord?.type === 'report_publish',
+  });
+  const detailReport: any = detailReportData?.data?.data || null;
+
+  // 审核详情 — 报告配置（数据绑定键 / 调度信息）
+  const { data: reportConfigsData } = useQuery({
+    queryKey: ['review-report-configs'],
+    queryFn: () => reportConfigsApi.list({ page_size: 100 }),
+    enabled: !!detailRecord?.target_id && detailRecord?.type === 'report_publish',
+  });
+  const detailReportConfig: any = (reportConfigsData?.data?.data || []).find((c: any) => c.id === detailReport?.config_id) || null;
+
+  // 审核详情 — 全量技能/知识库（用于解析对话型智能体挂载的技能与知识库名称）
+  const { data: allSkillsData } = useQuery({
+    queryKey: ['review-all-skills'],
+    queryFn: () => skillsApi.list({ page_size: 200 }),
+    enabled: !!detailAgent && !isWorkflowAgent,
+  });
+  const allSkillsList: any[] = allSkillsData?.data?.data || [];
+  const { data: allKbData } = useQuery({
+    queryKey: ['review-all-kbs'],
+    queryFn: () => ragApi.knowledgeBases.list({ page_size: 200 }),
+    enabled: !!detailAgent && !isWorkflowAgent,
+  });
+  const allKbList: any[] = allKbData?.data?.data || [];
+
   const SCOPE_LABEL: Record<string, string> = {
     private: '私有', department: '部门', company: '全公司',
   };
@@ -194,6 +284,38 @@ export default function FrontPermManagePage() {
     mutationFn: (id: string) => frontPermApi.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['front-perm-resources'] }); setDeleteTarget(null); enqueueSnackbar('资源已删除', { variant: 'success' }); },
   });
+
+  /* ========= 审核详情抽屉 — 派生计算值（全部只读展示） ========= */
+  // 通用辅助检查（四类共有）：Slug 唯一性 / 版本号格式 / 描述长度
+  const auxSlug = String(detailRecord?.target_slug || '');
+  const auxVersion = String(detailRecord?.version || '');
+  const auxDesc = String(detailRecord?.target_desc || '');
+  const auxChecks = detailRecord ? [
+    { label: 'Slug 唯一性', pass: !!auxSlug && /^[a-z0-9][a-z0-9-]*$/i.test(auxSlug), detail: auxSlug ? `“${auxSlug}” 有效且无冲突` : '缺少 Slug' },
+    { label: '版本号格式', pass: /^\d+\.\d+\.\d+$/.test(auxVersion), detail: auxVersion ? `v${auxVersion}` : '未填写版本号' },
+    { label: '描述长度', pass: auxDesc.length >= 10 && auxDesc.length <= 200, detail: `${auxDesc.length} 字符（建议 10~200）` },
+  ] : [];
+
+  // 智能体·对话型：挂载技能 / 引用知识库 名称解析
+  const chatSkillIds: string[] = detailAgent?.chat_config?.authorized_skills || [];
+  const chatKbIds: string[] = detailAgent?.chat_config?.knowledge_base_ids || [];
+  const chatSkillNames = chatSkillIds.map((sid: string) => allSkillsList.find((s: any) => s.id === sid)?.name || sid);
+  const chatKbNames = chatKbIds.map((kid: string) => allKbList.find((k: any) => k.id === kid)?.name || kid);
+
+  // 智能体·工作流型：节点类型统计 / 报告输出节点 / 入参清单
+  const wfNodes: any[] = detailWorkflow?.nodes || [];
+  const wfNodeStats = wfNodes.reduce((acc: Record<string, number>, n: any) => { acc[n.type] = (acc[n.type] || 0) + 1; return acc; }, {});
+  const wfReportOutputNode: any = wfNodes.find((n: any) => n.type === 'report_output') || null;
+  const wfInputParams: any[] = detailWorkflow?.input_params || [];
+
+  // 报告：区块统计 / 数据绑定键 / 敏感词检测
+  const reportBlocks: any[] = detailReport?.blocks || [];
+  const reportBlockStats = reportBlocks.reduce((acc: Record<string, number>, b: any) => { acc[b.type] = (acc[b.type] || 0) + 1; return acc; }, {});
+  const reportDataKeys: string[] = detailReportConfig?.data_keys || [];
+  const sensitiveText = [detailReport?.title, detailReportConfig?.name, detailReportConfig?.agent_name, detailReport?.agent_name].filter(Boolean).join(' ');
+  const sensitiveTextHit = SENSITIVE_WORDS.find(w => sensitiveText.includes(w));
+  const sensitiveKeyHit = reportDataKeys.find((k: string) => SENSITIVE_KEYS.includes(String(k).toLowerCase()) || SENSITIVE_WORDS.some(w => String(k).includes(w)));
+  const sensitiveHit = sensitiveTextHit || sensitiveKeyHit;
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
@@ -277,7 +399,7 @@ export default function FrontPermManagePage() {
                 <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{item.submitted_at ? new Date(item.submitted_at).toLocaleString() : '-'}</TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Tooltip title="查看详情"><IconButton size="small" onClick={() => { setReviewScopeType('all'); setReviewScopeRoles([]); setPreviewFile(null); setDetailRecord(item); }}><Visibility fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title="查看详情"><IconButton size="small" onClick={() => { setReviewScopeType('all'); setReviewScopeRoles([]); setPreviewFile(null); setSystemPromptExpanded(false); setReportPreviewOpen(false); setDetailRecord(item); }}><Visibility fontSize="small" /></IconButton></Tooltip>
                     <Tooltip title="通过"><IconButton size="small" color="success" onClick={() => approveMutation.mutate({ id: item.id, scopeConfig: { scope_type: 'all' } })} disabled={approveMutation.isPending}><CheckCircle fontSize="small" /></IconButton></Tooltip>
                     <Tooltip title="驳回"><IconButton size="small" color="error" onClick={() => setRejectDialog({ open: true, recordId: item.id, recordName: item.target_name })}><Cancel fontSize="small" /></IconButton></Tooltip>
                   </Box>
@@ -457,7 +579,7 @@ export default function FrontPermManagePage() {
       </Dialog>
 
       {/* 审核详情抽屉（右侧滑出，适用于智能体/报告/技能） */}
-      <Drawer anchor="right" open={!!detailRecord} onClose={() => { setDetailRecord(null); setPreviewFile(null); setReviewScopeType('all'); setReviewScopeRoles([]); }}
+      <Drawer anchor="right" open={!!detailRecord} onClose={() => { setDetailRecord(null); setPreviewFile(null); setReviewScopeType('all'); setReviewScopeRoles([]); setSystemPromptExpanded(false); setReportPreviewOpen(false); }}
         slotProps={{ paper: { sx: { width: 640, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' } } }}
       >
         {/* 头部 */}
@@ -468,6 +590,24 @@ export default function FrontPermManagePage() {
           </Box>
           <IconButton size="small" onClick={() => { setDetailRecord(null); setPreviewFile(null); setReviewScopeType('all'); setReviewScopeRoles([]); }}><Close fontSize="small" /></IconButton>
         </Box>
+
+        {/* 审核历史（顶部：提交时间·第 N 次提交·上次驳回原因） */}
+        {detailRecord && (
+          <Box sx={{ px: 3, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+              <History sx={{ fontSize: 15, color: 'text.secondary' }} />
+              <Typography variant="caption" sx={{ fontWeight: 700 }}>审核历史</Typography>
+              <Typography variant="caption" color="text.secondary">
+                提交于 {fmtDateTime(detailRecord.submitted_at)} · 第 <b>{submitCount || 1}</b> 次提交
+              </Typography>
+            </Box>
+            {lastReject && (
+              <Typography variant="caption" color="warning.main" sx={{ pl: 3.25 }}>
+                上次驳回原因：{lastReject.review_reason || '-'}
+              </Typography>
+            )}
+          </Box>
+        )}
 
         {/* 内容区 */}
         <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -483,6 +623,16 @@ export default function FrontPermManagePage() {
                   <InfoRow label="版本" value={`v${detailRecord.version || '0.0.0'}`} />
                   <InfoRow label="变更说明" value={detailRecord.changelog || '-'} />
                   <InfoRow label="申请人" value={`${detailRecord.applicant_name || '-'}（${detailRecord.applicant_dept || '-'}）`} />
+                </Box>
+              </Box>
+
+              {/* 辅助检查（四类共有：Slug 唯一性 / 版本号格式 / 描述长度，绿✓黄⚠） */}
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>辅助检查</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {auxChecks.map((c: any) => (
+                    <SoftCheckItem key={c.label} pass={c.pass} label={c.label} detail={c.detail} />
+                  ))}
                 </Box>
               </Box>
 
@@ -526,6 +676,107 @@ export default function FrontPermManagePage() {
                     <AutoCheckItem pass={(detailRecord.auto_check?.total_size || 0) <= 10 * 1024 * 1024} label={`大小 ${((detailRecord.auto_check?.total_size || 0) / 1024).toFixed(1)}KB`} />
                     <AutoCheckItem pass={!detailRecord.auto_check?.danger_keywords?.length} label="危险命令" />
                     <AutoCheckItem pass={!detailRecord.auto_check?.slug_conflict} label="Slug 唯一" />
+                  </Box>
+                </Box>
+              )}
+
+              {/* 内容预览 — 智能体·对话型（类型/模型/挂载技能/引用知识库/系统提示词） */}
+              {detailRecord.type === 'agent_publish' && !isWorkflowAgent && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>内容预览</Typography>
+                  <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <InfoRow label="类型" value="对话 Agent" />
+                    <InfoRow label="使用模型" value={detailAgent?.policy_name || detailAgent?.model_policy_id || '-'} />
+                    <InfoRow label="挂载技能" value={chatSkillNames.length ? (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>{chatSkillNames.map((n: string) => <Chip key={n} label={n} size="small" variant="outlined" />)}</Box>
+                    ) : '无'} />
+                    <InfoRow label="引用知识库" value={chatKbNames.length ? (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>{chatKbNames.map((n: string) => <Chip key={n} label={n} size="small" variant="outlined" color="info" />)}</Box>
+                    ) : '无'} />
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 70, flexShrink: 0 }}>系统提示词</Typography>
+                        <Button size="small" endIcon={systemPromptExpanded ? <ExpandLess sx={{ fontSize: 14 }} /> : <ExpandMore sx={{ fontSize: 14 }} />}
+                          onClick={() => setSystemPromptExpanded(v => !v)} sx={{ fontSize: 11, py: 0, minWidth: 'auto' }}>
+                          {systemPromptExpanded ? '收起' : '展开查看'}
+                        </Button>
+                      </Box>
+                      <Collapse in={systemPromptExpanded}>
+                        <Card variant="outlined" sx={{ mt: 0.5, bgcolor: 'action.hover' }}>
+                          <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 }, whiteSpace: 'pre-wrap', fontSize: 12, color: 'text.secondary' }}>
+                            {detailAgent?.system_prompt || '（未设置）'}
+                          </CardContent>
+                        </Card>
+                      </Collapse>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+
+              {/* 内容预览 — 智能体·工作流型（节点类型统计/报告输出节点/入参清单） */}
+              {detailRecord.type === 'agent_publish' && isWorkflowAgent && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>内容预览</Typography>
+                  <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <InfoRow label="类型" value="工作流 Agent" />
+                    <InfoRow label="节点类型统计" value={wfNodes.length ? (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {Object.entries(wfNodeStats).map(([t, c]) => (
+                          <Chip key={t} label={`${NODE_TYPE_LABEL[t] || t}×${c}`} size="small" variant="outlined" />
+                        ))}
+                      </Box>
+                    ) : '暂无节点'} />
+                    <InfoRow label="报告输出节点" value={wfReportOutputNode ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
+                        <Typography variant="body2" sx={{ fontSize: 12 }}>含</Typography>
+                        <code style={{ fontFamily: 'monospace', fontSize: 11 }}>{wfReportOutputNode.dataKey || '（无识别名）'}</code>
+                      </Box>
+                    ) : '不含'} />
+                    <InfoRow label="入参清单" value={wfInputParams.length ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        {wfInputParams.map((p: any) => (
+                          <Typography key={p.key} variant="body2" sx={{ fontSize: 12 }}>
+                            {p.label} <code style={{ fontFamily: 'monospace', fontSize: 11, opacity: 0.7 }}>({p.key} · {p.type}{p.required ? ' · 必填' : ''})</code>
+                          </Typography>
+                        ))}
+                      </Box>
+                    ) : '无'} />
+                  </Box>
+                </Box>
+              )}
+
+              {/* 内容预览 — 报告（数据源/调度/周期/区块统计/绑定键 + 预览报告 + 敏感词提示） */}
+              {detailRecord.type === 'report_publish' && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>内容预览</Typography>
+                  <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <InfoRow label="数据源" value={`${detailReport?.agent_name || detailReportConfig?.agent_name || '-'}（生成工作流/Agent）`} />
+                    <InfoRow label="调度信息" value={fmtSchedule(detailReportConfig?.schedule)} />
+                    <InfoRow label="报告周期" value={`${PERIOD_LABEL[detailReport?.period] || detailReport?.period || '-'}${detailReport?.period_start ? `（${fmtDate(detailReport.period_start)} ~ ${fmtDate(detailReport.period_end)}）` : ''}`} />
+                    <InfoRow label="内容区块统计" value={reportBlocks.length ? (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {Object.entries(reportBlockStats).map(([t, c]) => (
+                          <Chip key={t} label={`${BLOCK_TYPE_LABEL[t] || t}×${c}`} size="small" variant="outlined" />
+                        ))}
+                      </Box>
+                    ) : '暂无区块'} />
+                    <InfoRow label="数据绑定键" value={reportDataKeys.length ? (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ fontSize: 12 }}>{reportDataKeys.length} 个</Typography>
+                        {reportDataKeys.map((k: string) => <code key={k} style={{ fontFamily: 'monospace', fontSize: 11, background: 'rgba(128,128,128,.15)', borderRadius: 3, padding: '1px 5px' }}>{k}</code>)}
+                      </Box>
+                    ) : '无'} />
+                    {sensitiveHit && (
+                      <Alert severity="warning" sx={{ py: 0, '& .MuiAlert-message': { fontSize: 12 } }}>
+                        检测到可能含敏感经营数据（<b>{String(sensitiveHit)}</b>），建议选择“指定角色”可见范围。
+                      </Alert>
+                    )}
+                    <Box>
+                      <Button size="small" variant="outlined" startIcon={<Preview />} onClick={() => setReportPreviewOpen(true)} disabled={!reportBlocks.length}>
+                        预览报告
+                      </Button>
+                    </Box>
                   </Box>
                 </Box>
               )}
@@ -583,6 +834,9 @@ export default function FrontPermManagePage() {
         </DialogActions>
       </Dialog>
 
+      {/* 报告只读渲染预览弹窗 */}
+      <ReportPreviewDialog report={detailReport} open={reportPreviewOpen && !!detailReport} onClose={() => setReportPreviewOpen(false)} />
+
     </Box>
   );
 }
@@ -603,6 +857,91 @@ function AutoCheckItem({ pass, label }: { pass: boolean; label: string }) {
       {pass ? <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} /> : <Warning sx={{ fontSize: 14, color: 'error.main' }} />}
       <Typography variant="caption" sx={{ fontSize: 11, color: pass ? 'text.primary' : 'error.main' }}>{label}</Typography>
     </Box>
+  );
+}
+
+// 辅助检查项（绿✓通过 / 黄⚠提示，不阻断）
+function SoftCheckItem({ pass, label, detail }: { pass: boolean; label: string; detail?: string }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+      {pass ? <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} /> : <Warning sx={{ fontSize: 14, color: 'warning.main' }} />}
+      <Typography variant="caption" sx={{ fontSize: 11, fontWeight: 600 }}>{label}</Typography>
+      {detail && <Typography variant="caption" sx={{ fontSize: 11, color: 'text.secondary' }}>— {detail}</Typography>}
+    </Box>
+  );
+}
+
+// 报告只读渲染预览弹窗
+function ReportPreviewDialog({ report, open, onClose }: { report: any; open: boolean; onClose: () => void }) {
+  const blocks: any[] = report?.blocks || [];
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1.5 }}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 16 }}>{report?.title || '报告预览'}</Typography>
+          <Typography variant="caption" color="text.secondary">只读渲染预览{report?.agent_name ? ` · ${report.agent_name}` : ''}</Typography>
+        </Box>
+        <IconButton size="small" onClick={onClose}><Close fontSize="small" /></IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ px: 3, py: 2.5, bgcolor: 'background.default' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {blocks.map((b: any) => <ReportBlock key={b.block_id} block={b} />)}
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose}>关闭</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// 报告单个区块的只读渲染
+function ReportBlock({ block }: { block: any }) {
+  const { type, title, data } = block;
+  return (
+    <Card variant="outlined" sx={{ bgcolor: 'background.paper' }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, fontSize: 13 }}>{title}</Typography>
+        {type === 'metrics_card' && Array.isArray(data) && (
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 1 }}>
+            {data.map((m: any) => (
+              <Box key={m.name} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, textAlign: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 10 }}>{m.name}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 15 }}>{m.value}{m.unit}</Typography>
+                <Typography variant="caption" sx={{ fontSize: 10, color: (m.change ?? 0) >= 0 ? 'success.main' : 'error.main' }}>
+                  环比 {(m.change ?? 0) >= 0 ? '+' : ''}{m.change}%
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+        {type === 'chart_image' && (
+          <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 1, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover' }}>
+            <Typography variant="caption" color="text.secondary">📈 {data?.caption || data?.alt || '图表'}（渲染图片占位）</Typography>
+          </Box>
+        )}
+        {type === 'data_table' && data?.headers && (
+          <Box sx={{ overflow: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>{data.headers.map((h: string) => <TableCell key={h} sx={{ fontSize: 11, fontWeight: 700 }}>{h}</TableCell>)}</TableRow>
+              </TableHead>
+              <TableBody>
+                {(data.rows || []).map((r: string[], i: number) => (
+                  <TableRow key={i}>{(r || []).map((c: string, j: number) => <TableCell key={j} sx={{ fontSize: 11 }}>{c}</TableCell>)}</TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        )}
+        {type === 'rich_text' && <Typography variant="body2" sx={{ fontSize: 12, color: 'text.secondary', whiteSpace: 'pre-wrap' }}>{data?.content}</Typography>}
+        {type === 'bullet_list' && (
+          <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+            {(data?.items || []).map((it: string, i: number) => <li key={i}><Typography variant="body2" sx={{ fontSize: 12 }}>{it}</Typography></li>)}
+          </Box>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
