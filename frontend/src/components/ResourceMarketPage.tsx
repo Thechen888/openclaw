@@ -113,7 +113,7 @@ export default function ResourceMarketPage({
   };
 
   return (
-    <Box>
+    <Box sx={{ px: 3, py: 3 }}>
       <PageHeader
         title={title}
         subtitle={subtitle}
@@ -147,13 +147,13 @@ export default function ResourceMarketPage({
       {isLoading || betaLoading ? (
         <Grid container spacing={2}>
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
-              <Card><CardContent><Skeleton variant="text" width="60%" height={32} /><Skeleton variant="text" width="40%" /><Skeleton variant="text" width="100%" /></CardContent></Card>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={i}>
+              <Card sx={{ minHeight: 190 }}><CardContent><Skeleton variant="text" width="60%" height={32} /><Skeleton variant="text" width="40%" /><Skeleton variant="text" width="100%" /></CardContent></Card>
             </Grid>
           ))}
         </Grid>
       ) : items.length === 0 ? (
-        <Card>
+        <Card sx={{ minHeight: 190 }}>
           <CardContent sx={{ textAlign: 'center', py: 6 }}>
             {emptyIcon || <Typography sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }}>📦</Typography>}
             <Typography variant="h6" color="text.secondary">{emptyTitle || `暂无上架的${label}`}</Typography>
@@ -163,10 +163,10 @@ export default function ResourceMarketPage({
       ) : (
         <Grid container spacing={2}>
           {items.map((item: any) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={item.id}>
               <Card
                 sx={{
-                  height: '100%', display: 'flex', flexDirection: 'column',
+                  minHeight: 190, height: '100%', display: 'flex', flexDirection: 'column',
                   transition: 'box-shadow 0.25s, transform 0.25s',
                   '&:hover': { boxShadow: '0 0 20px rgba(0,212,255,0.12)', transform: 'translateY(-2px)', borderColor: 'rgba(0,212,255,0.2)' },
                   border: '1px solid rgba(0,212,255,0.06)',
@@ -197,7 +197,7 @@ export default function ResourceMarketPage({
                       label={item.scope === 'company' ? '全公司' : item.scope === 'department' ? '他人分享' : '私有'}
                       size="small" sx={{ fontSize: 10, height: 22 }}
                     />
-                    {scopeTab === 'beta' && (
+                    {item.is_beta && (
                       <Chip label="内测" size="small" sx={{ fontSize: 10, height: 22, bgcolor: 'warning.main', color: '#fff', fontWeight: 700, ml: 0.5 }} />
                     )}
                   </Box>

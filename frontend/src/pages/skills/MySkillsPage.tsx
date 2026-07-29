@@ -412,7 +412,7 @@ export default function MySkillsPage() {
   };
 
   return (
-    <Box>
+    <Box sx={{ px: 3, py: 3 }}>
       <PageHeader
         title="我创建的技能"
         subtitle="管理你的技能，提交发布到技能市场。市场上跑的永远是快照，你改的永远是草稿。"

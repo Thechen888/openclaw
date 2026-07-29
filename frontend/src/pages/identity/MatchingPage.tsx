@@ -1,14 +1,15 @@
-﻿import { useState } from 'react';
+﻿import { useState, Fragment } from 'react';
 import {
   Box, Tooltip, Chip, Typography, IconButton, Grid,
-  Tabs, Tab, Card, Button, LinearProgress, Switch, Collapse, Divider,
+  Tabs, Tab, Card, Button, Switch, Collapse,
   TableHead, TableBody, TableRow, TableCell,
   TextField, Select, MenuItem, FormControl, InputLabel, Avatar,
 } from '@mui/material';
 import {
-  Refresh, Settings, PlayArrow, CheckCircle,
-  Edit, LinkOff, Cancel, Visibility, PersonAdd, HelpOutlined,
-  ExpandMore, ExpandLess, Info, DoNotDisturb, CompareArrows, AccountTree,
+  Refresh, PlayArrow, CheckCircle,
+  LinkOff, PersonAdd,
+  ExpandMore, ExpandLess, Info, DoNotDisturb, AccountTree,
+  KeyboardArrowUp, KeyboardArrowDown,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,6 +17,7 @@ import {
   EmptyState, LoadingState, SectionCard, CrudDialog,
 } from '../../components/shared';
 import { matchingApi } from '../../api/client';
+import api from '../../api/client';
 
 /* ============ 常量 ============ */
 
@@ -30,7 +32,6 @@ const STATUS_TABS = [
 const STATUS_LABELS: Record<string, string> = {
   matched: '已匹配',
   pending: '待确认',
-  conflict: '待确认',
   unmatched: '未匹配',
   ignored: '已忽略',
 };
@@ -47,27 +48,9 @@ const STRATEGY_TYPES: Record<string, string> = {
   phone_match: '手机号匹配',
   email_match: '邮箱匹配',
   name_dept_match: '姓名+部门匹配',
-  ai_match: 'AI语义匹配',
 };
 
-const USERS = [
-  { id: 'u-1', name: '张伟', email: 'zhangwei@company.com' },
-  { id: 'u-2', name: '李思', email: 'lisi@company.com' },
-  { id: 'u-3', name: '王五', email: 'wangwu@company.com' },
-  { id: 'u-4', name: '赵六', email: 'zhaoliu@company.com' },
-  { id: 'u-5', name: '陈七', email: 'chenqi@company.com' },
-  { id: 'u-6', name: '孙八', email: 'sunba@company.com' },
-  { id: 'u-7', name: '周九', email: 'zhoujiu@company.com' },
-];
-
-const confidenceColor = (score: number) => {
-  if (score >= 0.85) return '#00FF88';
-  if (score >= 0.6) return '#00D4FF';
-  if (score >= 0.4) return '#FFB800';
-  return '#FF4D6D';
-};
-
-const isPendingReview = (status: string) => status === 'pending' || status === 'conflict';
+const isPendingReview = (status: string) => status === 'pending';
 
 /* ============ 详情面板子组件 ============ */
 
@@ -143,7 +126,6 @@ function DetailPanel({ item, allItems }: { item: any; allItems: any[] }) {
                 <Box key={i} sx={{ p: 1, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.3 }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, fontSize: 11 }}>{r.strategy}</Typography>
-                    <Chip label={`${(r.confidence * 100).toFixed(0)}%`} size="small" sx={{ height: 16, fontSize: 10, bgcolor: 'rgba(0,212,255,0.1)', color: '#00D4FF' }} />
                   </Box>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{r.detail}</Typography>
                 </Box>
@@ -189,17 +171,21 @@ export default function MatchingPage() {
   const queryClient = useQueryClient();
   const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
   const [statusTab, setStatusTab] = useState('');
-  const [strategyDialog, setStrategyDialog] = useState(false);
-  const [editStrategy, setEditStrategy] = useState<any>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // 行操作弹窗
   const [manualLinkItem, setManualLinkItem] = useState<any>(null);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [conflictItem, setConflictItem] = useState<any>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; desc: string; item: any; nextStatus: string } | null>(null);
 
-  const queryParams = { ...params, status: (statusTab === 'pending_review' ? 'pending' : statusTab) || undefined };
+  // 获取用户列表（用于手动关联弹窗）
+  const { data: usersData } = useQuery({
+    queryKey: ['users-list'],
+    queryFn: () => api.get('/users', { params: { page_size: 200 } }),
+  });
+  const usersList: any[] = usersData?.data?.data || [];
+
+  const queryParams = { ...params, status: statusTab || undefined };
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['matching-results', queryParams],
@@ -233,18 +219,12 @@ export default function MatchingPage() {
   });
   const recentRuns = runsData?.data?.data || [];
 
-  const { data: conflictData } = useQuery({
-    queryKey: ['matching-conflicts', conflictItem?.id],
-    queryFn: () => matchingApi.getConflicts(conflictItem.id),
-    enabled: !!conflictItem?.id,
-  });
-  const conflictCandidates = conflictData?.data?.data || [];
-
   const runMutation = useMutation({
     mutationFn: () => matchingApi.triggerRun(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matching-results'] });
       queryClient.invalidateQueries({ queryKey: ['matching-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['matching-strategies'] });
     },
   });
 
@@ -252,8 +232,13 @@ export default function MatchingPage() {
     mutationFn: (data: any) => matchingApi.updateStrategy(data.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matching-strategies'] });
-      setStrategyDialog(false);
-      setEditStrategy(null);
+    },
+  });
+
+  const swapStrategyMutation = useMutation({
+    mutationFn: ({ id, direction }: { id: string; direction: 'up' | 'down' }) => matchingApi.swapStrategy(id, direction),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matching-strategies'] });
     },
   });
 
@@ -264,7 +249,6 @@ export default function MatchingPage() {
       setManualLinkItem(null);
       setSelectedUserId('');
       setConfirmDialog(null);
-      setConflictItem(null);
     },
   });
 
@@ -272,8 +256,13 @@ export default function MatchingPage() {
     updateStrategyMutation.mutate({ ...strat, status: strat.status === 'active' ? 'disabled' : 'active' });
   };
 
-  const handleOpenStrategy = (strat: any) => { setEditStrategy({ ...strat }); setStrategyDialog(true); };
-  const handleSaveStrategy = () => { if (editStrategy) updateStrategyMutation.mutate(editStrategy); };
+  const handleSwapPriority = (strat: any, direction: 'up' | 'down') => {
+    swapStrategyMutation.mutate({ id: strat.id, direction });
+  };
+
+  const handleOnHitChange = (strat: any, onHit: string) => {
+    updateStrategyMutation.mutate({ ...strat, on_hit: onHit });
+  };
 
   const handleConfirmMatch = (item: any) => {
     const existingCount = item.user_id ? (userAccountsMap[item.user_id]?.length ?? 0) : 0;
@@ -290,13 +279,8 @@ export default function MatchingPage() {
     if (!manualLinkItem || !selectedUserId) return;
     updateResultMutation.mutate({
       id: manualLinkItem.id,
-      data: { status: 'matched', user_id: selectedUserId, user_name: USERS.find(u => u.id === selectedUserId)?.name || '' },
+      data: { status: 'matched', user_id: selectedUserId, user_name: usersList.find(u => u.id === selectedUserId)?.name || '' },
     });
-  };
-
-  const handleConflictResolve = (candidate: any) => {
-    if (!conflictItem) return;
-    updateResultMutation.mutate({ id: conflictItem.id, data: { status: 'matched', user_id: candidate.user_id, user_name: candidate.user_name } });
   };
 
   const handleConfirmAction = () => {
@@ -310,9 +294,6 @@ export default function MatchingPage() {
     if (isPendingReview(item.status)) {
       return (
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-          {item.status === 'conflict' && (
-            <Tooltip title="查看候选"><IconButton size="small" color="warning" onClick={() => setConflictItem(item)}><Visibility fontSize="small" /></IconButton></Tooltip>
-          )}
           <Tooltip title="确认关联"><IconButton size="small" color="success" onClick={() => handleConfirmMatch(item)}><CheckCircle fontSize="small" /></IconButton></Tooltip>
           <Tooltip title="标记忽略"><IconButton size="small" sx={{ color: 'rgba(200,210,220,0.4)' }} onClick={() => handleIgnore(item)}><DoNotDisturb fontSize="small" /></IconButton></Tooltip>
           <Tooltip title="手动指定"><IconButton size="small" color="primary" onClick={() => handleOpenManualLink(item)}><PersonAdd fontSize="small" /></IconButton></Tooltip>
@@ -371,35 +352,55 @@ export default function MatchingPage() {
       </Box>
 
       {/* ========== 匹配策略 ========== */}
-      <SectionCard
-        title="匹配策略"
-        actions={<Button size="small" startIcon={<Settings />} variant="outlined" onClick={() => { setEditStrategy(null); setStrategyDialog(true); }}>策略管理</Button>}
-        sx={{ mb: 3 }}
-      >
+      <SectionCard title="匹配策略" sx={{ mb: 3 }}>
         {strategies.length === 0 ? (
           <Typography variant="body2" color="text.secondary">暂未配置匹配策略</Typography>
         ) : (
-          <Grid container spacing={2}>
-            {strategies.map((s: any, idx: number) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={s.id || idx}>
-                <Card variant="outlined" sx={{
-                  p: 2, height: '100%',
-                  border: s.status === 'active' ? '1px solid rgba(0,255,136,0.2)' : '1px solid rgba(255,255,255,0.08)',
-                  bgcolor: s.status === 'active' ? 'rgba(0,255,136,0.03)' : 'rgba(255,255,255,0.02)',
-                  opacity: s.status === 'active' ? 1 : 0.6,
-                  transition: 'all 0.3s', '&:hover': { borderColor: 'rgba(0,212,255,0.3)', opacity: 1 },
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {[...strategies].sort((a: any, b: any) => a.priority - b.priority).map((s: any, idx: number) => (
+              <Card key={s.id} variant="outlined" sx={{
+                p: 2,
+                border: s.status === 'active' ? '1px solid rgba(0,255,136,0.2)' : '1px solid rgba(255,255,255,0.08)',
+                bgcolor: s.status === 'active' ? 'rgba(0,255,136,0.03)' : 'rgba(255,255,255,0.02)',
+                opacity: s.status === 'active' ? 1 : 0.6,
+                transition: 'all 0.3s', '&:hover': { borderColor: 'rgba(0,212,255,0.3)', opacity: 1 },
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  {/* 优先级序号 */}
+                  <Chip label={`P${s.priority}`} size="small" sx={{
+                    fontWeight: 700, fontSize: 12, height: 24, minWidth: 36,
+                    bgcolor: 'rgba(0,212,255,0.15)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)',
+                  }} />
+                  {/* 策略名称 + 描述 */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 14 }}>{s.name}</Typography>
-                    <Switch size="small" checked={s.status === 'active'} onChange={() => toggleStrategy(s)} color="success" />
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.4, fontSize: 11 }}>
+                      {s.description || STRATEGY_TYPES[s.strategy_type] || '无描述'}
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.5 }}>
-                    {s.description || STRATEGY_TYPES[s.strategy_type] || '无描述'}
-                  </Typography>
-                </Card>
-              </Grid>
+                  {/* 上移/下移 */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    <IconButton size="small" onClick={() => handleSwapPriority(s, 'up')} disabled={idx === 0} sx={{ p: 0.25 }}>
+                      <KeyboardArrowUp sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleSwapPriority(s, 'down')} disabled={idx === strategies.length - 1} sx={{ p: 0.25 }}>
+                      <KeyboardArrowDown sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                  {/* 启用开关 */}
+                  <Switch size="small" checked={s.status === 'active'} onChange={() => toggleStrategy(s)} color="success" />
+                  {/* 命中后处理 */}
+                  <FormControl size="small" sx={{ minWidth: 110 }}>
+                    <Select value={s.on_hit || 'auto_link'} onChange={e => handleOnHitChange(s, e.target.value)}
+                      sx={{ fontSize: 12, '& .MuiSelect-select': { py: 0.5, px: 1 } }}>
+                      <MenuItem value="auto_link" sx={{ fontSize: 12 }}>自动关联</MenuItem>
+                      <MenuItem value="manual_confirm" sx={{ fontSize: 12 }}>转人工待确认</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Card>
             ))}
-          </Grid>
+          </Box>
         )}
         {recentRuns.length > 0 && (
           <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid rgba(0,212,255,0.06)' }}>
@@ -437,14 +438,7 @@ export default function MatchingPage() {
                 <TableCell sx={{ width: 100 }}>来源平台</TableCell>
                 <TableCell sx={{ width: 150 }}>账号标识</TableCell>
                 <TableCell sx={{ width: 160 }}>关联用户</TableCell>
-                <TableCell align="center" sx={{ width: 140 }}>
-                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                    匹配度
-                    <Tooltip title="系统判断该账号属于某用户的置信度" arrow>
-                      <HelpOutlined sx={{ fontSize: 14, color: 'rgba(0,212,255,0.5)', cursor: 'help' }} />
-                    </Tooltip>
-                  </Box>
-                </TableCell>
+                <TableCell sx={{ width: 160 }}>匹配依据</TableCell>
                 <TableCell align="center" sx={{ width: 100 }}>状态</TableCell>
                 <TableCell align="center" sx={{ width: 130 }}>操作</TableCell>
               </TableRow>
@@ -452,9 +446,9 @@ export default function MatchingPage() {
             <TableBody>
               {items.length === 0 ? (
                 <TableRow><TableCell colSpan={7}><EmptyState title="暂无匹配结果" description="执行一次匹配任务后将在此展示结果" /></TableCell></TableRow>
-              ) : items.map((item: any, idx: number) => (
-                <>
-                  <TableRow key={item.id || idx} hover onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)} sx={{ cursor: 'pointer', '& td': { borderBottom: expandedRow === item.id ? 'none' : undefined } }}>
+              ) : items.map((item: any) => (
+                <Fragment key={item.id}>
+                  <TableRow hover onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)} sx={{ cursor: 'pointer', '& td': { borderBottom: expandedRow === item.id ? 'none' : undefined } }}>
                     <TableCell sx={{ px: 1 }}>
                       <IconButton size="small" sx={{ transition: 'transform 0.2s' }}>
                         {expandedRow === item.id ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
@@ -479,67 +473,43 @@ export default function MatchingPage() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ width: 116, mx: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LinearProgress variant="determinate" value={(item.score ?? 0) * 100} sx={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', '& .MuiLinearProgress-bar': { backgroundColor: confidenceColor(item.score ?? 0), boxShadow: `0 0 6px ${confidenceColor(item.score ?? 0)}` } }} />
-                        <Typography variant="caption" sx={{ width: 34, textAlign: 'right', fontFamily: 'monospace', fontSize: 12 }}>
-                          {item.score != null ? `${(item.score * 100).toFixed(0)}%` : '-'}
-                        </Typography>
-                      </Box>
+                    <TableCell>
+                      {item.hit_strategy ? (
+                        <Chip label={item.hit_strategy} size="small" sx={{ fontSize: 11, height: 22, bgcolor: 'rgba(0,212,255,0.1)', color: '#00D4FF', fontWeight: 500 }} />
+                      ) : isPendingReview(item.status) ? (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>姓名+部门相似，需确认</Typography>
+                      ) : (
+                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>未命中策略</Typography>
+                      )}
                     </TableCell>
                     <TableCell align="center">
                       <StatusBadge status={isPendingReview(item.status) ? 'warning' : item.status === 'ignored' ? 'disabled' : item.status} label={STATUS_LABELS[item.status] || item.status} />
-                      {item.status === 'conflict' && <Chip label="多候选" size="small" sx={{ ml: 0.5, fontSize: 10, height: 16, bgcolor: 'rgba(255,184,0,0.1)', color: '#FFB800' }} />}
                     </TableCell>
                     <TableCell align="center" onClick={e => e.stopPropagation()}>
                       {renderRowActions(item)}
                     </TableCell>
                   </TableRow>
                   {/* 展开详情 */}
-                  <TableRow key={`${item.id}-detail`}>
+                  <TableRow>
                     <TableCell colSpan={7} sx={{ p: 0, border: 'none' }}>
                       <Collapse in={expandedRow === item.id} timeout="auto" unmountOnExit>
                         <DetailPanel item={item} allItems={rawItems} />
                       </Collapse>
                     </TableCell>
                   </TableRow>
-                </>
+                </Fragment>
               ))}
             </TableBody>
           </DataTable>
         )}
       </SectionCard>
 
-      {/* ========== 策略编辑弹窗 ========== */}
-      <CrudDialog open={strategyDialog} onClose={() => { setStrategyDialog(false); setEditStrategy(null); }} title={editStrategy ? `编辑策略 - ${editStrategy.name}` : '策略管理'} onSave={handleSaveStrategy} saving={updateStrategyMutation.isPending}>
-        {editStrategy ? (
-          <Grid container spacing={2.5}>
-            <Grid size={12}><TextField fullWidth label="策略名称" value={editStrategy.name} onChange={e => setEditStrategy({ ...editStrategy, name: e.target.value })} /></Grid>
-            <Grid size={12}><TextField fullWidth label="描述" multiline rows={2} value={editStrategy.description || ''} onChange={e => setEditStrategy({ ...editStrategy, description: e.target.value })} /></Grid>
-            <Grid size={6}>
-              <FormControl fullWidth size="small"><InputLabel>策略类型</InputLabel>
-                <Select value={editStrategy.strategy_type} label="策略类型" onChange={e => setEditStrategy({ ...editStrategy, strategy_type: e.target.value })}>
-                  {Object.entries(STRATEGY_TYPES).map(([k, v]) => (<MenuItem key={k} value={k}>{v}</MenuItem>))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={6}>
-              <FormControl fullWidth size="small"><InputLabel>状态</InputLabel>
-                <Select value={editStrategy.status} label="状态" onChange={e => setEditStrategy({ ...editStrategy, status: e.target.value })}>
-                  <MenuItem value="active">启用</MenuItem><MenuItem value="disabled">禁用</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        ) : (<Typography variant="body2" color="text.secondary">请点击策略卡片上的编辑按钮来修改配置。</Typography>)}
-      </CrudDialog>
-
       {/* ========== 手动关联弹窗 ========== */}
       <CrudDialog open={!!manualLinkItem} onClose={() => { setManualLinkItem(null); setSelectedUserId(''); }} title={manualLinkItem ? `手动关联 - ${manualLinkItem.account_id}` : '手动关联'} onSave={handleManualLinkSave} saving={updateResultMutation.isPending}>
         <Typography variant="body2" sx={{ color: 'rgba(200,210,220,0.7)', mb: 2 }}>请为该账号选择一个关联用户。关联后该账号的操作将归属到所选用户。</Typography>
         <FormControl fullWidth size="small"><InputLabel>选择用户</InputLabel>
           <Select value={selectedUserId} label="选择用户" onChange={e => setSelectedUserId(e.target.value as string)}>
-            {USERS.map(user => (
+            {usersList.map(user => (
               <MenuItem key={user.id} value={user.id}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                   <Avatar sx={{ width: 24, height: 24, fontSize: 12, bgcolor: 'rgba(0,212,255,0.2)' }}>{user.name.charAt(0)}</Avatar>
@@ -565,28 +535,6 @@ export default function MatchingPage() {
             </Box>
           </Box>
         )}
-      </CrudDialog>
-
-      {/* ========== 多候选解决弹窗 ========== */}
-      <CrudDialog open={!!conflictItem} onClose={() => setConflictItem(null)} title={conflictItem ? `多候选处理 - ${conflictItem.account_id}` : '多候选处理'} onSave={() => setConflictItem(null)} saving={false}>
-        <Typography variant="body2" sx={{ color: 'rgba(200,210,220,0.7)', mb: 2 }}>该账号匹配到多个候选用户，请选择正确的关联目标。</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {conflictCandidates.map((candidate: any, idx: number) => (
-            <Card key={idx} variant="outlined" sx={{ p: 1.5, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.08)', '&:hover': { borderColor: 'rgba(0,212,255,0.4)', bgcolor: 'rgba(0,212,255,0.03)' } }} onClick={() => handleConflictResolve(candidate)}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Avatar sx={{ width: 32, height: 32, fontSize: 14, bgcolor: 'rgba(0,212,255,0.15)' }}>{candidate.user_name.charAt(0)}</Avatar>
-                  <Box><Typography variant="body2" sx={{ fontWeight: 600 }}>{candidate.user_name}</Typography><Typography variant="caption" sx={{ color: 'rgba(200,210,220,0.5)' }}>{candidate.reason}</Typography></Box>
-                </Box>
-                <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="caption" sx={{ color: '#00D4FF', fontFamily: 'monospace' }}>{(candidate.score * 100).toFixed(0)}%</Typography>
-                  <Button size="small" sx={{ ml: 1 }}>选择</Button>
-                </Box>
-              </Box>
-            </Card>
-          ))}
-          {conflictCandidates.length === 0 && <Typography variant="body2" color="text.secondary">暂无候选信息</Typography>}
-        </Box>
       </CrudDialog>
 
       {/* ========== 确认弹窗 ========== */}

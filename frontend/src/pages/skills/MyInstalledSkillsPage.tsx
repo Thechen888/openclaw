@@ -34,7 +34,7 @@ export default function MyInstalledSkillsPage() {
   });
 
   return (
-    <Box>
+    <Box sx={{ px: 3, py: 3 }}>
       <PageHeader
         title="我安装的技能"
         subtitle="已安装到工作空间的技能列表"

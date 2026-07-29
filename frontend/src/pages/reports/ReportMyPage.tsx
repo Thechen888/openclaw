@@ -7,7 +7,7 @@ import WeeklyReportsPage from '../weekly/WeeklyReportsPage';
  */
 export default function ReportMyPage() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', px: 3, py: 3 }}>
       <PageHeader title="我创建的报告" subtitle="管理你创建的报告模板与生成任务" />
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <WeeklyReportsPage />

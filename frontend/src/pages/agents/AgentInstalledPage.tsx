@@ -50,7 +50,7 @@ export default function AgentInstalledPage() {
   });
 
   return (
-    <Box>
+    <Box sx={{ px: 3, py: 3 }}>
       <PageHeader
         title="我安装的智能体"
         subtitle="已安装到本地的对话智能体列表"
@@ -64,14 +64,14 @@ export default function AgentInstalledPage() {
       </Box>
 
       {isLoading ? (
-        <Grid container spacing={2}>{[1, 2, 3].map(i => <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}><Card><CardContent><Skeleton variant="text" width="60%" height={32} /><Skeleton variant="text" width="40%" /></CardContent></Card></Grid>)}</Grid>
+        <Grid container spacing={2}>{[1, 2, 3].map(i => <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={i}><Card sx={{ minHeight: 190 }}><CardContent><Skeleton variant="text" width="60%" height={32} /><Skeleton variant="text" width="40%" /></CardContent></Card></Grid>)}</Grid>
       ) : items.length === 0 ? (
-        <Card><CardContent sx={{ textAlign: 'center', py: 6 }}><SmartToy sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} /><Typography variant="h6" color="text.secondary">暂无安装的智能体</Typography></CardContent></Card>
+        <Card sx={{ minHeight: 190 }}><CardContent sx={{ textAlign: 'center', py: 6 }}><SmartToy sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} /><Typography variant="h6" color="text.secondary">暂无安装的智能体</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: 13 }}>前往智能体市场安装智能体</Typography></CardContent></Card>
       ) : (
         <Grid container spacing={2}>
           {items.map((item: any) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={item.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid rgba(0,212,255,0.06)', '&:hover': { boxShadow: '0 0 20px rgba(0,212,255,0.12)' }, cursor: 'pointer' }}
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={item.id}>
+              <Card sx={{ minHeight: 190, height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid rgba(0,212,255,0.06)', '&:hover': { boxShadow: '0 0 20px rgba(0,212,255,0.12)' }, cursor: 'pointer' }}
                 onClick={() => navigate(`/agents/installed/${item.id}`)}>
                 <CardContent sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>

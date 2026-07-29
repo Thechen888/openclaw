@@ -106,7 +106,7 @@ export function AgentCard({
     <Card
       onClick={onClick}
       sx={{
-        p: 2, cursor: 'pointer', minHeight: 148, position: 'relative',
+        p: 2, cursor: 'pointer', minHeight: 190, position: 'relative',
         display: 'flex', flexDirection: 'column',
         border: '1px solid', borderColor: 'divider',
         transition: 'all 0.25s',

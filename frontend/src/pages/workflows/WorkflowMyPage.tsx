@@ -90,9 +90,8 @@ export default function WorkflowMyPage() {
   };
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 2.5 }}>
-      <Box sx={{ '& > div': { mb: 1, pb: 1 } }}>
-        <PageHeader
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', px: 3, py: 3 }}>
+      <PageHeader
           title="我创建的工作流"
           subtitle="管理你创建的工作流编排"
           actions={
@@ -104,7 +103,6 @@ export default function WorkflowMyPage() {
             </>
           }
         />
-      </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2.5 }}>
         <Tabs value={statusTab} onChange={(_, v) => setStatusTab(v)}
@@ -121,7 +119,7 @@ export default function WorkflowMyPage() {
       ) : (
         <Grid container spacing={2}>
           {items.map((agent: any) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={agent.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={agent.id}>
               <AgentCard
                 agent={agent}
                 onClick={() => navigate(`/agents/${agent.id}`)}
