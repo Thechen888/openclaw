@@ -157,6 +157,7 @@ export const frontPermApi = {
   removeAcl: (resourceType: string, resourceId: string, aclId: string) => api.delete(`/front-perm/acl/${resourceType}/${resourceId}/${aclId}`),
   roles: () => api.get('/front-perm/roles'),
   toggle: (id: string) => api.post(`/front-perm/resources/${id}/toggle`),
+  delist: (id: string, data: { reason: string }) => api.post(`/front-perm/resources/${id}/delist`, data),
   delete: (id: string) => api.delete(`/front-perm/resources/${id}`),
   transfer: (id: string, data: any) => api.post(`/front-perm/resources/${id}/transfer`, data),
 };

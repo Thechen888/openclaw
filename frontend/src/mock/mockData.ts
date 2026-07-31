@@ -1756,7 +1756,8 @@ const reviewRecords: any[] = [
   { id: 'rv-4', type: 'report_publish', target_id: 'rpt-1', target_name: '2026年第20周运营周报', target_slug: 'rpt-1', target_desc: '运营数据周报，包含核心指标、趋势图表与 AI 智能分析', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', version: '1.0.0', changelog: '首次提交发布', submitted_at: dayAgo(4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
   { id: 'rv-0', type: 'agent_publish', target_id: 'a-6', target_name: '知识库问答助手', target_slug: 'kb-qa-assistant', target_desc: '基于企业知识库的智能问答对话助手', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.1.0', changelog: '新增多轮对话能力', submitted_at: dayAgo(10), status: 'rejected', reviewer: 'u-admin', review_reason: '系统提示词中包含内部敏感表述，请脱敏后重新提交', reviewed_at: dayAgo(8) },
   { id: 'rv-5', type: 'agent_publish', target_id: 'a-6', target_name: '知识库问答助手', target_slug: 'a-6', target_desc: '基于企业知识库的智能问答对话助手', applicant: 'u-2', applicant_name: '李娜', applicant_dept: '产品部', scope: 'company', version: '1.2.0', changelog: '优化检索策略，提升回答准确率', submitted_at: dayAgo(1), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
-  { id: 'rv-6', type: 'agent_publish', target_id: 'a-1', target_name: 'CRM销售通知', target_slug: 'crm-sales-notify', target_desc: '监控CRM系统销售事件并发送通知', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', version: '2.1.0', changelog: '新增报表数据输出节点', submitted_at: dayAgo(0.4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null },
+  { id: 'rv-6', type: 'agent_publish', target_id: 'a-1', target_name: 'CRM销售通知', target_slug: 'crm-sales-notify', target_desc: '监控CRM系统销售事件并发送通知', applicant: 'u-1', applicant_name: '张伟', applicant_dept: '技术部', scope: 'company', version: '2.1.0', changelog: '新增报表数据输出节点', submitted_at: dayAgo(0.4), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null, sub_type: 'chat' },
+  { id: 'rv-7', type: 'workflow_publish', target_id: 'a-2', target_name: '售后工单自动处理', target_slug: 'aftersale-workflow', target_desc: '售后工单自动处理工作流，含Starlark数据拉取和AI分析节点', applicant: 'u-2', applicant_name: '李思', applicant_dept: '产品部', scope: 'company', version: '1.0.0', changelog: '首次提交发布', submitted_at: dayAgo(3), status: 'pending', reviewer: null, review_reason: null, reviewed_at: null, sub_type: 'workflow' },
 ];
 
 // =================== 统一资源权限（resource_acl） ===================
@@ -1781,23 +1782,23 @@ const resourceAcls: any[] = [
 
 // =================== 前台权限管理（角色级资源权限） ===================
 const frontPermResources: any[] = [
-  // 智能体
-  { id: 'fp-a1', resource_type: 'agent', resource_id: 'a-1', name: '金蝶ERP智能查询助手', sub_type: 'chat', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'active', last_used_at: dayAgo(0), use_count_30d: 328, created_at: dayAgo(120) },
-  { id: 'fp-a2', resource_type: 'agent', resource_id: 'a-2', name: '售后工单自动处理', sub_type: 'workflow', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'active', last_used_at: dayAgo(1), use_count_30d: 156, created_at: dayAgo(90) },
-  { id: 'fp-a3', resource_type: 'agent', resource_id: 'a-3', name: '销售数据周报Agent', sub_type: 'workflow', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'active', last_used_at: dayAgo(95), use_count_30d: 0, created_at: dayAgo(200) },
-  { id: 'fp-a4', resource_type: 'agent', resource_id: 'a-4', name: 'HR问答助手', sub_type: 'chat', owner_id: 'u-4', owner_name: '赵六', owner_dept: '人事部', status: 'disabled', last_used_at: dayAgo(180), use_count_30d: 0, created_at: dayAgo(300) },
-  // 报告
-  { id: 'fp-r1', resource_type: 'report', resource_id: 'rpt-1', name: '公司经营周报', sub_type: 'public', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'active', last_used_at: dayAgo(0), use_count_30d: 52, created_at: dayAgo(60) },
-  { id: 'fp-r2', resource_type: 'report', resource_id: 'rpt-2', name: '销售月报', sub_type: 'public', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'active', last_used_at: dayAgo(3), use_count_30d: 12, created_at: dayAgo(45) },
-  { id: 'fp-r3', resource_type: 'report', resource_id: 'rpt-3', name: '个人工作日报', sub_type: 'personal', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'active', last_used_at: dayAgo(100), use_count_30d: 0, created_at: dayAgo(150) },
+  // 智能体（发布生命周期六值：published/pending/draft/rejected/delisted/modified）
+  { id: 'fp-a1', resource_type: 'agent', resource_id: 'a-1', name: '金蝶ERP智能查询助手', sub_type: 'chat', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'published', installed_users: 12, last_used_at: dayAgo(0), use_count_30d: 328, created_at: dayAgo(120) },
+  { id: 'fp-a2', resource_type: 'agent', resource_id: 'a-2', name: '售后工单自动处理', sub_type: 'workflow', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'published', installed_users: 8, related_reports: 2, last_used_at: dayAgo(1), use_count_30d: 156, created_at: dayAgo(90) },
+  { id: 'fp-a3', resource_type: 'agent', resource_id: 'a-3', name: '销售数据周报Agent', sub_type: 'workflow', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'pending', installed_users: 0, related_reports: 1, last_used_at: dayAgo(95), use_count_30d: 0, created_at: dayAgo(200) },
+  { id: 'fp-a4', resource_type: 'agent', resource_id: 'a-4', name: 'HR问答助手', sub_type: 'chat', owner_id: 'u-4', owner_name: '赵六', owner_dept: '人事部', status: 'delisted', installed_users: 0, last_used_at: dayAgo(180), use_count_30d: 0, created_at: dayAgo(300) },
+  // 报告（发布生命周期六值）
+  { id: 'fp-r1', resource_type: 'report', resource_id: 'rpt-1', name: '公司经营周报', sub_type: 'public', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'published', installed_users: 25, last_used_at: dayAgo(0), use_count_30d: 52, created_at: dayAgo(60) },
+  { id: 'fp-r2', resource_type: 'report', resource_id: 'rpt-2', name: '销售月报', sub_type: 'public', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'modified', installed_users: 10, last_used_at: dayAgo(3), use_count_30d: 12, created_at: dayAgo(45) },
+  { id: 'fp-r3', resource_type: 'report', resource_id: 'rpt-3', name: '个人工作日报', sub_type: 'personal', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'draft', installed_users: 0, last_used_at: dayAgo(100), use_count_30d: 0, created_at: dayAgo(150) },
   // 知识库
   { id: 'fp-k1', resource_type: 'kb', resource_id: 'kb-1', name: '产品技术文档库', sub_type: 'document', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'active', last_used_at: dayAgo(0), use_count_30d: 89, created_at: dayAgo(80) },
   { id: 'fp-k2', resource_type: 'kb', resource_id: 'kb-2', name: '制度规范库', sub_type: 'faq', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'active', last_used_at: dayAgo(5), use_count_30d: 34, created_at: dayAgo(100) },
   { id: 'fp-k3', resource_type: 'kb', resource_id: 'kb-3', name: '项目资料库', sub_type: 'document', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'disabled', last_used_at: dayAgo(200), use_count_30d: 0, created_at: dayAgo(250) },
-  // 技能
-  { id: 'fp-s1', resource_type: 'skill', resource_id: 'sk-1', name: 'kingdee-erp-query', sub_type: 'v2.1.0', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'published', last_used_at: dayAgo(0), use_count_30d: 210, created_at: dayAgo(90) },
-  { id: 'fp-s2', resource_type: 'skill', resource_id: 'sk-2', name: 'weekly-report-gen', sub_type: 'v1.3.0', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'published', last_used_at: dayAgo(2), use_count_30d: 67, created_at: dayAgo(70) },
-  { id: 'fp-s3', resource_type: 'skill', resource_id: 'sk-3', name: 'data-cleaning', sub_type: 'v0.9.0', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'pending', last_used_at: dayAgo(110), use_count_30d: 0, created_at: dayAgo(30) },
+  // 技能（发布生命周期六值）
+  { id: 'fp-s1', resource_type: 'skill', resource_id: 'sk-1', name: 'kingdee-erp-query', sub_type: 'v2.1.0', owner_id: 'u-1', owner_name: '张伟', owner_dept: '技术部', status: 'published', install_count: 45, last_used_at: dayAgo(0), use_count_30d: 210, created_at: dayAgo(90) },
+  { id: 'fp-s2', resource_type: 'skill', resource_id: 'sk-2', name: 'weekly-report-gen', sub_type: 'v1.3.0', owner_id: 'u-2', owner_name: '李思', owner_dept: '产品部', status: 'published', install_count: 22, last_used_at: dayAgo(2), use_count_30d: 67, created_at: dayAgo(70) },
+  { id: 'fp-s3', resource_type: 'skill', resource_id: 'sk-3', name: 'data-cleaning', sub_type: 'v0.9.0', owner_id: 'u-3', owner_name: '王五', owner_dept: '销售部', status: 'pending', install_count: 0, last_used_at: dayAgo(110), use_count_30d: 0, created_at: dayAgo(30) },
 ];
 
 // 角色级资源权限（perm: edit / view）
@@ -3901,6 +3902,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (path === '/front-perm/resources' && method === 'get') {
     let list = [...frontPermResources];
     if (p.resource_type) list = list.filter(r => r.resource_type === p.resource_type);
+    if (p.sub_type) list = list.filter(r => r.sub_type === p.sub_type);
     if (p.status) list = list.filter(r => r.status === p.status);
     if (p.search) {
       const kw = (p.search as string).toLowerCase();
@@ -3950,6 +3952,13 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         res.status = res.status === 'active' ? 'disabled' : 'active';
       }
     }
+    return ok(frontPermResources[idx]);
+  }
+  if (/^\/front-perm\/resources\/[^/]+\/delist$/.test(path) && method === 'post') {
+    const parts = path.split('/');
+    const resId = parts[3];
+    const idx = frontPermResources.findIndex(r => r.id === resId);
+    if (idx >= 0) frontPermResources[idx].status = 'delisted';
     return ok(frontPermResources[idx]);
   }
   if (/^\/front-perm\/resources\/[^/]+\/transfer$/.test(path) && method === 'post') {

@@ -20,6 +20,7 @@ import api from '../../api/client';
 
 const TYPE_TABS = [
   { label: '智能体', value: 'agent' },
+  { label: '工作流', value: 'workflow' },
   { label: '报告', value: 'report' },
   { label: '知识库', value: 'kb' },
   { label: '技能', value: 'skill' },
@@ -32,14 +33,16 @@ const SUB_TYPE_LABEL: Record<string, Record<string, string>> = {
   skill: {},
 };
 
-const STATUS_META: Record<string, { label: string; color: 'success' | 'default' | 'warning' | 'error' }> = {
+const STATUS_META: Record<string, { label: string; color: 'success' | 'default' | 'warning' | 'error' | 'info' }> = {
+  draft: { label: '未上架', color: 'default' },
+  private: { label: '未上架', color: 'default' },
+  pending: { label: '审核中', color: 'warning' },
+  published: { label: '已上架', color: 'success' },
+  modified: { label: '已修改', color: 'info' },
+  rejected: { label: '已驳回', color: 'error' },
+  delisted: { label: '已下架', color: 'default' },
   active: { label: '启用', color: 'success' },
   disabled: { label: '停用', color: 'default' },
-  published: { label: '已上架', color: 'success' },
-  pending: { label: '待审核', color: 'warning' },
-  draft: { label: '草稿', color: 'default' },
-  rejected: { label: '已驳回', color: 'error' },
-  delisted: { label: '已下架', color: 'error' },
 };
 
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('zh-CN') : '-';
@@ -109,13 +112,13 @@ export default function FrontPermManagePage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['front-perm-resources', typeTab, params, idleFilter],
-    queryFn: () => frontPermApi.resources({ ...params, resource_type: typeTab, idle: idleFilter ? '1' : undefined }),
+    queryFn: () => frontPermApi.resources({ ...params, resource_type: typeTab, sub_type: typeTab === 'agent' ? 'chat' : typeTab === 'workflow' ? 'workflow' : undefined, idle: idleFilter ? '1' : undefined }),
   });
   const items: any[] = data?.data?.data || [];
   const total: number = data?.data?.pagination?.total || 0;
 
   // 各 Tab 对应的审核类型（无审核机制的 Tab 为 null，不显示待审核分段）
-  const REVIEW_TYPE_BY_TAB: Record<string, string | null> = { agent: 'agent_publish', report: 'report_publish', skill: 'skill_publish', kb: null };
+  const REVIEW_TYPE_BY_TAB: Record<string, string | null> = { agent: 'agent_publish', workflow: 'workflow_publish', report: 'report_publish', skill: 'skill_publish', kb: null };
   const reviewType = REVIEW_TYPE_BY_TAB[typeTab] || null;
   const hasReview = !!reviewType;
 
@@ -133,7 +136,13 @@ export default function FrontPermManagePage() {
     queryFn: () => reviewApi.list({ page_size: 50, type: reviewType as string, status: 'pending' }),
     enabled: hasReview && segment === 'pending',
   });
-  const reviewRecords: any[] = (reviewData?.data?.data || []).slice().sort((a: any, b: any) => new Date(a.submitted_at || 0).getTime() - new Date(b.submitted_at || 0).getTime());
+  const reviewRecords: any[] = (reviewData?.data?.data || [])
+    .filter((r: any) => {
+      if (typeTab === 'agent') return r.sub_type === 'chat';
+      if (typeTab === 'workflow') return r.sub_type === 'workflow';
+      return true;
+    })
+    .slice().sort((a: any, b: any) => new Date(a.submitted_at || 0).getTime() - new Date(b.submitted_at || 0).getTime());
 
   // 审核 mutations
   const approveMutation = useMutation({
@@ -270,9 +279,22 @@ export default function FrontPermManagePage() {
     private: '私有', department: '部门', company: '全公司',
   };
 
+  const [delistDialog, setDelistDialog] = useState<{ open: boolean; item: any }>({ open: false, item: null });
+  const [delistReason, setDelistReason] = useState('');
+
   const toggleMutation = useMutation({
     mutationFn: (id: string) => frontPermApi.toggle(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['front-perm-resources'] }); enqueueSnackbar('状态已切换', { variant: 'success' }); },
+  });
+
+  const delistMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => frontPermApi.delist(id, { reason }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['front-perm-resources'] });
+      enqueueSnackbar('已强制下架，已通知作者', { variant: 'success' });
+      setDelistDialog({ open: false, item: null });
+      setDelistReason('');
+    },
   });
 
   const transferMutation = useMutation({
@@ -357,6 +379,13 @@ export default function FrontPermManagePage() {
             )}
           </Button>
         </Box>
+      )}
+
+      {/* 知识库说明 Alert */}
+      {typeTab === 'kb' && (
+        <Alert severity="info" sx={{ mb: 2, fontSize: 12, py: 0.5 }}>
+          知识库不参与市场发布，此处控制其服务可用性
+        </Alert>
       )}
 
       <Box sx={{ display: 'flex', gap: 1.5, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -451,15 +480,7 @@ export default function FrontPermManagePage() {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    {item.resource_type === 'skill' ? (
-                      <Chip
-                        label={item.status === 'published' ? '已上架' : '已下架'}
-                        color={item.status === 'published' ? 'success' : 'default'}
-                        size="small" sx={{ height: 20, fontSize: 10 }}
-                      />
-                    ) : (
-                      <Chip label={sm.label} color={sm.color} size="small" sx={{ height: 20, fontSize: 10 }} />
-                    )}
+                    <Chip label={sm.label} color={sm.color} size="small" sx={{ height: 20, fontSize: 10 }} />
                   </TableCell>
                   <TableCell>
                     <Typography variant="caption" sx={{ fontSize: 11 }}>{fmtRelative(item.last_used_at)}</Typography>
@@ -479,19 +500,19 @@ export default function FrontPermManagePage() {
                       <Tooltip title="权限配置">
                         <IconButton size="small" color="primary" onClick={() => setDrawerTarget(item)}><Security fontSize="small" /></IconButton>
                       </Tooltip>
-                      {item.resource_type === 'skill' ? (
-                        <Tooltip title={item.status === 'published' ? '强制下架' : '上架'}>
-                          <IconButton size="small" color={item.status === 'published' ? 'error' : 'success'} onClick={() => toggleMutation.mutate(item.id)}>
-                            <PowerSettingsNew fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      ) : (
+                      {item.resource_type === 'kb' ? (
                         <Tooltip title={item.status === 'active' ? '停用' : '启用'}>
                           <IconButton size="small" color={item.status === 'active' ? 'warning' : 'success'} onClick={() => toggleMutation.mutate(item.id)}>
                             <PowerSettingsNew fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                      )}
+                      ) : (item.status === 'published' || item.status === 'modified') ? (
+                        <Tooltip title="强制下架">
+                          <IconButton size="small" color="error" onClick={() => { setDelistDialog({ open: true, item }); setDelistReason(''); }}>
+                            <PowerSettingsNew fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      ) : null}
                       <Tooltip title="转移拥有者">
                         <IconButton size="small" onClick={() => { setTransferTarget(item); setTransferForm({ owner_name: '', owner_dept: '' }); }}>
                           <SwapHoriz fontSize="small" />
@@ -575,6 +596,33 @@ export default function FrontPermManagePage() {
         <DialogActions>
           <Button onClick={() => setRejectDialog({ open: false, recordId: '', recordName: '' })}>取消</Button>
           <Button variant="contained" color="error" onClick={handleReject} disabled={rejectMutation.isPending}>确认驳回</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 强制下架弹窗 */}
+      <Dialog open={delistDialog.open} onClose={() => setDelistDialog({ open: false, item: null })} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>强制下架确认</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            确定要强制下架「<b>{delistDialog.item?.name}</b>」吗？
+          </Typography>
+          {delistDialog.item && (
+            <Alert severity="warning" sx={{ mb: 2, fontSize: 12 }}>
+              {(delistDialog.item.resource_type === 'agent' || delistDialog.item.resource_type === 'workflow')
+                ? `下架将影响 ${delistDialog.item.related_reports || 0} 个关联报告和 ${delistDialog.item.installed_users || 0} 个已安装用户`
+                : delistDialog.item.resource_type === 'report'
+                ? `已安装用户数：${delistDialog.item.installed_users || 0}`
+                : `已安装数：${delistDialog.item.install_count || 0}`}
+            </Alert>
+          )}
+          <TextField fullWidth label="下架原因" required multiline rows={3} value={delistReason}
+            onChange={e => setDelistReason(e.target.value)} placeholder="请填写下架原因，将通知作者..." />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDelistDialog({ open: false, item: null })}>取消</Button>
+          <Button variant="contained" color="error" disabled={!delistReason.trim()} onClick={() => delistDialog.item && delistMutation.mutate({ id: delistDialog.item.id, reason: delistReason })}>
+            确认下架
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -992,7 +1040,7 @@ function PermDrawer({ target, onClose }: { target: any; onClose: () => void }) {
   };
 
   const isSkill = target?.resource_type === 'skill';
-  const isAgent = target?.resource_type === 'agent';
+  const isAgentOrWorkflow = target?.resource_type === 'agent' || target?.resource_type === 'workflow';
 
   // 公共额度相关状态
   const [publicQuotaOpen, setPublicQuotaOpen] = useState(false);
@@ -1004,7 +1052,7 @@ function PermDrawer({ target, onClose }: { target: any; onClose: () => void }) {
   const { data: accountsData } = useQuery({
     queryKey: ['token-accounts'],
     queryFn: () => tokenAccountsApi.list(),
-    enabled: isAgent,
+    enabled: isAgentOrWorkflow,
   });
   const tokenAccounts: any[] = accountsData?.data?.data || [];
 
@@ -1012,7 +1060,7 @@ function PermDrawer({ target, onClose }: { target: any; onClose: () => void }) {
   const { data: whitelistData } = useQuery({
     queryKey: ['token-account-whitelist', pqAccountId],
     queryFn: () => tokenAccountsApi.whitelist(pqAccountId),
-    enabled: isAgent && !!pqAccountId,
+    enabled: isAgentOrWorkflow && !!pqAccountId,
   });
   const whitelistUsers: any[] = whitelistData?.data?.data || [];
 
@@ -1020,7 +1068,7 @@ function PermDrawer({ target, onClose }: { target: any; onClose: () => void }) {
   const { data: quotaData } = useQuery({
     queryKey: ['agent-public-quota', target?.resource_id],
     queryFn: () => publicQuotaApi.get(target.resource_id),
-    enabled: isAgent && !!target?.resource_id,
+    enabled: isAgentOrWorkflow && !!target?.resource_id,
   });
   const existingQuota: any = quotaData?.data?.data || null;
 
@@ -1028,7 +1076,7 @@ function PermDrawer({ target, onClose }: { target: any; onClose: () => void }) {
   const { data: quotaUsersData } = useQuery({
     queryKey: ['agent-public-quota-users', existingQuota?.account_id],
     queryFn: () => tokenAccountsApi.whitelist(existingQuota.account_id),
-    enabled: isAgent && !!existingQuota?.account_id,
+    enabled: isAgentOrWorkflow && !!existingQuota?.account_id,
   });
   const quotaAllUsers: any[] = quotaUsersData?.data?.data || [];
   const quotaEnabledUsers = quotaAllUsers.filter(u => existingQuota?.user_ids?.includes(u.user_id));
@@ -1189,7 +1237,7 @@ function PermDrawer({ target, onClose }: { target: any; onClose: () => void }) {
           )}
 
           {/* 公共额度（仅智能体类型显示） */}
-          {isAgent && (
+          {isAgentOrWorkflow && (
             <>
               <Divider sx={{ mb: 2 }} />
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -1257,7 +1305,7 @@ function PermDrawer({ target, onClose }: { target: any; onClose: () => void }) {
       )}
 
       {/* 公共额度配置弹窗 */}
-      {isAgent && (
+      {isAgentOrWorkflow && (
         <Dialog open={publicQuotaOpen} onClose={() => setPublicQuotaOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 15 }}>开启公共额度 —— {target?.name}</Typography>
