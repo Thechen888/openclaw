@@ -112,7 +112,7 @@ export default function FrontPermManagePage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['front-perm-resources', typeTab, params, idleFilter],
-    queryFn: () => frontPermApi.resources({ ...params, resource_type: typeTab, sub_type: typeTab === 'agent' ? 'chat' : typeTab === 'workflow' ? 'workflow' : undefined, idle: idleFilter ? '1' : undefined }),
+    queryFn: () => frontPermApi.resources({ ...params, resource_type: typeTab === 'workflow' ? 'agent' : typeTab, sub_type: typeTab === 'agent' ? 'chat' : typeTab === 'workflow' ? 'workflow' : undefined, idle: idleFilter ? '1' : undefined }),
   });
   const items: any[] = data?.data?.data || [];
   const total: number = data?.data?.pagination?.total || 0;
