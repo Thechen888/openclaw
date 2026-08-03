@@ -3,12 +3,13 @@ import {
   Box, Table, TableHead, TableBody, TableRow, TableCell, IconButton, Button,
   Typography, Chip, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
-import { Delete, Refresh, Extension, Visibility, SystemUpdateAlt, Science } from '@mui/icons-material';
+import { Delete, Refresh, Extension, Visibility, SystemUpdateAlt, Science, ContentCopy } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader, FilterBar, DataTable, useTableState, EmptyState, LoadingState, StatusBadge } from '../../components/shared';
 import { skillsApi } from '../../api/client';
+import ForkResourceDialog from '../../components/ForkResourceDialog';
 
 export default function MyInstalledSkillsPage() {
   const qc = useQueryClient();
@@ -16,6 +17,7 @@ export default function MyInstalledSkillsPage() {
   const { enqueueSnackbar } = useSnackbar();
   const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
   const [confirmUninstall, setConfirmUninstall] = useState<any>(null);
+  const [forkItem, setForkItem] = useState<any>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['skills-installed', params],
@@ -30,6 +32,15 @@ export default function MyInstalledSkillsPage() {
       qc.invalidateQueries({ queryKey: ['skills-installed'] });
       setConfirmUninstall(null);
       enqueueSnackbar('已卸载', { variant: 'success' });
+    },
+  });
+
+  const forkMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => skillsApi.fork(id, { name }),
+    onSuccess: () => {
+      enqueueSnackbar('副本已创建到「我创建的」', { variant: 'success' });
+      setForkItem(null);
+      navigate('/skills/my');
     },
   });
 
@@ -54,7 +65,7 @@ export default function MyInstalledSkillsPage() {
               <TableCell sx={{ fontWeight: 700, width: 100 }}>版本</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 100 }}>来源</TableCell>
               <TableCell sx={{ fontWeight: 700, width: 140 }}>安装时间</TableCell>
-              <TableCell sx={{ fontWeight: 700, width: 100 }}>操作</TableCell>
+              <TableCell sx={{ fontWeight: 700, width: 140 }}>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -107,6 +118,11 @@ export default function MyInstalledSkillsPage() {
                         </IconButton>
                       </Tooltip>
                     )}
+                    <Tooltip title="创建副本">
+                      <IconButton size="small" color="primary" onClick={() => setForkItem(item)}>
+                        <ContentCopy fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="详情">
                       <IconButton size="small" onClick={() => navigate(`/skills/${item.skill_id}/detail`)}>
                         <Visibility fontSize="small" />
@@ -144,6 +160,15 @@ export default function MyInstalledSkillsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ForkResourceDialog
+        open={!!forkItem}
+        originalName={forkItem?.skill_name || ''}
+        originalOwner={forkItem?.owner_name}
+        onConfirm={(name) => forkItem && forkMutation.mutate({ id: forkItem.skill_id || forkItem.id, name })}
+        onClose={() => setForkItem(null)}
+        isPending={forkMutation.isPending}
+      />
     </Box>
   );
 }

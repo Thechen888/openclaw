@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Box, Card, Typography, Chip, Button, Avatar, Divider } from '@mui/material';
-import { ArrowBack, Delete, Visibility, Groups, Science, CalendarToday, InfoOutlined, History } from '@mui/icons-material';
+import { ArrowBack, Delete, Visibility, Groups, Science, CalendarToday, InfoOutlined, History, ContentCopy } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader, LoadingState } from '../../components/shared';
 import api from '../../api/client';
+import ForkResourceDialog from '../../components/ForkResourceDialog';
 
 const SCOPE_META: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   company: { icon: <></>, label: '全公司', color: 'success.main' },
@@ -33,6 +35,17 @@ export default function ReportInstalledDetailPage() {
       enqueueSnackbar('已卸载报告', { variant: 'success' });
       qc.invalidateQueries({ queryKey: ['reports-installed'] });
       navigate('/reports/installed');
+    },
+  });
+
+  // 创建副本
+  const [forkOpen, setForkOpen] = useState(false);
+  const forkMutation = useMutation({
+    mutationFn: (name: string) => api.post(`/reports/${id}/fork`, { name }),
+    onSuccess: () => {
+      enqueueSnackbar('副本已创建到「我创建的」', { variant: 'success' });
+      setForkOpen(false);
+      navigate('/reports/my');
     },
   });
 
@@ -120,6 +133,14 @@ export default function ReportInstalledDetailPage() {
             </Button>
             <Button
               variant="outlined"
+              startIcon={<ContentCopy />}
+              onClick={() => setForkOpen(true)}
+              sx={{ fontWeight: 600, textTransform: 'none', minWidth: 100 }}
+            >
+              创建副本
+            </Button>
+            <Button
+              variant="outlined"
               color="error"
               startIcon={<Delete />}
               onClick={() => uninstallMutation.mutate()}
@@ -171,6 +192,15 @@ export default function ReportInstalledDetailPage() {
           </Box>
         </Card>
       </Box>
+
+      <ForkResourceDialog
+        open={forkOpen}
+        originalName={item?.name || item?.title || ''}
+        originalOwner={item?.owner_name}
+        onConfirm={(name) => forkMutation.mutate(name)}
+        onClose={() => setForkOpen(false)}
+        isPending={forkMutation.isPending}
+      />
     </Box>
   );
 }

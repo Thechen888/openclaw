@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Box, Card, Typography, Chip, Button, Avatar, Divider } from '@mui/material';
-import { ArrowBack, Delete, PlayArrow, Groups, Science, CalendarToday, InfoOutlined, History } from '@mui/icons-material';
+import { ArrowBack, Delete, PlayArrow, Groups, Science, CalendarToday, InfoOutlined, History, ContentCopy } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader, LoadingState } from '../../components/shared';
 import api from '../../api/client';
+import ForkResourceDialog from '../../components/ForkResourceDialog';
 
 const SCOPE_META: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   company: { icon: <></>, label: '全公司', color: 'success.main' },
@@ -33,6 +35,16 @@ export default function WorkflowInstalledDetailPage() {
       enqueueSnackbar('已卸载工作流', { variant: 'success' });
       qc.invalidateQueries({ queryKey: ['workflows-installed'] });
       navigate('/workflows/installed');
+    },
+  });
+
+  const [forkOpen, setForkOpen] = useState(false);
+  const forkMutation = useMutation({
+    mutationFn: (name: string) => api.post(`/agents/${id}/fork`, { name }),
+    onSuccess: () => {
+      enqueueSnackbar('副本已创建到「我创建的」', { variant: 'success' });
+      setForkOpen(false);
+      navigate('/workflows/my');
     },
   });
 
@@ -120,9 +132,17 @@ export default function WorkflowInstalledDetailPage() {
               卸载
             </Button>
             <Button
+              variant="outlined"
+              startIcon={<ContentCopy />}
+              onClick={() => setForkOpen(true)}
+              sx={{ fontWeight: 600, textTransform: 'none', minWidth: 100 }}
+            >
+              创建副本
+            </Button>
+            <Button
               variant="contained"
               startIcon={<PlayArrow />}
-              onClick={() => navigate(`/workflows/installed`)}
+              onClick={() => enqueueSnackbar('请到我安装的工作流列表中运行', { variant: 'info' })}
               sx={{ fontWeight: 600, textTransform: 'none', minWidth: 100,
                 bgcolor: '#10b981', '&:hover': { bgcolor: '#059669' } }}
             >

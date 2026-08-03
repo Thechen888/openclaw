@@ -3593,6 +3593,55 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     if (!report) return { status: 404, data: { error: '报告不存在' } };
     return ok({ ...report, installed_at: new Date().toISOString() });
   }
+  // ===== POST /agents/:id/fork — 创建智能体/工作流副本 =====
+  if (/^\/agents\/[^/]+\/fork$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const agent = agents.find((a: any) => a.id === id);
+    if (!agent) return { status: 404, data: { error: '资源不存在' } };
+    const forkName = data?.name || `${agent.name}（副本）`;
+    const newAgent = {
+      ...agent,
+      id: 'a-fork-' + Date.now(),
+      name: forkName,
+      owner_id: 'u-1',
+      owner_name: '管理员',
+      owner_dept: '技术部',
+      status: 'draft',
+      forked_from: `${agent.name}（${agent.owner_name}）`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      triggers: (agent.triggers || []).map((t: any) => ({ ...t, enabled: false })),
+    };
+    // 工作流副本：触发器默认关闭，report_output 节点追加 -copy 后缀
+    if (agent.category === 'workflow' || agent.agent_type === 'workflow') {
+      newAgent.triggers_count = 0;
+      newAgent._fork_note = 'report_output 节点已追加 -copy 后缀';
+    }
+    agents.push(newAgent);
+    return ok(newAgent);
+  }
+  // ===== POST /reports/:id/fork — 创建报告副本 =====
+  if (/^\/reports\/[^/]+\/fork$/.test(path) && method === 'post') {
+    const id = path.split('/')[2];
+    const report = reports.find((r: any) => r.id === id);
+    if (!report) return { status: 404, data: { error: '报告不存在' } };
+    const forkName = data?.name || `${report.name || report.title}（副本）`;
+    const newReport = {
+      ...report,
+      id: 'rpt-fork-' + Date.now(),
+      name: forkName,
+      title: forkName,
+      owner_id: 'u-1',
+      owner_name: '管理员',
+      owner_dept: '技术部',
+      status: 'draft',
+      forked_from: `${report.name || report.title}（${report.owner_name || '未知'}）`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    reports.push(newReport);
+    return ok(newReport);
+  }
   if (/^\/agents\/[^/]+$/.test(path) && method === 'get') {
     const id = path.split('/').pop() as string;
     const agent = agents.find((a: any) => a.id === id) || agents[0];
@@ -3644,6 +3693,27 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const idx = skills.findIndex(s => s.id === sid);
     if (idx >= 0) skills[idx] = { ...skills[idx], status: 'delisted', updated_at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
     return ok(idx >= 0 ? skills[idx] : null);
+  }
+  // ===== POST /skills/:id/fork — 创建技能副本 =====
+  if (/^\/skills\/[^/]+\/fork$/.test(path) && method === 'post') {
+    const sid = path.split('/')[2];
+    const skill = skills.find(s => s.id === sid);
+    if (!skill) return { status: 404, data: { error: '技能不存在' } };
+    const forkName = data?.name || `${skill.name}（副本）`;
+    const newSkill = {
+      ...skill,
+      id: 'sk-fork-' + Date.now(),
+      name: forkName,
+      owner_id: 'u-1',
+      owner_name: '管理员',
+      owner_dept: '技术部',
+      status: 'draft',
+      forked_from: `${skill.name}（${skill.owner_name || '未知'}）`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    skills.push(newSkill);
+    return ok(newSkill);
   }
   // Skills — 回滚版本（modified → published）
   if (/^\/skills\/[^/]+\/rollback$/.test(path) && method === 'post') {

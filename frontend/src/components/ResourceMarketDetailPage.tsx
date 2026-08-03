@@ -4,13 +4,14 @@ import {
 } from '@mui/material';
 import {
   ArrowBack, Download, Public, Groups, Person, Science, CalendarToday,
-  InfoOutlined, History,
+  InfoOutlined, History, ContentCopy,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader, LoadingState } from './shared';
 import api from '../api/client';
+import ForkResourceDialog from './ForkResourceDialog';
 
 const SCOPE_META: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   company: { icon: <Public fontSize="small" />, label: '全公司', color: 'success.main' },
@@ -67,6 +68,17 @@ export default function ResourceMarketDetailPage({
     onSuccess: () => {
       enqueueSnackbar(installSuccessMsg || `已安装到${label}库`, { variant: 'success' });
       qc.invalidateQueries({ queryKey: [`${resourceType}-installed-check`] });
+    },
+  });
+
+  const [forkOpen, setForkOpen] = useState(false);
+  const forkMutation = useMutation({
+    mutationFn: (name: string) => api.post(`${basePath}/${id}/fork`, { name }),
+    onSuccess: () => {
+      enqueueSnackbar('副本已创建到「我创建的」', { variant: 'success' });
+      setForkOpen(false);
+      const myListPath = resourceType === 'agent' ? '/agents/my' : resourceType === 'workflow' ? '/workflows/my' : '/skills/my';
+      navigate(myListPath);
     },
   });
 
@@ -147,7 +159,7 @@ export default function ResourceMarketDetailPage({
             </Box>
           </Box>
 
-          {/* 安装按钮 */}
+          {/* 安装按钮 + 创建副本 */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <Button
               variant="contained"
@@ -160,6 +172,14 @@ export default function ResourceMarketDetailPage({
               }}
             >
               {isInstalled ? '已安装' : '安装'}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ContentCopy />}
+              onClick={() => setForkOpen(true)}
+              sx={{ fontWeight: 600, textTransform: 'none', minWidth: 120 }}
+            >
+              创建副本
             </Button>
           </Box>
         </Box>
@@ -204,6 +224,15 @@ export default function ResourceMarketDetailPage({
           </Box>
         </Card>
       </Box>
+
+      <ForkResourceDialog
+        open={forkOpen}
+        originalName={item?.name || ''}
+        originalOwner={item?.owner_name}
+        onConfirm={(name) => forkMutation.mutate(name)}
+        onClose={() => setForkOpen(false)}
+        isPending={forkMutation.isPending}
+      />
     </Box>
   );
 }

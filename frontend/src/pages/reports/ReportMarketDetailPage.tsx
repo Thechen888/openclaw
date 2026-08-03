@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Box, Card, Typography, Chip, Button, Avatar, Divider, Skeleton } from '@mui/material';
-import { ArrowBack, Download, Groups, Science, CalendarToday, InfoOutlined, History } from '@mui/icons-material';
+import { ArrowBack, Download, Groups, Science, CalendarToday, InfoOutlined, History, ContentCopy } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader, LoadingState } from '../../components/shared';
 import api from '../../api/client';
+import ForkResourceDialog from '../../components/ForkResourceDialog';
 
 const SCOPE_META: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
   company: { icon: <></>, label: '全公司', color: 'success.main' },
@@ -39,6 +41,16 @@ export default function ReportMarketDetailPage() {
     onSuccess: () => {
       enqueueSnackbar('已安装到报告库', { variant: 'success' });
       qc.invalidateQueries({ queryKey: ['reports-installed-check'] });
+    },
+  });
+
+  const [forkOpen, setForkOpen] = useState(false);
+  const forkMutation = useMutation({
+    mutationFn: (name: string) => api.post(`/reports/${id}/fork`, { name }),
+    onSuccess: () => {
+      enqueueSnackbar('副本已创建到「我创建的」', { variant: 'success' });
+      setForkOpen(false);
+      navigate('/reports/my');
     },
   });
 
@@ -114,7 +126,7 @@ export default function ReportMarketDetailPage() {
             </Box>
           </Box>
 
-          {/* 安装按钮 */}
+          {/* 安装按钮 + 创建副本 */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
             <Button
               variant="contained"
@@ -127,6 +139,14 @@ export default function ReportMarketDetailPage() {
               }}
             >
               {isInstalled ? '已安装' : '安装'}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ContentCopy />}
+              onClick={() => setForkOpen(true)}
+              sx={{ fontWeight: 600, textTransform: 'none', minWidth: 120 }}
+            >
+              创建副本
             </Button>
           </Box>
         </Box>
@@ -171,6 +191,15 @@ export default function ReportMarketDetailPage() {
           </Box>
         </Card>
       </Box>
+
+      <ForkResourceDialog
+        open={forkOpen}
+        originalName={item?.name || item?.title || ''}
+        originalOwner={item?.owner_name}
+        onConfirm={(name) => forkMutation.mutate(name)}
+        onClose={() => setForkOpen(false)}
+        isPending={forkMutation.isPending}
+      />
     </Box>
   );
 }

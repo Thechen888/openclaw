@@ -123,6 +123,7 @@ export const skillsApi = {
   create: (data: any) => api.post('/skills', data),
   update: (id: string, data: any) => api.put(`/skills/${id}`, data),
   delete: (id: string) => api.delete(`/skills/${id}`),
+  fork: (id: string, data: { name: string }) => api.post(`/skills/${id}/fork`, data),
   // 前台：我创建的
   my: (params?: ListParams) => api.get('/skills/my', { params }),
   // 前台：我安装的
@@ -180,6 +181,7 @@ export const agentsApi = {
   updateCollaborator: (id: string, principalId: string, data: any) => api.put(`/agents/${id}/collaborators/${principalId}`, data),
   removeCollaborator: (id: string, principalId: string) => api.delete(`/agents/${id}/collaborators/${principalId}`),
   transferOwnership: (id: string, data: any) => api.post(`/agents/${id}/transfer`, data),
+  fork: (id: string, data: { name: string }) => api.post(`/agents/${id}/fork`, data),
   // 调试
   debugChat: (id: string, data: any) => api.post(`/agents/${id}/debug/chat`, data),
   debugWorkflow: (id: string, data: any) => api.post(`/agents/${id}/debug/workflow`, data),
@@ -355,6 +357,7 @@ export const reportsApi = {
   list: (params?: ListParams & { scope?: string; period?: string; department_id?: string; status?: string }) => api.get('/reports/list', { params }),
   get: (id: string) => api.get(`/reports/${id}`),
   export: (id: string) => api.get(`/reports/${id}/export`),
+  fork: (id: string, data: { name: string }) => api.post(`/reports/${id}/fork`, data),
   departments: () => api.get('/reports/departments'),
 };
 
