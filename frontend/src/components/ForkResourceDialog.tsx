@@ -26,7 +26,7 @@ export default function ForkResourceDialog({
   const [name, setName] = useState(`${originalName}（副本）`);
   const [error, setError] = useState('');
 
-  // 每次打开弹窗时重置名称和错误状态（解决常驻挂载场景 originalName 变更不生效的问题）
+  // 每次打开弹窗时重置名称和错误状态
   useEffect(() => {
     if (open) {
       setName(`${originalName}（副本）`);
@@ -56,27 +56,31 @@ export default function ForkResourceDialog({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700 }}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, px: 3, pt: 2.5, pb: 1 }}>
         <ContentCopy sx={{ fontSize: 20, color: 'primary.main' }} />
         创建副本
       </DialogTitle>
-      <DialogContent sx={{ px: 3, py: 1 }}>
+      <DialogContent sx={{ px: 3, pt: 1.5, pb: 0.5 }}>
+        {/* 静态标签：不用 TextField 的浮动 label，彻底避免被裁剪 */}
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+          副本名称
+        </Typography>
         <TextField
           fullWidth
           size="small"
-          label="副本名称"
+          placeholder="请输入副本名称"
           value={name}
           onChange={e => { setName(e.target.value); setError(''); }}
           error={!!error}
           helperText={error || `${name.trim().length}/50`}
-          sx={{ mt: 1, mb: 2 }}
+          sx={{ mb: 2 }}
         />
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.6 }}>
           副本将保存到「我创建的」，与原版互不影响；定时触发器等自动化配置将默认关闭。
           {originalOwner && <> 源自：{originalOwner}</>}
         </Typography>
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      <DialogActions sx={{ px: 3, pt: 1.5, pb: 2.5 }}>
         <Button onClick={handleClose}>取消</Button>
         <Button variant="contained" onClick={handleConfirm} disabled={isPending || !name.trim()}>
           {confirmText}
