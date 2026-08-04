@@ -5,13 +5,14 @@ import {
 } from '@mui/material';
 import {
   ArrowBack, Download, Extension, Person, CalendarToday,
-  Description, Code,
+  Description, Code, ContentCopy,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useState, useEffect } from 'react';
 import { skillsApi } from '../../api/client';
 import api from '../../api/client';
+import ForkResourceDialog from '../../components/ForkResourceDialog';
 
 // =================== 文件编辑器弹窗 ===================
 function FileEditorDialog({
@@ -87,6 +88,17 @@ export default function SkillDetailPage() {
     },
   });
 
+  // 创建副本
+  const [forkOpen, setForkOpen] = useState(false);
+  const forkMutation = useMutation({
+    mutationFn: (name: string) => skillsApi.fork(id!, { name }),
+    onSuccess: () => {
+      enqueueSnackbar('副本已创建到「我创建的」', { variant: 'success' });
+      setForkOpen(false);
+      navigate('/skills/my');
+    },
+  });
+
   if (isLoading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -136,6 +148,14 @@ export default function SkillDetailPage() {
             sx={{ fontWeight: 600, textTransform: 'none', px: 3 }}
           >
             安装
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<ContentCopy />}
+            onClick={() => setForkOpen(true)}
+            sx={{ fontWeight: 600, textTransform: 'none', px: 3 }}
+          >
+            创建副本
           </Button>
         </Box>
 
@@ -234,6 +254,15 @@ export default function SkillDetailPage() {
           onClose={() => setEditFilePath('')}
         />
       )}
+
+      <ForkResourceDialog
+        open={forkOpen}
+        originalName={skill?.name || ''}
+        originalOwner={skill?.owner_name}
+        onConfirm={(name) => forkMutation.mutate(name)}
+        onClose={() => setForkOpen(false)}
+        isPending={forkMutation.isPending}
+      />
     </Box>
   );
 }

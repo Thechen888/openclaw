@@ -191,6 +191,15 @@ export default function WorkflowInstalledDetailPage() {
           </Box>
         </Card>
       </Box>
+
+      <ForkResourceDialog
+        open={forkOpen}
+        originalName={item?.name || ''}
+        originalOwner={item?.owner_name}
+        onConfirm={(name) => forkMutation.mutate(name)}
+        onClose={() => setForkOpen(false)}
+        isPending={forkMutation.isPending}
+      />
     </Box>
   );
 }

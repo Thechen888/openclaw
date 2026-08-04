@@ -453,7 +453,14 @@ export default function MySkillsPage() {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Extension fontSize="small" sx={{ color: '#00D4FF' }} />
-                      <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{item.name}</Typography>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{item.name}</Typography>
+                        {item.forked_from && (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, lineHeight: 1.3 }}>
+                            复制自 {item.forked_from}
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                   </TableCell>
                   <TableCell>

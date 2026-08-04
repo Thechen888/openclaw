@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Typography,
 } from '@mui/material';
@@ -25,6 +25,14 @@ export default function ForkResourceDialog({
 }: ForkResourceDialogProps) {
   const [name, setName] = useState(`${originalName}（副本）`);
   const [error, setError] = useState('');
+
+  // 每次打开弹窗时重置名称和错误状态（解决常驻挂载场景 originalName 变更不生效的问题）
+  useEffect(() => {
+    if (open) {
+      setName(`${originalName}（副本）`);
+      setError('');
+    }
+  }, [open, originalName]);
 
   const handleConfirm = () => {
     const trimmed = name.trim();

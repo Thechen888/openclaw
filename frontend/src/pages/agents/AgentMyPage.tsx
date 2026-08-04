@@ -114,17 +114,24 @@ export default function AgentMyPage() {
         <Grid container spacing={2}>
           {items.map((agent: any) => (
             <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={agent.id}>
-              <AgentCard
-                agent={agent}
-                onClick={() => navigate(`/agents/${agent.id}`)}
-                onEdit={() => navigate(`/agents/${agent.id}/edit/chat`)}
-                actionsMenu={
-                  <ResourceActionsMenu
-                    status={agent.status || 'draft'}
-                    onAction={(action) => handleAction(action, agent)}
-                  />
-                }
-              />
+              <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <AgentCard
+                  agent={agent}
+                  onClick={() => navigate(`/agents/${agent.id}`)}
+                  onEdit={() => navigate(`/agents/${agent.id}/edit/chat`)}
+                  actionsMenu={
+                    <ResourceActionsMenu
+                      status={agent.status || 'draft'}
+                      onAction={(action) => handleAction(action, agent)}
+                    />
+                  }
+                />
+                {agent.forked_from && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, px: 0.5, fontSize: 11, lineHeight: 1.4 }}>
+                    复制自 {agent.forked_from}
+                  </Typography>
+                )}
+              </Box>
             </Grid>
           ))}
         </Grid>

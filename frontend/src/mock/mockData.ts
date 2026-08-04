@@ -3596,7 +3596,12 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // ===== POST /agents/:id/fork — 创建智能体/工作流副本 =====
   if (/^\/agents\/[^/]+\/fork$/.test(path) && method === 'post') {
     const id = path.split('/')[2];
-    const agent = agents.find((a: any) => a.id === id);
+    let agent = agents.find((a: any) => a.id === id);
+    // 兜底：主数组找不到时，从 installedAgents / installedWorkflows 中查找源资源
+    if (!agent) {
+      const installed = [...installedAgents, ...installedWorkflows].find((r: any) => r.id === id);
+      if (installed) agent = agents.find((a: any) => a.id === installed.id);
+    }
     if (!agent) return { status: 404, data: { error: '资源不存在' } };
     const forkName = data?.name || `${agent.name}（副本）`;
     const newAgent = {
@@ -3612,10 +3617,32 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       updated_at: new Date().toISOString(),
       triggers: (agent.triggers || []).map((t: any) => ({ ...t, enabled: false })),
     };
-    // 工作流副本：触发器默认关闭，report_output 节点追加 -copy 后缀
+    // 工作流副本：触发器全部关闭，遍历 flow_json 节点把 report_output 的 dataKey 追加 -copy
     if (agent.category === 'workflow' || agent.agent_type === 'workflow') {
       newAgent.triggers_count = 0;
-      newAgent._fork_note = 'report_output 节点已追加 -copy 后缀';
+      if (newAgent.flow_json && Array.isArray(newAgent.flow_json.nodes)) {
+        newAgent.flow_json = {
+          ...newAgent.flow_json,
+          nodes: newAgent.flow_json.nodes.map((n: any) => {
+            if (n.type === 'report_output' && n.dataKey) {
+              const newDataKey = n.dataKey + '-copy';
+              // 在 outputDeclarations 中注册副本的识别名
+              const origDecl = outputDeclarations.find((d: any) => d.dataKey === n.dataKey && d.workflow_id === id);
+              if (origDecl) {
+                outputDeclarations.push({
+                  ...origDecl,
+                  dataKey: newDataKey,
+                  workflow_id: newAgent.id,
+                  workflow_name: forkName,
+                  description: origDecl.description + '（副本）',
+                });
+              }
+              return { ...n, dataKey: newDataKey };
+            }
+            return n;
+          }),
+        };
+      }
     }
     agents.push(newAgent);
     return ok(newAgent);
@@ -3623,7 +3650,12 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // ===== POST /reports/:id/fork — 创建报告副本 =====
   if (/^\/reports\/[^/]+\/fork$/.test(path) && method === 'post') {
     const id = path.split('/')[2];
-    const report = reports.find((r: any) => r.id === id);
+    let report = reports.find((r: any) => r.id === id);
+    // 兜底：主数组找不到时，从 installedReports 中查找源资源
+    if (!report) {
+      const installed = installedReports.find((r: any) => r.id === id);
+      if (installed) report = reports.find((r: any) => r.id === installed.id);
+    }
     if (!report) return { status: 404, data: { error: '报告不存在' } };
     const forkName = data?.name || `${report.name || report.title}（副本）`;
     const newReport = {
@@ -3697,7 +3729,16 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // ===== POST /skills/:id/fork — 创建技能副本 =====
   if (/^\/skills\/[^/]+\/fork$/.test(path) && method === 'post') {
     const sid = path.split('/')[2];
-    const skill = skills.find(s => s.id === sid);
+    let skill = skills.find(s => s.id === sid);
+    let sourceSkillId = sid;
+    // 兜底：主数组找不到时，从 installedSkills 中按 skill_id 查找源资源
+    if (!skill) {
+      const installed = installedSkills.find((i: any) => i.id === sid || i.skill_id === sid);
+      if (installed) {
+        sourceSkillId = installed.skill_id;
+        skill = skills.find(s => s.id === sourceSkillId);
+      }
+    }
     if (!skill) return { status: 404, data: { error: '技能不存在' } };
     const forkName = data?.name || `${skill.name}（副本）`;
     const newSkill = {
@@ -3709,10 +3750,22 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       owner_dept: '技术部',
       status: 'draft',
       forked_from: `${skill.name}（${skill.owner_name || '未知'}）`,
+      _source_skill_id: sourceSkillId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     skills.push(newSkill);
+    // 继承源技能的文件列表
+    if (skillFiles[sourceSkillId]) {
+      skillFiles[newSkill.id] = [...skillFiles[sourceSkillId]];
+      // 同时复制文件内容
+      Object.keys(skillFileContents).forEach(key => {
+        if (key.startsWith(sourceSkillId + ':')) {
+          const filePath = key.slice(sourceSkillId.length + 1);
+          skillFileContents[`${newSkill.id}:${filePath}`] = skillFileContents[key];
+        }
+      });
+    }
     return ok(newSkill);
   }
   // Skills — 回滚版本（modified → published）
@@ -3853,6 +3906,13 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // Skill 文件列表
   if (/^\/skills\/[^/]+\/files$/.test(path) && method === 'get') {
     const sid = path.split('/')[2];
+    // 兜底：fork 出的技能如果没有文件，从源技能继承
+    if (!skillFiles[sid] || skillFiles[sid].length === 0) {
+      const forkSkill = skills.find(s => s.id === sid && s._source_skill_id);
+      if (forkSkill && skillFiles[forkSkill._source_skill_id]) {
+        return ok(skillFiles[forkSkill._source_skill_id]);
+      }
+    }
     return ok(skillFiles[sid] || []);
   }
   // Skill 文件内容（GET /skills/:id/files/:path）
