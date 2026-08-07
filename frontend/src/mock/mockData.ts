@@ -1825,18 +1825,35 @@ const allRoles = [...roles, ...extraRoles];
 // =================== Token ===================
 // 平台公共 Token 账户
 const tokenAccounts: any[] = [
-  { id: 'ta-1', name: '平台公共账户-DeepSeek', model_vendor: 'DeepSeek', model_name: 'DeepSeek-V3', total_quota: 10000000, used_quota: 7650000, status: 'active' },
-  { id: 'ta-2', name: '平台公共账户-Qwen', model_vendor: '阿里云', model_name: 'Qwen-Max', total_quota: 5000000, used_quota: 4800000, status: 'active' },
-  { id: 'ta-3', name: '平台公共账户-GPT4o', model_vendor: 'OpenAI', model_name: 'GPT-4o', total_quota: 8000000, used_quota: 2100000, status: 'active' },
+  { id: 'ta-1', name: '平台公共账户-DeepSeek', model_vendor: 'DeepSeek', model_name: 'DeepSeek-V3', total_quota: 10000000, used_quota: 7650000, cycle_type: 'monthly', status: 'active' },
+  { id: 'ta-2', name: '平台公共账户-Qwen', model_vendor: '阿里云', model_name: 'Qwen-Max', total_quota: 5000000, used_quota: 4800000, cycle_type: 'monthly', status: 'active' },
+  { id: 'ta-3', name: '平台公共账户-GPT4o', model_vendor: 'OpenAI', model_name: 'GPT-4o', total_quota: 8000000, used_quota: 2100000, cycle_type: 'total', status: 'active' },
+  { id: 'ta-4', name: '测试账户-Claude', model_vendor: 'Anthropic', model_name: 'Claude-3-Sonnet', total_quota: 1000000, used_quota: 960000, cycle_type: 'monthly', status: 'disabled' },
 ];
 
-// Token 白名单人员
-const tokenWhitelist: any[] = [
-  { id: 'wl-1', user_id: 'u-1', name: '张三', emp_id: 'EMP001', dept: '研发部', token_account_ids: ['ta-1', 'ta-2'], monthly_limit: 500000, monthly_used: 45000, status: 'active' },
-  { id: 'wl-2', user_id: 'u-2', name: '李四', emp_id: 'EMP002', dept: '研发部', token_account_ids: ['ta-1'], monthly_limit: 300000, monthly_used: 210000, status: 'active' },
-  { id: 'wl-3', user_id: 'u-3', name: '王五', emp_id: 'EMP003', dept: '产品部', token_account_ids: ['ta-3'], monthly_limit: 200000, monthly_used: 85000, status: 'active' },
-  { id: 'wl-4', user_id: 'u-5', name: '孙七', emp_id: 'EMP005', dept: '运营部', token_account_ids: ['ta-2'], monthly_limit: 150000, monthly_used: 32000, status: 'active' },
-];
+// Token 白名单（以公用账户为单位管理授权成员）
+// 张三同时在 DeepSeek(ta-1) 和 Qwen(ta-2) 两个账户的成员列表中
+const accountWhitelist: Record<string, any[]> = {
+  'ta-1': [
+    { id: 'wl-1-1', user_id: 'u-1', name: '张三', emp_id: 'EMP001', dept: '研发部', monthly_limit: 500000, authorized_by: 'admin', authorized_at: '2026-06-15', status: 'active', reason: '负责核心 Agent 开发' },
+    { id: 'wl-1-2', user_id: 'u-2', name: '李四', emp_id: 'EMP002', dept: '研发部', monthly_limit: 300000, authorized_by: 'admin', authorized_at: '2026-06-20', status: 'active', reason: '参与 Agent 联调测试' },
+    { id: 'wl-1-3', user_id: 'u-4', name: '赵六', emp_id: 'EMP004', dept: '市场部', monthly_limit: 400000, authorized_by: 'admin', authorized_at: '2026-05-10', status: 'disabled', reason: '临时项目需要' },
+  ],
+  'ta-2': [
+    { id: 'wl-2-1', user_id: 'u-1', name: '张三', emp_id: 'EMP001', dept: '研发部', monthly_limit: 500000, authorized_by: 'admin', authorized_at: '2026-06-15', status: 'active', reason: '负责核心 Agent 开发' },
+    { id: 'wl-2-2', user_id: 'u-5', name: '孙七', emp_id: 'EMP005', dept: '运营部', monthly_limit: 150000, authorized_by: 'admin', authorized_at: '2026-07-05', status: 'active', reason: '运营数据分析 Agent' },
+  ],
+  'ta-3': [
+    { id: 'wl-3-1', user_id: 'u-3', name: '王五', emp_id: 'EMP003', dept: '产品部', monthly_limit: 200000, authorized_by: 'admin', authorized_at: '2026-07-01', status: 'active', reason: '产品原型验证' },
+    { id: 'wl-3-2', user_id: 'u-4', name: '赵六', emp_id: 'EMP004', dept: '市场部', monthly_limit: 400000, authorized_by: 'admin', authorized_at: '2026-05-10', status: 'disabled', reason: '临时项目需要' },
+  ],
+  'ta-4': [],
+};
+
+// 兼容旧接口：扁平化白名单列表（按人维度，供 FrontPermManagePage 使用）
+const tokenWhitelist: any[] = Object.entries(accountWhitelist).flatMap(([accountId, members]) =>
+  members.map(m => ({ ...m, token_account_ids: [accountId], monthly_used: 0 }))
+);
 
 // Agent 公共额度配置
 const agentPublicQuotas: any[] = [
@@ -5155,10 +5172,106 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (path === '/token-accounts/whitelist' && method === 'get') {
     const accountId = p.account_id;
     if (accountId) {
-      const users = tokenWhitelist.filter(w => w.token_account_ids.includes(accountId) && w.status === 'active');
-      return ok(users);
+      const members = accountWhitelist[accountId] || [];
+      // 兼容旧接口：返回扁平化列表
+      const flat = members.map(m => ({ ...m, token_account_ids: [accountId], monthly_used: 0 }));
+      return ok(flat);
     }
-    return ok(tokenWhitelist);
+    // 无 account_id 时返回所有账户的所有成员（去重）
+    const allMembers = Object.values(accountWhitelist).flat();
+    const seen = new Set<string>();
+    const unique = allMembers.filter(m => {
+      if (seen.has(m.user_id)) return false;
+      seen.add(m.user_id);
+      return true;
+    });
+    return ok(unique.map(m => ({ ...m, token_account_ids: Object.keys(accountWhitelist).filter(aid => accountWhitelist[aid].some(x => x.user_id === m.user_id)), monthly_used: 0 })));
+  }
+  // 批量添加白名单成员
+  if (path === '/token-accounts/whitelist' && method === 'post') {
+    const { account_id, user_ids, monthly_limit, reason } = data;
+    if (!account_id || !user_ids || !Array.isArray(user_ids)) return { status: 400, data: { message: '参数错误' } };
+    const account = tokenAccounts.find(a => a.id === account_id);
+    if (!account) return { status: 404, data: { message: '账户不存在' } };
+    if (!accountWhitelist[account_id]) accountWhitelist[account_id] = [];
+    const allUsers = users;
+    const orgMap = new Map(organizations.map((o: any) => [o.id, o.name]));
+    const added: any[] = [];
+    const alreadyInOtherAccounts: { name: string; count: number }[] = [];
+    for (const uid of user_ids) {
+      // 检查是否已在该账户
+      if (accountWhitelist[account_id].some(m => m.user_id === uid)) continue;
+      const userInfo = allUsers.find((u: any) => u.id === uid);
+      if (!userInfo) continue;
+      // 检查该人员是否在其他账户的白名单中
+      const otherAccounts = Object.entries(accountWhitelist)
+        .filter(([aid]) => aid !== account_id)
+        .filter(([, members]) => members.some(m => m.user_id === uid));
+      if (otherAccounts.length > 0) {
+        alreadyInOtherAccounts.push({ name: userInfo.name, count: otherAccounts.length });
+      }
+      const dept = orgMap.get(userInfo.org_id) || '';
+      const member = {
+        id: `wl-${account_id}-${uid}-${Date.now()}`,
+        user_id: uid,
+        name: userInfo.name,
+        emp_id: userInfo.username.toUpperCase().slice(0, 3) + String(Math.floor(Math.random() * 900 + 100)),
+        dept,
+        monthly_limit: Number(monthly_limit) || 500000,
+        authorized_by: 'admin',
+        authorized_at: new Date().toISOString().split('T')[0],
+        status: 'active',
+        reason: reason || '',
+      };
+      accountWhitelist[account_id].push(member);
+      added.push(member);
+    }
+    // 同步更新 tokenWhitelist 兼容层
+    tokenWhitelist.length = 0;
+    Object.entries(accountWhitelist).forEach(([aid, members]) => {
+      members.forEach(m => tokenWhitelist.push({ ...m, token_account_ids: [aid], monthly_used: 0 }));
+    });
+    return ok({ added, alreadyInOtherAccounts });
+  }
+  // 修改成员月限额/状态
+  if (/^\/token-accounts\/whitelist\/[^/]+$/.test(path) && method === 'put') {
+    const parts = path.split('/');
+    const memberId = parts[3];
+    // 在所有账户中查找该成员
+    for (const accountId of Object.keys(accountWhitelist)) {
+      const idx = accountWhitelist[accountId].findIndex(m => m.id === memberId);
+      if (idx >= 0) {
+        const member = accountWhitelist[accountId][idx];
+        if (data.monthly_limit !== undefined) member.monthly_limit = Number(data.monthly_limit);
+        if (data.status !== undefined) member.status = data.status;
+        if (data.reason !== undefined) member.reason = data.reason;
+        // 同步 tokenWhitelist
+        const twIdx = tokenWhitelist.findIndex(m => m.id === memberId);
+        if (twIdx >= 0) {
+          tokenWhitelist[twIdx].monthly_limit = member.monthly_limit;
+          tokenWhitelist[twIdx].status = member.status;
+          tokenWhitelist[twIdx].reason = member.reason;
+        }
+        return ok(member);
+      }
+    }
+    return { status: 404, data: { message: '成员不存在' } };
+  }
+  // 移除成员
+  if (/^\/token-accounts\/whitelist\/[^/]+$/.test(path) && method === 'delete') {
+    const parts = path.split('/');
+    const memberId = parts[3];
+    for (const accountId of Object.keys(accountWhitelist)) {
+      const idx = accountWhitelist[accountId].findIndex(m => m.id === memberId);
+      if (idx >= 0) {
+        accountWhitelist[accountId].splice(idx, 1);
+        // 同步 tokenWhitelist
+        const twIdx = tokenWhitelist.findIndex(m => m.id === memberId);
+        if (twIdx >= 0) tokenWhitelist.splice(twIdx, 1);
+        return ok({ success: true });
+      }
+    }
+    return { status: 404, data: { message: '成员不存在' } };
   }
   // 获取 Agent 公共额度配置
   if (/^\/front-perm\/resources\/[^/]+\/public-quota$/.test(path) && method === 'get') {

@@ -7,8 +7,9 @@ import {
 } from '@mui/material';
 import {
   Add, Edit, Refresh, Key, Visibility, VisibilityOff, ContentCopy, Delete,
-  Close, Upload, Tune, History,
+  Close, Upload, Tune, History, People,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import {
   PageHeader, DataTable, EmptyState, CrudDialog,
 } from '../../components/shared';
@@ -50,6 +51,7 @@ function quotaColor(pct: number) {
 }
 
 export default function TokenAccountsPage() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   // 管理员 Token 弹窗
@@ -173,6 +175,7 @@ export default function TokenAccountsPage() {
                         <Tooltip title={item.status === 'active' ? '停用' : '启用'}><IconButton size="small"><Switch size="small" checked={item.status === 'active'} /></IconButton></Tooltip>
                         <Tooltip title="充值"><IconButton size="small" color="primary" onClick={() => { setTopUpItem(item); setTopUpAmount(''); setTopUpOpen(true); }}><Upload fontSize="small" /></IconButton></Tooltip>
                         <Tooltip title="明细"><IconButton size="small"><History fontSize="small" /></IconButton></Tooltip>
+                        <Tooltip title="成员"><IconButton size="small" onClick={() => navigate(`/tokens/whitelist?account_id=${item.id}`)}><People fontSize="small" /></IconButton></Tooltip>
                       </Box>
                     </TableCell>
                   </TableRow>

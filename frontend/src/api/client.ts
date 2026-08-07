@@ -221,6 +221,9 @@ export const tokensApi = {
 export const tokenAccountsApi = {
   list: () => api.get('/token-accounts'),
   whitelist: (accountId: string) => api.get('/token-accounts/whitelist', { params: { account_id: accountId } }),
+  addMembers: (data: { account_id: string; user_ids: string[]; monthly_limit: number; reason: string }) => api.post('/token-accounts/whitelist', data),
+  updateMember: (memberId: string, data: { monthly_limit?: number; status?: string; reason?: string }) => api.put(`/token-accounts/whitelist/${memberId}`, data),
+  removeMember: (memberId: string) => api.delete(`/token-accounts/whitelist/${memberId}`),
 };
 
 // Agent 公共额度
