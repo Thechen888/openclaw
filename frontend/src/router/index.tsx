@@ -38,11 +38,9 @@ import SkillDetailPage from '../pages/skills/SkillDetailPage';
 import SkillPublishPage from '../pages/skills/SkillPublishPage';
 import FrontPermManagePage from '../pages/permissions/FrontPermManagePage';
 import TokenAccountsPage from '../pages/tokens/TokenAccountsPage';
-import WhitelistPage from '../pages/tokens/WhitelistPage';
 import QuotaManagePage from '../pages/tokens/QuotaManagePage';
 import TokenUsagePage from '../pages/tokens/TokenUsagePage';
 import OveragePolicyPage from '../pages/tokens/OveragePolicyPage';
-import ApprovalsPage from '../pages/tokens/ApprovalsPage';
 import TokenResalePage from '../pages/tokens/TokenResalePage';
 import QuotasPage from '../pages/resources/QuotasPage';
 import K8sStatusPage from '../pages/resources/K8sStatusPage';
@@ -139,11 +137,9 @@ export const router = createBrowserRouter([
       // Tokens
       { path: 'tokens', element: <Navigate to="/tokens/accounts" /> },
       { path: 'tokens/accounts', element: <TokenAccountsPage /> },
-      { path: 'tokens/whitelist', element: <WhitelistPage /> },
       { path: 'tokens/quotas', element: <QuotaManagePage /> },
       { path: 'tokens/usage', element: <TokenUsagePage /> },
       { path: 'tokens/overage', element: <OveragePolicyPage /> },
-      { path: 'tokens/approvals', element: <ApprovalsPage /> },
       { path: 'tokens/resale', element: <TokenResalePage /> },
       // Resources
       { path: 'resources/sn', element: <PlatformSnPage /> },

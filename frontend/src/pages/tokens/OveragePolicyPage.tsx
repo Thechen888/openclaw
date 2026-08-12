@@ -25,9 +25,8 @@ export default function OveragePolicyPage() {
     notify_email: false,
   });
 
-  // 卡片2：管理员Token超限策略
+  // 卡片2：资源池额度告警
   const [adminPolicy, setAdminPolicy] = useState({
-    strategy: 'disable_agent', // disable_agent | downgrade
     account_alert_enabled: true,
     account_alert_threshold: 85,
     account_alert_people: [] as any[],
@@ -53,7 +52,7 @@ export default function OveragePolicyPage() {
 
   const handleReset = () => {
     setPersonalPolicy({ strategy: 'block', alert_enabled: true, alert_threshold: 80, notify_in_app: true, notify_wechat: false, notify_email: false });
-    setAdminPolicy({ strategy: 'disable_agent', account_alert_enabled: true, account_alert_threshold: 85, account_alert_people: [] });
+    setAdminPolicy({ account_alert_enabled: true, account_alert_threshold: 85, account_alert_people: [] });
     setNotifyPeople([{ label: '管理员 (admin)', value: 'admin' }]);
     setNotifyChannels({ in_app: true, wechat: true, email: false, sms: false });
   };
@@ -73,7 +72,7 @@ export default function OveragePolicyPage() {
               <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>个人 Token 超限策略</Typography>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              当个人 Token 额度用完或接近上限时的处理方式
+              当个人额度及其可用资源池共享额度均耗尽后
             </Typography>
 
             <FormControl sx={{ mb: 2 }}>
@@ -124,31 +123,11 @@ export default function OveragePolicyPage() {
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <Shield color="primary" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>管理员 Token 超限策略</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>资源池额度告警</Typography>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              白名单人员使用管理员 Token 超限后的处理方式
+              资源池共享额度接近耗尽时的告警规则
             </Typography>
-
-            <FormControl sx={{ mb: 2 }}>
-              <FormLabel sx={{ fontSize: 13, fontWeight: 600, mb: 1 }}>白名单人员单月消耗达上限后</FormLabel>
-              <RadioGroup value={adminPolicy.strategy} onChange={e => setAdminPolicy({ ...adminPolicy, strategy: e.target.value })}>
-                <FormControlLabel value="disable_agent" control={<Radio size="small" />} label={
-                  <Box>
-                    <Typography variant="body2">自动停用 Agent</Typography>
-                    <Typography variant="caption" color="text.secondary">该人员名下使用管理员 Token 的 Agent 自动停用</Typography>
-                  </Box>
-                } />
-                <FormControlLabel value="downgrade" control={<Radio size="small" />} label={
-                  <Box>
-                    <Typography variant="body2">自动降级</Typography>
-                    <Typography variant="caption" color="text.secondary">切换为该人员个人 Token 继续计费</Typography>
-                  </Box>
-                } />
-              </RadioGroup>
-            </FormControl>
-
-            <Divider sx={{ my: 2 }} />
 
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>平台公共账户总额度告警</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>

@@ -153,11 +153,9 @@ export const adminNavConfig: NavSection[] = [
     label: '令牌管理',
     items: [
       { title: 'Token 账户', path: '/tokens/accounts', icon: <KeyIcon fontSize="small" /> },
-      { title: '白名单', path: '/tokens/whitelist', icon: <Security fontSize="small" /> },
       { title: '配额管理', path: '/tokens/quotas', icon: <DataUsage fontSize="small" /> },
       { title: '用量看板', path: '/tokens/usage', icon: <BarChartIcon fontSize="small" /> },
       { title: '超额策略', path: '/tokens/overage', icon: <Gavel fontSize="small" /> },
-      { title: '审批', path: '/tokens/approvals', icon: <PlaylistAddCheckCircle fontSize="small" /> },
     ],
   },
   {

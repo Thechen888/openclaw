@@ -27,11 +27,11 @@ const MOCK_DEPT_USAGE = [
 ];
 
 const MOCK_AGENT_USAGE = [
-  { id: 'a1', name: '代码审查Bot', owner: '研发部', calls: 3200, input_tokens: 5800000, output_tokens: 4200000, total: 10000000, pct: 38.2, token_type: 'admin' },
-  { id: 'a2', name: '客服助手', owner: '运营部', calls: 2100, input_tokens: 3200000, output_tokens: 2400000, total: 5600000, pct: 21.4, token_type: 'admin' },
-  { id: 'a3', name: '数据分析Agent', owner: '研发部', calls: 1500, input_tokens: 2800000, output_tokens: 2000000, total: 4800000, pct: 18.3, token_type: 'admin' },
-  { id: 'a4', name: '周报生成器', owner: '产品部', calls: 800, input_tokens: 1500000, output_tokens: 1100000, total: 2600000, pct: 9.9, token_type: 'self' },
-  { id: 'a5', name: '营销文案助手', owner: '市场部', calls: 600, input_tokens: 1200000, output_tokens: 880000, total: 2080000, pct: 7.9, token_type: 'self' },
+  { id: 'a1', name: '代码审查Bot', owner: '研发部', calls: 3200, input_tokens: 5800000, output_tokens: 4200000, total: 10000000, pct: 38.2 },
+  { id: 'a2', name: '客服助手', owner: '运营部', calls: 2100, input_tokens: 3200000, output_tokens: 2400000, total: 5600000, pct: 21.4 },
+  { id: 'a3', name: '数据分析Agent', owner: '研发部', calls: 1500, input_tokens: 2800000, output_tokens: 2000000, total: 4800000, pct: 18.3 },
+  { id: 'a4', name: '周报生成器', owner: '产品部', calls: 800, input_tokens: 1500000, output_tokens: 1100000, total: 2600000, pct: 9.9 },
+  { id: 'a5', name: '营销文案助手', owner: '市场部', calls: 600, input_tokens: 1200000, output_tokens: 880000, total: 2080000, pct: 7.9 },
 ];
 
 const MOCK_SKILL_USAGE = [
@@ -229,7 +229,6 @@ export default function TokenUsagePage() {
               <TableCell sx={{ fontWeight: 700 }} align="right">输入 Tokens</TableCell>
               <TableCell sx={{ fontWeight: 700 }} align="right">输出 Tokens</TableCell>
               <TableCell sx={{ fontWeight: 700 }} align="right">总消耗</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>计费方式</TableCell>
               <TableCell sx={{ fontWeight: 700, minWidth: 120 }}>占比</TableCell>
             </TableRow>
           </TableHead>
@@ -242,9 +241,6 @@ export default function TokenUsagePage() {
                 <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{fmtTokens(item.input_tokens)}</TableCell>
                 <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{fmtTokens(item.output_tokens)}</TableCell>
                 <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{fmtTokens(item.total)}</TableCell>
-                <TableCell>
-                  <Chip size="small" label={item.token_type === 'admin' ? '管理员' : '个人'} color={item.token_type === 'admin' ? 'primary' : 'default'} variant="outlined" sx={{ fontSize: 10 }} />
-                </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LinearProgress variant="determinate" value={item.pct * 2.5} color="primary" sx={{ flex: 1, height: 6, borderRadius: 2 }} />

@@ -25,13 +25,16 @@ const MOCK_DEPT_QUOTAS = [
   { id: 'd4', name: '运营部', monthly_quota: 6000000, used: 2800000, per_capita: 2000000, agent_count: 3 },
 ];
 
-const MOCK_AGENT_QUOTAS = [
-  { id: 'a1', name: '客服助手', owner: '部门', owner_name: '运营部', person: '孙七', token_type: 'admin', monthly_limit: 2000000, used: 1200000, status: 'active' },
-  { id: 'a2', name: '代码审查Bot', owner: '部门', owner_name: '研发部', person: '张三', token_type: 'admin', monthly_limit: 5000000, used: 3800000, status: 'active' },
-  { id: 'a3', name: '周报生成器', owner: '个人', owner_name: '赵六', person: '赵六', token_type: 'self', monthly_limit: 1000000, used: 450000, status: 'active' },
-  { id: 'a4', name: '数据分析Agent', owner: '部门', owner_name: '研发部', person: '李四', token_type: 'admin', monthly_limit: 3000000, used: 2900000, status: 'active' },
-  { id: 'a5', name: '营销文案助手', owner: '部门', owner_name: '市场部', person: '王五', token_type: 'self', monthly_limit: 1500000, used: 1500000, status: 'blocked' },
-];
+// 用户→可用资源池映射（基于成员资格）
+const MOCK_POOL_MAP: Record<string, string[]> = {
+  '张伟': ['平台公共账户-DeepSeek', '平台公共账户-Qwen'],
+  '王五': ['平台公共账户-DeepSeek', '平台公共账户-GPT4o'],
+  '赵六': ['平台公共账户-DeepSeek'],
+  '李思': ['平台公共账户-Qwen'],
+  '孙八': ['平台公共账户-Qwen'],
+  '陈七': ['平台公共账户-GPT4o'],
+  '周九': ['平台公共账户-GPT4o'],
+};
 
 function fmtNum(n: number) { return n.toLocaleString(); }
 
@@ -58,10 +61,6 @@ export default function QuotaManagePage() {
   const [deptEditItem, setDeptEditItem] = useState<any>(null);
   const [deptForm, setDeptForm] = useState({ monthly_quota: '', overage_policy: 'block' });
 
-  // Agent配额编辑弹窗
-  const [agentEditOpen, setAgentEditOpen] = useState(false);
-  const [agentEditItem, setAgentEditItem] = useState<any>(null);
-  const [agentForm, setAgentForm] = useState({ monthly_limit: '' });
 
   const openPersonalEdit = (item: any) => {
     setPersonalEditItem(item);
@@ -75,20 +74,14 @@ export default function QuotaManagePage() {
     setDeptEditOpen(true);
   };
 
-  const openAgentEdit = (item: any) => {
-    setAgentEditItem(item);
-    setAgentForm({ monthly_limit: String(item.monthly_limit) });
-    setAgentEditOpen(true);
-  };
 
   return (
     <Box>
-      <PageHeader title="配额管理" subtitle="配置个人、部门、Agent 级别的 Token 配额" />
+      <PageHeader title="配额管理" subtitle="配置个人与部门的 Token 配额" />
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Tab label="个人配额" />
         <Tab label="部门配额" />
-        <Tab label="Agent 配额" />
       </Tabs>
 
       {/* =================== Tab 0: 个人配额 =================== */}
@@ -126,6 +119,7 @@ export default function QuotaManagePage() {
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>姓名</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>部门</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>可用资源池</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>适用配额</TableCell>
                 <TableCell sx={{ fontWeight: 700 }} align="right">日限额</TableCell>
                 <TableCell sx={{ fontWeight: 700 }} align="right">月限额</TableCell>
@@ -142,6 +136,14 @@ export default function QuotaManagePage() {
                   <TableRow key={item.id} hover>
                     <TableCell sx={{ fontWeight: 600 }}>{item.name}</TableCell>
                     <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{item.dept}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const pools = MOCK_POOL_MAP[item.name] || [];
+                        return pools.length > 0
+                          ? <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>{pools.map((p: string) => <Chip key={p} size="small" label={p} variant="outlined" sx={{ fontSize: 10 }} />)}</Box>
+                          : <Typography variant="caption" color="text.secondary">—</Typography>;
+                      })()}
+                    </TableCell>
                     <TableCell>
                       {item.use_default
                         ? <Chip size="small" label="默认模板" color="primary" variant="outlined" />
@@ -214,56 +216,6 @@ export default function QuotaManagePage() {
         </>
       )}
 
-      {/* =================== Tab 2: Agent 配额 =================== */}
-      {tab === 2 && (
-        <>
-          <Alert severity="info" sx={{ mb: 2 }}>对高频 Agent 单独设置月限额，防止单个 Agent 消耗过多 Token。</Alert>
-          <DataTable>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Agent 名称</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>归属</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>负责人</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>计费类型</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="right">月限额</TableCell>
-                <TableCell sx={{ fontWeight: 700, minWidth: 150 }}>已用</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>状态</TableCell>
-                <TableCell sx={{ fontWeight: 700, width: 80 }}>操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {MOCK_AGENT_QUOTAS.map((item) => {
-                const pct = item.monthly_limit > 0 ? (item.used / item.monthly_limit) * 100 : 0;
-                return (
-                  <TableRow key={item.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{item.name}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={`${item.owner} · ${item.owner_name}`} variant="outlined" sx={{ fontSize: 10 }} />
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{item.person}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={item.token_type === 'admin' ? '管理员Token' : '个人Token'} color={item.token_type === 'admin' ? 'primary' : 'default'} variant="outlined" sx={{ fontSize: 10 }} />
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: 12 }}>{fmtNum(item.monthly_limit)}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{fmtNum(item.used)}</Typography>
-                        <LinearProgress variant="determinate" value={Math.min(pct, 100)} color={quotaColor(pct) as any} sx={{ flex: 1, height: 5, borderRadius: 2 }} />
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip size="small" label={item.status === 'active' ? '正常' : '已停用'} color={item.status === 'active' ? 'success' : 'error'} />
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title="设置限额"><IconButton size="small" onClick={() => openAgentEdit(item)}><Settings fontSize="small" /></IconButton></Tooltip>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </DataTable>
-        </>
-      )}
 
       {/* =================== 个人配额编辑弹窗 =================== */}
       <Dialog open={personalEditOpen} onClose={() => setPersonalEditOpen(false)} maxWidth="sm" fullWidth>
@@ -293,7 +245,6 @@ export default function QuotaManagePage() {
             <TextField fullWidth select label="超额策略" value={deptForm.overage_policy} onChange={e => setDeptForm({ ...deptForm, overage_policy: e.target.value })} helperText="超出部门配额后的处理方式，详见「超额策略」页面">
               <MenuItem value="block">停用（超额后暂停）</MenuItem>
               <MenuItem value="warn">仅警告</MenuItem>
-              <MenuItem value="downgrade">降级到个人Token</MenuItem>
             </TextField>
           </Box>
         </DialogContent>
@@ -303,19 +254,6 @@ export default function QuotaManagePage() {
         </DialogActions>
       </Dialog>
 
-      {/* =================== Agent配额编辑弹窗 =================== */}
-      <Dialog open={agentEditOpen} onClose={() => setAgentEditOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle><Typography variant="h6" sx={{ fontWeight: 700 }}>设置限额 — {agentEditItem?.name}</Typography></DialogTitle>
-        <DialogContent sx={{ px: 3, py: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField fullWidth label="Agent 月限额 (Tokens)" type="number" value={agentForm.monthly_limit} onChange={e => setAgentForm({ ...agentForm, monthly_limit: e.target.value })} helperText="限制该 Agent 每月最大 Token 消耗" />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setAgentEditOpen(false)}>取消</Button>
-          <Button variant="contained" onClick={() => setAgentEditOpen(false)}>保存</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

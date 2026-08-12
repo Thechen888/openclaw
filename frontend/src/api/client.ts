@@ -220,10 +220,17 @@ export const tokensApi = {
 // 平台公共 Token 账户
 export const tokenAccountsApi = {
   list: () => api.get('/token-accounts'),
+  // 成员管理（新接口）
+  members: (accountId: string) => api.get(`/token-accounts/${accountId}/members`),
+  addMembers: (accountId: string, data: { user_ids: string[]; remark?: string }) => api.post(`/token-accounts/${accountId}/members`, data),
+  removeMember: (memberId: string) => api.delete(`/token-accounts/members/${memberId}`),
+  // 兼容旧接口（供前台权限管理使用）
   whitelist: (accountId: string) => api.get('/token-accounts/whitelist', { params: { account_id: accountId } }),
-  addMembers: (data: { account_id: string; user_ids: string[]; monthly_limit: number; reason: string }) => api.post('/token-accounts/whitelist', data),
-  updateMember: (memberId: string, data: { monthly_limit?: number; status?: string; reason?: string }) => api.put(`/token-accounts/whitelist/${memberId}`, data),
-  removeMember: (memberId: string) => api.delete(`/token-accounts/whitelist/${memberId}`),
+};
+
+// 组织树
+export const orgTreeApi = {
+  get: () => api.get('/org-tree'),
 };
 
 // Agent 公共额度
@@ -255,12 +262,6 @@ export const matchingApi = {
   ignoreResult: (id: string) => api.put(`/account-matching/results/${id}`, { status: 'ignored' }),
 };
 
-export const approvalsApi = {
-  list: (params?: ListParams) => api.get('/approvals', { params }),
-  get: (id: string) => api.get(`/approvals/${id}`),
-  approve: (id: string) => api.post(`/approvals/${id}/approve`),
-  reject: (id: string, reason?: string) => api.post(`/approvals/${id}/reject`, { reason }),
-};
 
 export const quotasApi = {
   list: (params?: ListParams) => api.get('/quotas', { params }),
