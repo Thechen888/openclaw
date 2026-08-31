@@ -2,7 +2,7 @@ import {
   AppBar, Toolbar, IconButton, Typography, Box, Avatar, Menu, MenuItem,
   Breadcrumbs, Link, useTheme, Chip, ToggleButtonGroup, ToggleButton,
 } from '@mui/material';
-import { Menu as MenuIcon, DarkMode, LightMode, Notifications, AdminPanelSettings, Storefront } from '@mui/icons-material';
+import { Menu as MenuIcon, DarkMode, LightMode, AdminPanelSettings, Storefront } from '@mui/icons-material';
 import { useLocation, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useThemeStore } from '../../stores/themeStore';
@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useSidebarStore } from '../../stores/sidebarStore';
 import { useViewModeStore, VIEW_DEFAULT_PATH, type ViewMode } from '../../stores/viewModeStore';
 import { allNavConfig } from '../Sidebar/navConfig';
+import NotificationBell from '../../components/NotificationBell';
 
 export default function Header() {
   const theme = useTheme();
@@ -157,23 +158,7 @@ export default function Header() {
         </IconButton>
 
         {/* Notifications */}
-        <IconButton size="small" sx={{
-          color: 'text.secondary',
-          position: 'relative',
-          transition: 'all 0.3s',
-          '&:hover': { color: '#00D4FF', boxShadow: '0 0 12px rgba(0,212,255,0.3)' },
-        }}>
-          <Notifications fontSize="small" />
-          <Box sx={{
-            position: 'absolute', top: 4, right: 4,
-            width: 8, height: 8, borderRadius: '50%',
-            bgcolor: '#FF006E',
-            border: '2px solid',
-            borderColor: 'background.paper',
-            animation: 'dotPulse 2s ease-in-out infinite',
-            boxShadow: '0 0 6px rgba(255,0,110,0.6)',
-          }} />
-        </IconButton>
+        <NotificationBell dark />
 
         {/* User menu */}
         <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} size="small">

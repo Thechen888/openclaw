@@ -9,14 +9,32 @@ import {
   AutoStories, Search, Settings, Logout,
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
-  AccountTree,
+  AccountTree, Share,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
+import { chatApi } from '../api/client';
+import NotificationBell from '../components/NotificationBell';
 
 const SIDEBAR_WIDTH = 280;
+
+// 相对时间
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.max(0, now - then);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '刚刚';
+  if (mins < 60) return `${mins}分钟前`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}小时前`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}天前`;
+  return new Date(dateStr).toLocaleDateString();
+}
 
 // 导航分区：三模块九页 + 知识库/技能/Token转售
 interface NavSubItem { icon: React.ReactNode; label: string; path: string; }
@@ -68,30 +86,6 @@ const NAV_SECTIONS: NavSectionDef[] = [
   },
 ];
 
-// Mock 数据
-const MOCK_SPACES = [
-  {
-    id: 'space-1',
-    name: 'openclaw-main',
-    icon: <Folder fontSize="small" />,
-    conversations: [
-      { id: 'c1', title: 'AI Agent管理平台代码...', time: '2小时前' },
-    ],
-  },
-  {
-    id: 'space-2',
-    name: '项目新手指引',
-    icon: <AutoFixHigh fontSize="small" />,
-    conversations: [
-      { id: 'c2', title: '生成项目功能介绍', time: '1天前' },
-    ],
-  },
-];
-
-const MOCK_TASKS = [
-  { id: 't1', title: '你好', time: '10分钟前' },
-];
-
 export default function FrontLayout() {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -128,6 +122,25 @@ export default function FrontLayout() {
 
   const isNavActive = (path: string) => location.pathname === path;
 
+  // API 查询会话列表
+  const { data: sessionsData } = useQuery({
+    queryKey: ['chat-sessions'],
+    queryFn: () => chatApi.sessions.list({ page: 1, page_size: 100 }),
+  });
+  const allSessions: any[] = sessionsData?.data?.data || [];
+
+  // 分组：任务（workspace_name 为空）和空间（按 workspace_name 分组）
+  const tasks = allSessions.filter((s) => !s.workspace_name);
+  const spaceMap = new Map<string, any[]>();
+  allSessions.forEach((s) => {
+    if (s.workspace_name) {
+      const list = spaceMap.get(s.workspace_name) || [];
+      list.push(s);
+      spaceMap.set(s.workspace_name, list);
+    }
+  });
+  const spaces = Array.from(spaceMap.entries());
+
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: c.bg }}>
       {/* ===== 左侧边栏 ===== */}
@@ -161,10 +174,11 @@ export default function FrontLayout() {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', gap: 0.25 }}>
+            <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
               <IconButton size="small" sx={{ color: c.text3, width: 28, height: 28, '&:hover': { color: c.text1, bgcolor: c.navHover } }}>
                 <Search sx={{ fontSize: 16 }} />
               </IconButton>
+              <NotificationBell />
               <IconButton size="small" sx={{ color: c.text3, width: 28, height: 28, '&:hover': { color: c.text1, bgcolor: c.navHover } }}>
                 <Settings sx={{ fontSize: 16 }} />
               </IconButton>
@@ -252,7 +266,7 @@ export default function FrontLayout() {
 
         {/* ---- 中部：任务 + 空间 列表 ---- */}
         <Box sx={{ flex: 1, overflow: 'auto', py: 1, px: 1.5 }}>
-          {/* 任务（纯聊天） */}
+          {/* 任务（纯聊天，workspace_name 为空） */}
           <Box sx={{ mb: 1 }}>
             <Box
               onClick={() => setTasksExpanded(!tasksExpanded)}
@@ -268,37 +282,51 @@ export default function FrontLayout() {
                   任务
                 </Typography>
                 <Typography variant="caption" sx={{ fontSize: 10, color: c.text3 }}>
-                  ({MOCK_TASKS.length})
+                  ({tasks.length})
                 </Typography>
               </Box>
               {tasksExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
             </Box>
             <Collapse in={tasksExpanded}>
               <List dense disablePadding sx={{ pl: 1 }}>
-                {MOCK_TASKS.map((task) => (
-                  <ListItemButton
-                    key={task.id}
-                    selected={activeId === task.id}
-                    onClick={() => { setActiveId(task.id); navigate(`/chat/${task.id}`); }}
-                    sx={{
-                      borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25,
-                      '&.Mui-selected': { bgcolor: c.navActive },
-                      '&:hover': { bgcolor: c.navHover },
-                    }}
-                  >
-                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: c.accent, mr: 1.5, flexShrink: 0 }} />
-                    <ListItemText
-                      primary={task.title}
-                      slotProps={{ primary: { sx: { fontSize: 12.5, color: c.text1 }, noWrap: true } }}
-                    />
-                    <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>{task.time}</Typography>
-                  </ListItemButton>
-                ))}
+                {tasks.length === 0 ? (
+                  <Box sx={{ py: 2, px: 1.5 }}>
+                    <Typography sx={{ fontSize: 12, color: c.text3 }}>暂无对话</Typography>
+                  </Box>
+                ) : (
+                  tasks.map((session) => (
+                    <ListItemButton
+                      key={session.id}
+                      selected={activeId === session.id}
+                      onClick={() => { setActiveId(session.id); navigate(`/chat/${session.id}`); }}
+                      sx={{
+                        borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25,
+                        '&.Mui-selected': { bgcolor: c.navActive },
+                        '&:hover': { bgcolor: c.navHover },
+                      }}
+                    >
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: c.accent, mr: 1.5, flexShrink: 0 }} />
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {session.shared_from && (
+                              <Share sx={{ fontSize: 11, color: session.readonly ? '#9ca3af' : c.accent, flexShrink: 0 }} />
+                            )}
+                            <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
+                          </Box>
+                        }
+                      />
+                      <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
+                        {session.last_message_at ? relativeTime(session.last_message_at) : ''}
+                      </Typography>
+                    </ListItemButton>
+                  ))
+                )}
               </List>
             </Collapse>
           </Box>
 
-          {/* 空间（关联项目文件夹的对话） */}
+          {/* 空间（按 workspace_name 分组） */}
           <Box>
             <Box
               onClick={() => setSpacesExpanded(!spacesExpanded)}
@@ -314,27 +342,27 @@ export default function FrontLayout() {
                   空间
                 </Typography>
                 <Typography variant="caption" sx={{ fontSize: 10, color: c.text3 }}>
-                  ({MOCK_SPACES.length})
+                  ({spaces.length})
                 </Typography>
               </Box>
               {spacesExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
             </Box>
             <Collapse in={spacesExpanded}>
-              {MOCK_SPACES.map((space) => (
-                <Box key={space.id} sx={{ pl: 1 }}>
+              {spaces.map(([spaceName, spaceSessions]) => (
+                <Box key={spaceName} sx={{ pl: 1 }}>
                   {/* 空间标题 */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 0.75 }}>
-                    <Box sx={{ color: '#f59e0b' }}>{space.icon}</Box>
-                    <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1 }}>{space.name}</Typography>
+                    <Box sx={{ color: '#f59e0b' }}><Folder sx={{ fontSize: 16 }} /></Box>
+                    <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1 }}>{spaceName}</Typography>
                     <ExpandMore sx={{ fontSize: 14, color: c.text3, ml: 'auto' }} />
                   </Box>
                   {/* 空间下的对话 */}
                   <List dense disablePadding sx={{ pl: 2 }}>
-                    {space.conversations.map((conv) => (
+                    {spaceSessions.map((session: any) => (
                       <ListItemButton
-                        key={conv.id}
-                        selected={activeId === conv.id}
-                        onClick={() => { setActiveId(conv.id); navigate(`/chat/${conv.id}`); }}
+                        key={session.id}
+                        selected={activeId === session.id}
+                        onClick={() => { setActiveId(session.id); navigate(`/chat/${session.id}`); }}
                         sx={{
                           borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25,
                           '&.Mui-selected': { bgcolor: c.navActive },
@@ -343,10 +371,18 @@ export default function FrontLayout() {
                       >
                         <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b', mr: 1.5, flexShrink: 0 }} />
                         <ListItemText
-                          primary={conv.title}
-                          slotProps={{ primary: { sx: { fontSize: 12.5, color: c.text1 }, noWrap: true } }}
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              {session.shared_from && (
+                                <Share sx={{ fontSize: 11, color: session.readonly ? '#9ca3af' : c.accent, flexShrink: 0 }} />
+                              )}
+                              <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
+                            </Box>
+                          }
                         />
-                        <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>{conv.time}</Typography>
+                        <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
+                          {session.last_message_at ? relativeTime(session.last_message_at) : ''}
+                        </Typography>
                       </ListItemButton>
                     ))}
                   </List>

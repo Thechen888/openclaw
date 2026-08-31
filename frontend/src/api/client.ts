@@ -430,15 +430,25 @@ export const workspaceApi = {
 export const chatApi = {
   sessions: {
     list: (params?: ListParams) => api.get('/chat/sessions', { params }),
+    get: (id: string) => api.get(`/chat/sessions/${id}`),
     create: (data: any) => api.post('/chat/sessions', data),
     update: (id: string, data: any) => api.put(`/chat/sessions/${id}`, data),
     delete: (id: string) => api.delete(`/chat/sessions/${id}`),
+    share: (id: string, data: { recipient_ids: string[]; mode: 'view' | 'continue'; scope: 'session' | 'message'; message_id?: string; note?: string }) =>
+      api.post(`/chat/sessions/${id}/share`, data),
   },
   messages: {
     list: (sessionId: string) => api.get(`/chat/sessions/${sessionId}/messages`),
     send: (sessionId: string, content: string) =>
       api.post(`/chat/sessions/${sessionId}/messages`, { content }),
   },
+};
+
+export const notificationsApi = {
+  list: () => api.get('/notifications'),
+  markRead: (id: string) => api.post(`/notifications/${id}/read`),
+  markAllRead: () => api.post('/notifications/read-all'),
+  create: (data: any) => api.post('/notifications', data),
 };
 
 export const tokenResaleApi = {

@@ -4,7 +4,7 @@ import {
   Box, Typography, Paper, Avatar, TextField, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem, Switch, Button,
   List, ListItemButton, ListItemText,
-  Collapse,
+  Collapse, CircularProgress,
 } from '@mui/material';
 import {
   Send, SmartToy, Person, Add, Mic, KeyboardArrowDown,
@@ -14,142 +14,17 @@ import {
   ExpandMore, ExpandLess, Description, Score,
   AttachFile, Extension, MenuBook, Code,
 } from '@mui/icons-material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSnackbar } from 'notistack';
+import { chatApi } from '../../api/client';
+import ShareDialog from './ShareDialog';
 
-// =================== Mock 对话数据 ===================
-const MOCK_CONVERSATIONS: Record<string, {
-  title: string;
-  messages: {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    time?: string;
-    tokens?: number;
-    model?: string;
-    attachments?: { name: string; type: string }[];
-    sources?: { doc_name: string; score: number; content: string }[];
-  }[];
-}> = {
-  t1: {
-    title: '你好',
-    messages: [
-      { id: 'm1', role: 'user', content: '你好', time: '2小时前' },
-      {
-        id: 'm2', role: 'assistant',
-        content: `你好！在继续之前，我想先跟你确认几个关于"我们俩"的小细节，方便以后交流起来更顺畅。
-
-**关于我：**
-1. **我叫什么** — 你想给我起个名字吗？还是你有已经习惯叫的？
-2. **我是什么** — AI 助手？赛博搭子？还是更有趣的什么？
-3. **风格** — 你喜欢正式一点、轻松随意、还是温暖话多型？
-4. **我的性格底色** — 有什么价值观或边界是你希望我始终坚持的？
-
-**关于你：**
-5. **怎么称呼你** — 名字或者昵称都行
-6. **你在哪个城市** — 方便我留意时区和生活相关的事
-7. **你最近在忙什么** — 工作、项目、兴趣都算，让我能更好地帮上忙
-
-不用一次性全答完，想到什么说什么就行。你也可以直接说"你看着办"，我会自己挑几个合适的设定 😊`,
-        time: '2小时前', tokens: 3.28, model: 'Auto',
-      },
-    ],
-  },
-  c1: {
-    title: 'AI Agent管理平台代码审查与架构图生成',
-    messages: [
-      { id: 'm1', role: 'user', content: '请审查 openclaw-main 项目的代码架构，并生成一份架构图', time: '5小时前' },
-      {
-        id: 'm2', role: 'assistant',
-        content: `已完成代码审查，以下是系统架构概览：
-
-\`\`\`mermaid
-field_match · time_window · starlark · model_judgment · approval_gate
-                    │
-                all passed?
-               ╱         ╲
-             no           yes
-             ↓             ↓
-          [skip]      Execute actions sequentially
-                      each step logged with input/output summary, duration, cost
-                             │
-              ┌──────────────┼──────────────┐
-              ↓              ↓              ↓
-         call_model     call_skill     connector    trigger_agent
-         via Gateway    Starlark       query/write  async goroutine
-                        sandbox        / IM
-              └──────────────┼──────────────┘
-                             ↓
-                        step ok?
-                       ╱        
-                    fail         ok
-                     ↓            ↓
-              [stop/skip/    Merge output into action context
-               retry/        next step can read step_N_* and last_output
-               continue]            │
-              OnFailure             ↓
-              strategy        Finalize execution
-                              status=completed, update agent last_run_at
-\`\`\`
-
-审查要点：
-1. **Gateway 层**：统一入口，负责路由分发和鉴权
-2. **Starlark 沙箱**：安全执行用户自定义脚本
-3. **Connector 模块**：对接外部 IM 平台
-4. **Trigger Agent**：异步触发机制，支持事件驱动
-
-已生成完整的架构审查报告，请查看附件。`,
-        time: '5小时前', tokens: 77.9, model: 'Auto',
-        attachments: [{ name: 'architecture-review-report.html', type: 'html' }],
-      },
-    ],
-  },
-  c2: {
-    title: '生成项目功能介绍',
-    messages: [
-      { id: 'm1', role: 'user', content: '请为 openclaw-main 项目生成一份功能介绍文档', time: '1天前' },
-      {
-        id: 'm2', role: 'assistant',
-        content: `# OpenClaw AI 平台 — 功能介绍
-
-## 平台概述
-OpenClaw 是一个企业级 AI 智能体管理平台，提供对话式 AI、工作流编排、知识库管理等核心能力。
-
-## 核心模块
-
-### 1. 智能体管理
-- **对话 Agent**：支持多模型切换、Max 模式深度推理
-- **工作流 Agent**：可视化编排，支持 Starlark 脚本扩展
-- **协作授权**：支持个人/组织级别的权限管理
-
-### 2. 知识库（RAG）
-- 文档上传与自动切片
-- FAQ 自动生成与管理
-- Wiki 知识库
-- 检索测试与调优
-
-### 3. 报告中心
-- 智能周报自动生成
-- 多数据源接入
-- 模板构筑器
-
-### 4. 连接器
-- 聊天适配器（微信、钉钉、飞书等）
-- Starlark 适配器
-- 第三方系统对接
-
-### 5. 模型管理
-- 多模型源接入
-- 模型策略配置
-- 调用日志与成本统计
-
-## 技术栈
-- **前端**：React 18 + TypeScript + MUI v6
-- **后端**：Go + Gin + PostgreSQL
-- **AI**：支持 Qwen、GLM、Kimi、DeepSeek 等主流模型`,
-        time: '1天前', tokens: 45.6, model: 'Auto',
-      },
-    ],
-  },
-};
+// =================== 相对时间 ===================
+function formatTime(dateStr?: string) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 // =================== 公共数据 ===================
 const MODELS = [
@@ -280,8 +155,15 @@ function SourcesPanel({ sources }: { sources: any[] }) {
 // =================== 主组件 ===================
 export default function ConversationPage() {
   const { sessionId } = useParams();
+  const { enqueueSnackbar } = useSnackbar();
+  const qc = useQueryClient();
   const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 分享弹窗
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareMsg, setShareMsg] = useState<{ id: string; content: string } | undefined>();
 
   // + 菜单
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
@@ -312,12 +194,50 @@ export default function ConversationPage() {
   const [permAnchor, setPermAnchor] = useState<null | HTMLElement>(null);
   const [selectedPerm, setSelectedPerm] = useState('default');
 
-  const conversation = sessionId ? MOCK_CONVERSATIONS[sessionId] : null;
+  // API 查询：会话信息
+  const { data: sessionData, isLoading: sessionLoading } = useQuery({
+    queryKey: ['chat-session', sessionId],
+    queryFn: () => chatApi.sessions.get(sessionId!),
+    enabled: !!sessionId,
+  });
+  const session: any = sessionData?.data?.data;
+
+  // API 查询：消息列表
+  const { data: messagesData, isLoading: messagesLoading } = useQuery({
+    queryKey: ['chat-messages', sessionId],
+    queryFn: () => chatApi.messages.list(sessionId!),
+    enabled: !!sessionId,
+  });
+  const messages: any[] = messagesData?.data?.data || [];
+
+  const isReadonly = session?.readonly === true;
+  const sharedFrom = session?.shared_from;
   const currentModel = MODELS.find(m => m.id === selectedModel) || MODELS[0];
+
+  // 发送消息 mutation
+  const sendMut = useMutation({
+    mutationFn: (content: string) => chatApi.messages.send(sessionId!, content),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['chat-messages', sessionId] });
+      qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+      setSending(false);
+    },
+    onError: () => {
+      enqueueSnackbar('发送失败', { variant: 'error' });
+      setSending(false);
+    },
+  });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation?.messages.length]);
+  }, [messages.length]);
+
+  const handleSend = () => {
+    if (!input.trim() || sending || isReadonly) return;
+    setSending(true);
+    sendMut.mutate(input.trim());
+    setInput('');
+  };
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkills(prev => prev.includes(skillId) ? prev.filter(id => id !== skillId) : [...prev, skillId]);
@@ -335,7 +255,26 @@ export default function ConversationPage() {
     }
   };
 
-  if (!conversation) {
+  const openShareDialog = (msg?: { id: string; content: string }) => {
+    if (msg) {
+      setShareMsg(msg);
+    } else {
+      setShareMsg(undefined);
+    }
+    setShareOpen(true);
+  };
+
+  // 加载态
+  if (sessionLoading || messagesLoading) {
+    return (
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress size={28} sx={{ color: '#6366f1' }} />
+      </Box>
+    );
+  }
+
+  // 会话不存在
+  if (!session) {
     return (
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography color="text.secondary">对话不存在</Typography>
@@ -347,71 +286,132 @@ export default function ConversationPage() {
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* 标题栏 */}
       <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 700, flex: 1 }}>{conversation.title}</Typography>
+        <Typography sx={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
+          {session.title}
+        </Typography>
+        {isReadonly && (
+          <Chip label="只读分享" size="small" sx={{ height: 22, fontSize: 11, bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 500 }} />
+        )}
+        <Tooltip title="发送给同事">
+          <IconButton size="small" onClick={() => openShareDialog()} sx={{ color: 'text.secondary', '&:hover': { color: '#6366f1' } }}>
+            <Share sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* 消息区域 */}
       <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 3 }}>
-        {conversation.messages.map((msg) => (
-          <Box key={msg.id} sx={{
-            display: 'flex', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-            mb: 3, gap: 1.5, maxWidth: msg.role === 'user' ? '70%' : '85%',
-            ml: msg.role === 'user' ? 'auto' : 0,
+        {/* 转交/分享横幅 */}
+        {sharedFrom && (
+          <Box sx={{
+            mb: 3, px: 2.5, py: 2, borderRadius: 2,
+            bgcolor: 'rgba(99,102,241,0.06)',
+            border: '1px solid', borderColor: 'rgba(99,102,241,0.15)',
+            display: 'flex', alignItems: 'flex-start', gap: 1.5,
           }}>
-            <Avatar sx={{
-              width: 32, height: 32, flexShrink: 0, fontSize: 13,
-              bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
-              border: msg.role === 'assistant' ? '1px solid' : 'none',
-              borderColor: 'divider',
-            }}>
-              {msg.role === 'user' ? <Person sx={{ fontSize: 16 }} /> : <SmartToy sx={{ fontSize: 16 }} />}
-            </Avatar>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Paper elevation={0} sx={{
-                p: 2, bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
-                color: msg.role === 'user' ? 'white' : 'text.primary', borderRadius: 2,
-              }}>
-                {msg.role === 'user' ? (
-                  <Typography sx={{ fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</Typography>
-                ) : renderContent(msg.content)}
-              </Paper>
-
-              {msg.attachments && msg.attachments.length > 0 && (
-                <Box sx={{ mt: 1.5 }}>
-                  {msg.attachments.map((att, idx) => (
-                    <Box key={idx} sx={{
-                      display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderRadius: 1.5,
-                      bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider', mb: 0.5, cursor: 'pointer',
-                      '&:hover': { bgcolor: 'action.selected' },
-                    }}>
-                      <InsertDriveFile sx={{ fontSize: 18, color: '#6366f1' }} />
-                      <Typography sx={{ fontSize: 12.5, fontWeight: 500, flex: 1 }}>{att.name}</Typography>
-                      <OpenInNew sx={{ fontSize: 14, color: 'text.secondary' }} />
-                    </Box>
-                  ))}
-                </Box>
+            <Share sx={{ fontSize: 18, color: '#6366f1', mt: 0.25, flexShrink: 0 }} />
+            <Box>
+              <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#6366f1' }}>
+                本对话由 {sharedFrom.name} {isReadonly ? '分享' : '转交'}
+              </Typography>
+              {sharedFrom.note && (
+                <Typography sx={{ fontSize: 12.5, color: 'text.secondary', mt: 0.5, lineHeight: 1.6 }}>
+                  附言：{sharedFrom.note}
+                </Typography>
               )}
-
-              {msg.role === 'assistant' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-                  <Tooltip title="复制"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ContentCopy sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                  <Tooltip title="有用"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ThumbUp sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                  <Tooltip title="无用"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ThumbDown sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                  <Tooltip title="分享"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><Share sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                  <Tooltip title="更多"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><MoreHoriz sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                  <Box sx={{ flex: 1 }} />
-                  <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>共消耗 ◇ {msg.tokens?.toFixed(1)}</Typography>
-                  <Typography sx={{ fontSize: 11, color: 'text.secondary', ml: 1 }}>{msg.model} {msg.time}</Typography>
-                </Box>
-              )}
-              {msg.role === 'assistant' && msg.sources && <SourcesPanel sources={msg.sources} />}
             </Box>
           </Box>
-        ))}
+        )}
+
+        {messages.length === 0 ? (
+          <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <ChatBubbleOutlined sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+            <Typography color="text.secondary">暂无消息</Typography>
+          </Box>
+        ) : (
+          messages.map((msg: any) => (
+            <Box key={msg.id} sx={{
+              display: 'flex', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+              mb: 3, gap: 1.5, maxWidth: msg.role === 'user' ? '70%' : '85%',
+              ml: msg.role === 'user' ? 'auto' : 0,
+            }}>
+              <Avatar sx={{
+                width: 32, height: 32, flexShrink: 0, fontSize: 13,
+                bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
+                border: msg.role === 'assistant' ? '1px solid' : 'none',
+                borderColor: 'divider',
+              }}>
+                {msg.role === 'user' ? <Person sx={{ fontSize: 16 }} /> : <SmartToy sx={{ fontSize: 16 }} />}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Paper elevation={0} sx={{
+                  p: 2, bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
+                  color: msg.role === 'user' ? 'white' : 'text.primary', borderRadius: 2,
+                }}>
+                  {msg.role === 'user' ? (
+                    <Typography sx={{ fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</Typography>
+                  ) : renderContent(msg.content)}
+                </Paper>
+
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <Box sx={{ mt: 1.5 }}>
+                    {msg.attachments.map((att: any, idx: number) => (
+                      <Box key={idx} sx={{
+                        display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderRadius: 1.5,
+                        bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider', mb: 0.5, cursor: 'pointer',
+                        '&:hover': { bgcolor: 'action.selected' },
+                      }}>
+                        <InsertDriveFile sx={{ fontSize: 18, color: '#6366f1' }} />
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 500, flex: 1 }}>{att.name}</Typography>
+                        <OpenInNew sx={{ fontSize: 14, color: 'text.secondary' }} />
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                {msg.role === 'assistant' && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                    <Tooltip title="复制"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ContentCopy sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+                    <Tooltip title="有用"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ThumbUp sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+                    <Tooltip title="无用"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ThumbDown sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+                    <Tooltip title="分享"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }} onClick={() => openShareDialog({ id: msg.id, content: msg.content })}><Share sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+                    <Tooltip title="更多"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><MoreHoriz sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+                    <Box sx={{ flex: 1 }} />
+                    {msg.tokens != null && <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>共消耗 ◇ {Number(msg.tokens).toFixed(1)}</Typography>}
+                    {msg.model && <Typography sx={{ fontSize: 11, color: 'text.secondary', ml: 0.5 }}>{msg.model}</Typography>}
+                    {msg.created_at && <Typography sx={{ fontSize: 11, color: 'text.secondary', ml: 0.5 }}>{formatTime(msg.created_at)}</Typography>}
+                  </Box>
+                )}
+                {msg.role === 'assistant' && msg.sources && <SourcesPanel sources={msg.sources} />}
+              </Box>
+            </Box>
+          ))
+        )}
+
+        {/* AI 正在思考 */}
+        {sending && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, ml: 5.5 }}>
+            <CircularProgress size={16} sx={{ color: '#6366f1' }} />
+            <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>AI 正在思考...</Typography>
+          </Box>
+        )}
         <div ref={messagesEndRef} />
       </Box>
 
-      {/* ===== 输入区域（与 ChatPage 完全一致） ===== */}
+      {/* ===== 只读模式提示 ===== */}
+      {isReadonly ? (
+        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <Box sx={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+            py: 1.5, px: 2, borderRadius: 2,
+            bgcolor: 'rgba(99,102,241,0.06)', border: '1px solid', borderColor: 'rgba(99,102,241,0.12)',
+          }}>
+            <ChatBubbleOutlined sx={{ fontSize: 16, color: '#6366f1' }} />
+            <Typography sx={{ fontSize: 13, color: '#6366f1' }}>该对话为只读分享，仅可查看</Typography>
+          </Box>
+        </Box>
+      ) : (
+      /* ===== 输入区域（与 ChatPage 完全一致） ===== */
       <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         {/* 已选内容标签 */}
         {(attachedFiles.length > 0 || selectedSkills.length > 0 || selectedKBs.length > 0) && (
@@ -459,7 +459,8 @@ export default function ConversationPage() {
           <TextField
             fullWidth multiline maxRows={6} value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setInput(''); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            disabled={sending}
             placeholder="今天帮你做些什么？@引用对话文件，/调用技能与指令"
             sx={{
               '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
@@ -511,14 +512,17 @@ export default function ConversationPage() {
             </Box>
 
             {/* 发送 */}
-            <Box sx={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 2,
-              cursor: input.trim() ? 'pointer' : 'default',
-              bgcolor: input.trim() ? '#6366f1' : 'action.disabledBackground',
-              color: input.trim() ? 'white' : 'text.disabled', transition: 'all 0.2s',
-              '&:hover': { bgcolor: input.trim() ? '#4f46e5' : undefined },
-              boxShadow: input.trim() ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
-            }}><Send sx={{ fontSize: 15 }} /></Box>
+            <Box
+              onClick={handleSend}
+              sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 2,
+                cursor: input.trim() && !sending ? 'pointer' : 'default',
+                bgcolor: input.trim() && !sending ? '#6366f1' : 'action.disabledBackground',
+                color: input.trim() && !sending ? 'white' : 'text.disabled', transition: 'all 0.2s',
+                '&:hover': { bgcolor: input.trim() && !sending ? '#4f46e5' : undefined },
+                boxShadow: input.trim() && !sending ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
+              }}
+            ><Send sx={{ fontSize: 15 }} /></Box>
           </Box>
         </Paper>
 
@@ -544,6 +548,7 @@ export default function ConversationPage() {
           </Box>
         </Box>
       </Box>
+      )}
 
       {/* ===== + 弹出菜单 ===== */}
       <Menu anchorEl={plusAnchor} open={plusMenuOpen} onClose={() => { setPlusMenuOpen(false); setPlusSubMenu(null); }}
@@ -709,6 +714,15 @@ export default function ConversationPage() {
           <ExpandLess sx={{ fontSize: 18, color: 'text.secondary' }} />
         </Box>
       </Menu>
+
+      {/* ===== 分享弹窗 ===== */}
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => { setShareOpen(false); setShareMsg(undefined); }}
+        sessionId={sessionId!}
+        sessionTitle={session?.title || ''}
+        message={shareMsg}
+      />
     </Box>
   );
 }

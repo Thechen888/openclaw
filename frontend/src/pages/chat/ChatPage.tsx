@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import {
   Box, TextField, Typography, Paper, Chip, Avatar,
   CircularProgress, Divider, Menu, MenuItem,
@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { useNavigate } from 'react-router-dom';
 import { chatApi, ragApi, modelPoliciesApi } from '../../api/client';
 
 // =================== Markdown渲染 ===================
@@ -148,6 +149,7 @@ const PERMISSIONS = [
 export default function ChatPage() {
   const { enqueueSnackbar } = useSnackbar();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [pendingMsg, setPendingMsg] = useState('');
@@ -207,6 +209,7 @@ export default function ChatPage() {
     setPendingMsg(content);
 
     let sessionId = selectedSession;
+    const isNewSession = !sessionId;
     if (!sessionId) {
       try {
         const res = await chatApi.sessions.create({
@@ -230,6 +233,10 @@ export default function ChatPage() {
       await chatApi.messages.send(sessionId, content);
       setPendingMsg('');
       qc.invalidateQueries({ queryKey: ['chat-messages', sessionId] });
+      if (isNewSession) {
+        navigate('/chat/' + sessionId);
+        return;
+      }
     } catch {
       enqueueSnackbar('发送失败', { variant: 'error' });
       setPendingMsg('');
