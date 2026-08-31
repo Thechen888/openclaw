@@ -166,7 +166,7 @@ const chatSessions: any[] = [
   // 分享会话（只读）
   { id: 'cs-shared-1', title: '【分享】CRM销售话术讨论', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: true, shared_from: { name: '李思', note: '这段分析你看看，下次评审用得上' }, message_count: 3, created_at: ago(60), updated_at: ago(50), last_message_at: ago(50) },
   // 群组会话
-  { id: 'grp-1', title: '销售预测平台攻坚群', user_id: 'u-1', session_type: 'group', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], agent_ids: ['ag-1'], skill_ids: ['sk-1'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40) },
+  { id: 'grp-1', title: '销售预测平台攻坚群', user_id: 'u-1', session_type: 'group', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40) },
 ];
 
 const chatMessages: Record<string, any[]> = {
@@ -536,8 +536,6 @@ export function handleMockRequest(method: string, url: string, params: any, data
         shared_from: { name: '张伟', note: d.note || '' },
         session_type: source?.session_type, creator_id: source?.creator_id,
         member_ids: source?.member_ids ? [...source.member_ids] : undefined,
-        agent_ids: source?.agent_ids ? [...source.agent_ids] : undefined,
-        skill_ids: source?.skill_ids ? [...source.skill_ids] : undefined,
         message_count: msgs.length, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString(),
       });
       chatMessages[newId] = msgs.map(msg => ({ ...msg, id: msg.id + '-copy-' + idx }));

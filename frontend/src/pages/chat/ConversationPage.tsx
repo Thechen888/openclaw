@@ -1142,7 +1142,7 @@ export default function ConversationPage() {
                 <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1 }}>群组信息</Typography>
                 {/* 权限上下文 */}
                 <Typography sx={{ fontSize: 11, color: 'info.main', mb: 1.5, lineHeight: 1.5 }}>
-                  本群 AI 调用使用创建人权限
+                  本群 AI 调用使用创建人（{getUserName(session?.creator_id) || '张伟'}）的全部权限
                 </Typography>
                 {/* 成员 */}
                 <Typography sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>成员</Typography>
@@ -1170,28 +1170,6 @@ export default function ConversationPage() {
                     );
                   })}
                 </Box>
-                {/* 本群可用 Agent */}
-                <Typography sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>本群可用 Agent</Typography>
-                {(session?.agent_ids?.length ?? 0) > 0 ? (
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
-                    {session.agent_ids.map((aid: string) => (
-                      <Chip key={aid} label={aid} size="small" sx={{ fontSize: 11, height: 22, bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1' }} />
-                    ))}
-                  </Box>
-                ) : (
-                  <Typography sx={{ fontSize: 11, color: 'text.disabled', mb: 1.5 }}>未配置</Typography>
-                )}
-                {/* 本群可用技能 */}
-                <Typography sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>本群可用技能</Typography>
-                {(session?.skill_ids?.length ?? 0) > 0 ? (
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {session.skill_ids.map((sid: string) => (
-                      <Chip key={sid} label={sid} size="small" sx={{ fontSize: 11, height: 22, bgcolor: 'rgba(245,158,11,0.1)', color: '#f59e0b' }} />
-                    ))}
-                  </Box>
-                ) : (
-                  <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>未配置</Typography>
-                )}
               </Box>
             )}
 

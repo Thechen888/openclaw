@@ -8,7 +8,7 @@ import { Close, Search } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
-import { chatApi, usersApi, agentsApi, skillsApi } from '../../api/client';
+import { chatApi, usersApi } from '../../api/client';
 
 interface NewGroupDialogProps {
   open: boolean;
@@ -24,8 +24,6 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<any[]>([]);
-  const [selectedAgents, setSelectedAgents] = useState<any[]>([]);
-  const [selectedSkills, setSelectedSkills] = useState<any[]>([]);
 
   // 防抖搜索
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -43,22 +41,6 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
   const availableUsers: any[] = (usersData?.data?.data || []).filter(
     (u: any) => u.id !== 'u-1' && !selectedMembers.some((s) => s.id === u.id)
   );
-
-  // 已安装 Agent
-  const { data: agentsData } = useQuery({
-    queryKey: ['new-group-agents'],
-    queryFn: () => agentsApi.list({ page: 1, page_size: 50 }),
-    enabled: open,
-  });
-  const availableAgents: any[] = agentsData?.data?.data || [];
-
-  // 已安装技能
-  const { data: skillsData } = useQuery({
-    queryKey: ['new-group-skills'],
-    queryFn: () => skillsApi.installed({ page: 1, page_size: 50 }),
-    enabled: open,
-  });
-  const availableSkills: any[] = skillsData?.data?.data || [];
 
   // 创建群组
   const createMut = useMutation({
@@ -80,8 +62,6 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
     setSearchText('');
     setDebouncedSearch('');
     setSelectedMembers([]);
-    setSelectedAgents([]);
-    setSelectedSkills([]);
     onClose();
   };
 
@@ -92,8 +72,6 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
       session_type: 'group',
       creator_id: 'u-1',
       member_ids: ['u-1', ...selectedMembers.map((m) => m.id)],
-      agent_ids: selectedAgents.map((a) => a.id),
-      skill_ids: selectedSkills.map((s) => s.id),
     });
   };
 
@@ -202,76 +180,12 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
             </Box>
           )}
         </Box>
-
-        {/* 本群可用 Agent */}
-        <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>本群可用 Agent（可选）</Typography>
-          {availableAgents.length > 0 ? (
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {availableAgents.map((a) => {
-                const selected = selectedAgents.some((s) => s.id === a.id);
-                return (
-                  <Chip
-                    key={a.id}
-                    label={a.name}
-                    size="small"
-                    onClick={() => {
-                      if (selected) setSelectedAgents((prev) => prev.filter((x) => x.id !== a.id));
-                      else setSelectedAgents((prev) => [...prev, a]);
-                    }}
-                    sx={{
-                      bgcolor: selected ? 'rgba(99,102,241,0.15)' : 'action.hover',
-                      color: selected ? '#6366f1' : 'text.secondary',
-                      fontWeight: selected ? 600 : 400, fontSize: 12,
-                      border: '1px solid', borderColor: selected ? '#6366f1' : 'divider',
-                      cursor: 'pointer',
-                    }}
-                  />
-                );
-              })}
-            </Box>
-          ) : (
-            <Typography sx={{ fontSize: 12, color: 'text.disabled' }}>暂无可用 Agent</Typography>
-          )}
-        </Box>
-
-        {/* 本群可用技能 */}
-        <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>本群可用技能（可选）</Typography>
-          {availableSkills.length > 0 ? (
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {availableSkills.map((s) => {
-                const selected = selectedSkills.some((x) => x.id === s.id);
-                return (
-                  <Chip
-                    key={s.id}
-                    label={s.name}
-                    size="small"
-                    onClick={() => {
-                      if (selected) setSelectedSkills((prev) => prev.filter((x) => x.id !== s.id));
-                      else setSelectedSkills((prev) => [...prev, s]);
-                    }}
-                    sx={{
-                      bgcolor: selected ? 'rgba(99,102,241,0.15)' : 'action.hover',
-                      color: selected ? '#6366f1' : 'text.secondary',
-                      fontWeight: selected ? 600 : 400, fontSize: 12,
-                      border: '1px solid', borderColor: selected ? '#6366f1' : 'divider',
-                      cursor: 'pointer',
-                    }}
-                  />
-                );
-              })}
-            </Box>
-          ) : (
-            <Typography sx={{ fontSize: 12, color: 'text.disabled' }}>暂无可用技能</Typography>
-          )}
-        </Box>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2, flexDirection: 'column', alignItems: 'stretch', gap: 1.5 }}>
         {/* 权限说明 */}
         <Typography sx={{ fontSize: 11, color: 'info.main', lineHeight: 1.6 }}>
-          本群中 AI 的调用将使用创建人（你）的全部权限，群成员均可发起对话。
+          本群 AI 可使用你（创建人）有权限的全部 Agent、技能与连接器工具，群成员均可发起对话。
         </Typography>
         <Button
           onClick={handleCreate}

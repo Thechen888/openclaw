@@ -216,7 +216,7 @@ export default function FrontLayout() {
             onClick={() => { setActiveId(''); navigate('/chat'); }}
             sx={{
               display: 'flex', alignItems: 'center', gap: 1,
-              px: 1.5, py: 1, borderRadius: 2, mb: 1.5,
+              px: 1.5, py: 1, borderRadius: 2, mb: 1,
               bgcolor: c.accent, color: 'white',
               cursor: 'pointer', fontWeight: 600, fontSize: 13,
               boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
@@ -226,6 +226,23 @@ export default function FrontLayout() {
           >
             <Add sx={{ fontSize: 18 }} />
             <Typography sx={{ fontWeight: 600, fontSize: 13 }}>新建对话</Typography>
+          </Box>
+
+          {/* 新建群组按钮 */}
+          <Box
+            onClick={() => setNewGroupOpen(true)}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              px: 1.5, py: 1, borderRadius: 2, mb: 1.5,
+              border: '1px solid', borderColor: c.border,
+              bgcolor: 'transparent', color: c.text2,
+              cursor: 'pointer', fontWeight: 500, fontSize: 13,
+              transition: 'all 0.2s',
+              '&:hover': { borderColor: c.accent, color: c.accent },
+            }}
+          >
+            <Groups sx={{ fontSize: 16 }} />
+            <Typography sx={{ fontWeight: 500, fontSize: 13 }}>新建群组</Typography>
           </Box>
 
           {/* 导航分区：三模块九页 + 知识库/技能/Token转售（均可折叠） */}
@@ -437,13 +454,15 @@ export default function FrontLayout() {
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                <Box
-                  component="span"
-                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); setNewGroupOpen(true); }}
-                  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: c.navHover }, color: c.text3 }}
-                >
-                  <Add sx={{ fontSize: 14 }} />
-                </Box>
+                <Tooltip title="新建群组" placement="right">
+                  <Box
+                    component="span"
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); setNewGroupOpen(true); }}
+                    sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: c.navHover, color: c.accent }, color: c.text3 }}
+                  >
+                    <Add sx={{ fontSize: 14 }} />
+                  </Box>
+                </Tooltip>
                 {groupsExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
               </Box>
             </Box>
@@ -451,7 +470,10 @@ export default function FrontLayout() {
               <List dense disablePadding sx={{ pl: 1 }}>
                 {groupSessions.length === 0 ? (
                   <Box sx={{ py: 2, px: 1.5 }}>
-                    <Typography sx={{ fontSize: 12, color: c.text3 }}>暂无群组</Typography>
+                    <Typography
+                      onClick={() => setNewGroupOpen(true)}
+                      sx={{ fontSize: 12, color: c.accent, cursor: 'pointer', '&:hover': { color: '#4f46e5' } }}
+                    >+ 创建群组</Typography>
                   </Box>
                 ) : (
                   groupSessions.map((session) => (
