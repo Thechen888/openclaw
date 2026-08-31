@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Box, Typography, Paper, Avatar, TextField, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem, Switch, Button,
   List, ListItemButton, ListItemText,
-  Collapse, CircularProgress,
+  Collapse, CircularProgress, Drawer,
 } from '@mui/material';
 import {
   Send, SmartToy, Person, Add, Mic, KeyboardArrowDown,
@@ -13,6 +13,8 @@ import {
   ChatBubbleOutlined, AutoFixHigh, CheckCircle,
   ExpandMore, ExpandLess, Description, Score,
   AttachFile, Extension, MenuBook, Code,
+  AccessTime, LastPage, KeyboardArrowUp,
+  Download,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -183,6 +185,25 @@ export default function ConversationPage() {
   // 语音
   const [isRecording, setIsRecording] = useState(false);
 
+  // 搜索对话内容
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchCurrentIdx, setSearchCurrentIdx] = useState(0);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
+
+  // 历史提问菜单
+  const [historyAnchor, setHistoryAnchor] = useState<null | HTMLElement>(null);
+  const [flashMsgId, setFlashMsgId] = useState<string | null>(null);
+
+  // 右栏概览面板
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+  // 产物预览 Drawer
+  const [previewArtifact, setPreviewArtifact] = useState<{ name: string; type: string; content: string } | null>(null);
+
+  // 消息 refs（用于 scrollIntoView）
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   // 工作空间
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [workspaceAnchor, setWorkspaceAnchor] = useState<null | HTMLElement>(null);
@@ -264,6 +285,63 @@ export default function ConversationPage() {
     setShareOpen(true);
   };
 
+  // ---- 搜索逻辑 ----
+  const searchResults = useMemo(() => {
+    if (!searchKeyword.trim()) return [];
+    const kw = searchKeyword.toLowerCase();
+    return messages.filter(m => m.content?.toLowerCase().includes(kw));
+  }, [messages, searchKeyword]);
+
+  const scrollToMessage = useCallback((msgId: string) => {
+    const el = msgRefs.current[msgId];
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, []);
+
+  const navigateSearch = (dir: 'prev' | 'next') => {
+    if (searchResults.length === 0) return;
+    let newIdx = dir === 'next' ? searchCurrentIdx + 1 : searchCurrentIdx - 1;
+    if (newIdx < 0) newIdx = searchResults.length - 1;
+    if (newIdx >= searchResults.length) newIdx = 0;
+    setSearchCurrentIdx(newIdx);
+    const msg = searchResults[newIdx];
+    if (msg) {
+      setHighlightedMsgId(msg.id);
+      scrollToMessage(msg.id);
+    }
+  };
+
+  // 搜索关键词变化时重置
+  useEffect(() => {
+    if (searchKeyword) {
+      setSearchCurrentIdx(0);
+      if (searchResults.length > 0) {
+        setHighlightedMsgId(searchResults[0].id);
+        scrollToMessage(searchResults[0].id);
+      }
+    } else {
+      setHighlightedMsgId(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKeyword]);
+
+  // 闪烁高亮
+  const flashMessage = useCallback((msgId: string) => {
+    setFlashMsgId(msgId);
+    scrollToMessage(msgId);
+    setTimeout(() => setFlashMsgId(null), 1200);
+  }, [scrollToMessage]);
+
+  // ---- 产物聚合 ----
+  const allArtifacts = useMemo(() => {
+    const arts: { name: string; type: string; content: string; msgId: string }[] = [];
+    messages.forEach(m => {
+      if (m.attachments) {
+        m.attachments.forEach((a: any) => arts.push({ ...a, msgId: m.id }));
+      }
+    });
+    return arts;
+  }, [messages]);
+
   // 加载态
   if (sessionLoading || messagesLoading) {
     return (
@@ -283,7 +361,9 @@ export default function ConversationPage() {
   }
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+      {/* ===== 左侧主内容区 ===== */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
       {/* 标题栏 */}
       <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <Typography sx={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
@@ -292,9 +372,61 @@ export default function ConversationPage() {
         {isReadonly && (
           <Chip label="只读分享" size="small" sx={{ height: 22, fontSize: 11, bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 500 }} />
         )}
+
+        {/* 工具栏：搜索 */}
+        {searchOpen ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'action.hover', borderRadius: 2, px: 1.5, py: 0.5 }}>
+            <Search sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <input
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="搜索对话内容..."
+              style={{ background: 'none', border: 'none', outline: 'none', color: 'inherit', fontSize: 13, width: 140 }}
+              autoFocus
+            />
+            {searchKeyword && (
+              <>
+                <Typography sx={{ fontSize: 11, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                  {searchResults.length === 0 ? '无结果' : `${searchCurrentIdx + 1} / ${searchResults.length}`}
+                </Typography>
+                <IconButton size="small" onClick={() => navigateSearch('prev')} sx={{ width: 22, height: 22, color: 'text.secondary' }}>
+                  <KeyboardArrowUp sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton size="small" onClick={() => navigateSearch('next')} sx={{ width: 22, height: 22, color: 'text.secondary' }}>
+                  <KeyboardArrowDown sx={{ fontSize: 16 }} />
+                </IconButton>
+              </>
+            )}
+            <IconButton size="small" onClick={() => { setSearchOpen(false); setSearchKeyword(''); setHighlightedMsgId(null); }} sx={{ width: 22, height: 22, color: 'text.secondary' }}>
+              <Close sx={{ fontSize: 14 }} />
+            </IconButton>
+          </Box>
+        ) : (
+          <Tooltip title="搜索对话内容">
+            <IconButton size="small" onClick={() => setSearchOpen(true)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
+              <Search sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        )}
+
+        {/* 工具栏：分享 */}
         <Tooltip title="发送给同事">
-          <IconButton size="small" onClick={() => openShareDialog()} sx={{ color: 'text.secondary', '&:hover': { color: '#6366f1' } }}>
+          <IconButton size="small" onClick={() => openShareDialog()} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
             <Share sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
+
+        {/* 工具栏：历史提问 */}
+        <Tooltip title="历史提问">
+          <IconButton size="small" onClick={(e) => setHistoryAnchor(e.currentTarget)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
+            <AccessTime sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Tooltip>
+
+        {/* 工具栏：展开右栏 */}
+        <Tooltip title={rightPanelOpen ? '收起概览' : '展开概览'}>
+          <IconButton size="small" onClick={() => setRightPanelOpen(!rightPanelOpen)} sx={{ width: 28, height: 28, color: rightPanelOpen ? '#6366f1' : 'text.secondary', '&:hover': { color: '#6366f1' } }}>
+            <LastPage sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
       </Box>
@@ -330,10 +462,13 @@ export default function ConversationPage() {
           </Box>
         ) : (
           messages.map((msg: any) => (
-            <Box key={msg.id} sx={{
+            <Box key={msg.id} ref={(el: HTMLDivElement | null) => { msgRefs.current[msg.id] = el; }} sx={{
               display: 'flex', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
               mb: 3, gap: 1.5, maxWidth: msg.role === 'user' ? '70%' : '85%',
               ml: msg.role === 'user' ? 'auto' : 0,
+              transition: 'all 0.3s',
+              ...(highlightedMsgId === msg.id ? { outline: '2px solid #6366f1', outlineOffset: 4, borderRadius: 2 } : {}),
+              ...(flashMsgId === msg.id ? { animation: 'flashBg 1.2s ease-out' } : {}),
             }}>
               <Avatar sx={{
                 width: 32, height: 32, flexShrink: 0, fontSize: 13,
@@ -723,6 +858,159 @@ export default function ConversationPage() {
         sessionTitle={session?.title || ''}
         message={shareMsg}
       />
+
+      {/* ===== 历史提问菜单 ===== */}
+      <Menu
+        anchorEl={historyAnchor} open={Boolean(historyAnchor)} onClose={() => setHistoryAnchor(null)}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        sx={{ '& .MuiPaper-root': { minWidth: 280, maxHeight: 360, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', overflow: 'auto' } }}
+      >
+        {messages.filter(m => m.role === 'user').length === 0 ? (
+          <Box sx={{ py: 4, textAlign: 'center' }}>
+            <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>暂无提问</Typography>
+          </Box>
+        ) : (
+          messages.filter(m => m.role === 'user').map((msg) => (
+            <MenuItem key={msg.id} onClick={() => { setHistoryAnchor(null); flashMessage(msg.id); }}
+              sx={{ py: 1.25, px: 2, whiteSpace: 'normal', lineHeight: 1.5 }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: 13, fontWeight: 500 }} noWrap>
+                  {msg.content.length > 20 ? msg.content.slice(0, 20) + '...' : msg.content}
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{formatTime(msg.created_at)}</Typography>
+              </Box>
+            </MenuItem>
+          ))
+        )}
+      </Menu>
+      </Box>
+
+      {/* ===== 右栏概览面板 ===== */}
+      <Collapse in={rightPanelOpen} orientation="horizontal">
+        <Box sx={{
+          width: 300, minWidth: 300, height: '100%',
+          borderLeft: '1px solid', borderColor: 'divider',
+          bgcolor: 'background.paper',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* 标题 */}
+          <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 700 }}>概览</Typography>
+            <IconButton size="small" onClick={() => setRightPanelOpen(false)} sx={{ color: 'text.secondary' }}>
+              <Close sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ flex: 1, overflow: 'auto', px: 2.5, py: 2 }}>
+            {/* 区块一：会话信息 */}
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>会话信息</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>模式</Typography>
+                <Typography sx={{ fontSize: 12, fontWeight: 500 }}>{MODES.find(m => m.id === session?.mode)?.label || session?.mode || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>模型</Typography>
+                <Typography sx={{ fontSize: 12, fontWeight: 500 }}>{session?.model_policy || '-'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>消息数</Typography>
+                <Typography sx={{ fontSize: 12, fontWeight: 500 }}>{messages.length}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>创建时间</Typography>
+                <Typography sx={{ fontSize: 12, fontWeight: 500 }}>
+                  {session?.created_at ? (() => { const d = new Date(session.created_at); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; })() : '-'}
+                </Typography>
+              </Box>
+              {sharedFrom && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>来源</Typography>
+                  <Typography sx={{ fontSize: 12, fontWeight: 500 }}>{sharedFrom.name} {isReadonly ? '分享' : '转交'}</Typography>
+                </Box>
+              )}
+            </Box>
+
+            {/* 区块三：产物 */}
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>产物</Typography>
+            {allArtifacts.length === 0 ? (
+              <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>本对话暂无产物</Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                {allArtifacts.map((art, idx) => {
+                  const typeColor = art.type === 'html' ? '#f59e0b' : art.type === 'sql' ? '#3b82f6' : art.type === 'pdf' ? '#ef4444' : '#6366f1';
+                  return (
+                    <Box key={idx} onClick={() => setPreviewArtifact(art)} sx={{
+                      display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderRadius: 1.5,
+                      border: '1px solid', borderColor: 'divider', cursor: 'pointer',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}>
+                      <InsertDriveFile sx={{ fontSize: 18, color: typeColor }} />
+                      <Typography sx={{ fontSize: 12, fontWeight: 500, flex: 1 }} noWrap>{art.name}</Typography>
+                      <OpenInNew sx={{ fontSize: 14, color: 'text.secondary' }} />
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Collapse>
+
+      {/* ===== 产物预览 Drawer ===== */}
+      <Drawer
+        anchor="right"
+        open={Boolean(previewArtifact)}
+        onClose={() => setPreviewArtifact(null)}
+        sx={{ '& .MuiDrawer-paper': { width: 480, bgcolor: 'background.paper' } }}
+      >
+        {previewArtifact && (
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography sx={{ fontSize: 14, fontWeight: 700, flex: 1 }} noWrap>{previewArtifact.name}</Typography>
+              <Button
+                size="small"
+                startIcon={<Download sx={{ fontSize: 16 }} />}
+                onClick={() => {
+                  const blob = new Blob([previewArtifact.content], { type: 'text/plain;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = previewArtifact.name;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                sx={{ fontSize: 12, textTransform: 'none' }}
+              >
+                下载
+              </Button>
+              <IconButton size="small" onClick={() => setPreviewArtifact(null)} sx={{ ml: 1, color: 'text.secondary' }}>
+                <Close sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+            <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+              {previewArtifact.type === 'html' ? (
+                <iframe
+                  srcDoc={previewArtifact.content}
+                  style={{ width: '100%', height: '100%', border: 'none', borderRadius: 8 }}
+                  title={previewArtifact.name}
+                />
+              ) : (
+                <Box component="pre" sx={{
+                  fontFamily: 'monospace', fontSize: 12, lineHeight: 1.7,
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  p: 2, bgcolor: 'action.hover', borderRadius: 2,
+                  border: '1px solid', borderColor: 'divider',
+                }}>
+                  {previewArtifact.content}
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+      </Drawer>
     </Box>
   );
 }

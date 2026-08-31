@@ -35,9 +35,11 @@ const typeIconMap: Record<string, { icon: typeof Gavel; color: string }> = {
 interface NotificationBellProps {
   /** 深色主题（后台）或浅色主题（前台） */
   dark?: boolean;
+  /** Popover 弹出方向：'down' 向下（默认），'up' 向上浮出 */
+  placement?: 'down' | 'up';
 }
 
-export default function NotificationBell({ dark = false }: NotificationBellProps) {
+export default function NotificationBell({ dark = false, placement = 'down' }: NotificationBellProps) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -115,8 +117,8 @@ export default function NotificationBell({ dark = false }: NotificationBellProps
         open={Boolean(anchorEl)}
         anchorEl={anchorEl}
         onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={placement === 'up' ? { vertical: 'top', horizontal: 'left' } : { horizontal: 'right', vertical: 'bottom' }}
+        transformOrigin={placement === 'up' ? { vertical: 'bottom', horizontal: 'left' } : { horizontal: 'right', vertical: 'top' }}
         slotProps={{
           paper: {
             sx: {

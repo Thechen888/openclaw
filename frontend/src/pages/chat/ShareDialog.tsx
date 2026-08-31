@@ -99,16 +99,16 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
         paper: {
           sx: {
             borderRadius: 3,
-            bgcolor: '#ffffff',
+            bgcolor: 'background.paper',
             border: '1px solid',
-            borderColor: 'rgba(0,0,0,0.08)',
+            borderColor: 'divider',
           },
         },
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
         <Typography sx={{ fontSize: 16, fontWeight: 700 }}>发送给同事</Typography>
-        <IconButton size="small" onClick={handleClose} sx={{ color: '#71717a' }}>
+        <IconButton size="small" onClick={handleClose} sx={{ color: 'text.secondary' }}>
           <Close sx={{ fontSize: 18 }} />
         </IconButton>
       </DialogTitle>
@@ -116,7 +116,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
       <DialogContent sx={{ px: 3, pb: 1 }}>
         {/* 搜索同事 */}
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#71717a', mb: 0.75 }}>搜索同事</Typography>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>搜索同事</Typography>
           <TextField
             fullWidth
             size="small"
@@ -127,7 +127,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search sx={{ fontSize: 18, color: '#a1a1aa' }} />
+                    <Search sx={{ fontSize: 18, color: 'text.disabled' }} />
                   </InputAdornment>
                 ),
               },
@@ -136,7 +136,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
               '& .MuiOutlinedInput-root': {
                 borderRadius: 2,
                 fontSize: 13,
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(0,0,0,0.12)' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
               },
             }}
           />
@@ -162,7 +162,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
           )}
           {/* 搜索结果下拉 */}
           {debouncedSearch && users.length > 0 && (
-            <Box sx={{ mt: 0.5, maxHeight: 150, overflow: 'auto', border: '1px solid', borderColor: 'rgba(0,0,0,0.08)', borderRadius: 2 }}>
+            <Box sx={{ mt: 0.5, maxHeight: 150, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
               {users.map((u) => (
                 <Box
                   key={u.id}
@@ -180,11 +180,11 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
                     gap: 1,
                     '&:hover': { bgcolor: 'rgba(99,102,241,0.06)' },
                     borderBottom: '1px solid',
-                    borderColor: 'rgba(0,0,0,0.04)',
+                    borderColor: 'divider',
                   }}
                 >
                   <Typography sx={{ fontWeight: 500 }}>{u.name}</Typography>
-                  <Typography sx={{ fontSize: 11, color: '#a1a1aa' }}>
+                  <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
                     {u.email || `组织: ${u.org_id || '-'}`}
                   </Typography>
                 </Box>
@@ -196,7 +196,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
         {/* 分享范围（仅消息级入口时显示） */}
         {message && (
           <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#71717a', mb: 0.75 }}>分享范围</Typography>
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>分享范围</Typography>
             <RadioGroup
               value={scope}
               onChange={(e) => setScope(e.target.value as 'session' | 'message')}
@@ -204,12 +204,12 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
             >
               <FormControlLabel
                 value="message"
-                control={<Radio size="small" sx={{ color: '#a1a1aa', '&.Mui-checked': { color: '#6366f1' } }} />}
+                control={<Radio size="small" sx={{ color: 'text.disabled', '&.Mui-checked': { color: '#6366f1' } }} />}
                 label={<Typography sx={{ fontSize: 13 }}>仅这条消息</Typography>}
               />
               <FormControlLabel
                 value="session"
-                control={<Radio size="small" sx={{ color: '#a1a1aa', '&.Mui-checked': { color: '#6366f1' } }} />}
+                control={<Radio size="small" sx={{ color: 'text.disabled', '&.Mui-checked': { color: '#6366f1' } }} />}
                 label={<Typography sx={{ fontSize: 13 }}>整个对话</Typography>}
               />
             </RadioGroup>
@@ -218,19 +218,19 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
 
         {/* 对方收到后 */}
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#71717a', mb: 0.75 }}>对方收到后</Typography>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>对方收到后</Typography>
           <RadioGroup
             value={mode}
             onChange={(e) => setMode(e.target.value as 'continue' | 'view')}
           >
             <FormControlLabel
               value="continue"
-              control={<Radio size="small" sx={{ color: '#a1a1aa', '&.Mui-checked': { color: '#6366f1' } }} />}
+              control={<Radio size="small" sx={{ color: 'text.disabled', '&.Mui-checked': { color: '#6366f1' } }} />}
               label={<Typography sx={{ fontSize: 13 }}>可以继续聊（转交，对话上下文完整带过去）</Typography>}
             />
             <FormControlLabel
               value="view"
-              control={<Radio size="small" sx={{ color: '#a1a1aa', '&.Mui-checked': { color: '#6366f1' } }} />}
+              control={<Radio size="small" sx={{ color: 'text.disabled', '&.Mui-checked': { color: '#6366f1' } }} />}
               label={<Typography sx={{ fontSize: 13 }}>仅查看（只读，不能继续对话）</Typography>}
             />
           </RadioGroup>
@@ -238,7 +238,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
 
         {/* 捎句话 */}
         <Box sx={{ mb: 1.5 }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#71717a', mb: 0.75 }}>捎句话</Typography>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>捎句话</Typography>
           <TextField
             fullWidth
             multiline
@@ -250,7 +250,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
               '& .MuiOutlinedInput-root': {
                 borderRadius: 2,
                 fontSize: 13,
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(0,0,0,0.12)' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
               },
             }}
           />
@@ -267,7 +267,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
         <Button
           onClick={handleClose}
-          sx={{ fontSize: 13, textTransform: 'none', color: '#71717a' }}
+          sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}
         >
           取消
         </Button>

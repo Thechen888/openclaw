@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import {
   Box, IconButton, Typography, Tooltip, Divider, Avatar,
   List, ListItemButton, ListItemIcon, ListItemText,
-  Menu, MenuItem, useTheme, alpha, Collapse, Badge,
+  Menu, MenuItem, useTheme, alpha, Collapse, Badge, Switch, TextField,
 } from '@mui/material';
 import {
   Add, SmartToy, Folder,
   AutoStories, Search, Settings, Logout,
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
-  AccountTree, Share,
+  AccountTree, Share, DarkMode, LightMode,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -92,10 +92,13 @@ export default function FrontLayout() {
   const location = useLocation();
   const { setViewMode } = useViewModeStore();
   const { user, logout } = useAuthStore();
-  const { mode: themeMode } = useThemeStore();
+  const { mode: themeMode, toggleMode } = useThemeStore();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [settingsAnchor, setSettingsAnchor] = useState<null | HTMLElement>(null);
   const [spacesExpanded, setSpacesExpanded] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [sidebarSearchOpen, setSidebarSearchOpen] = useState(false);
+  const [sidebarSearchText, setSidebarSearchText] = useState('');
   // 各导航分区展开状态（默认全部展开）
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
     () => Object.fromEntries(NAV_SECTIONS.map((s) => [s.label, true]))
@@ -130,9 +133,13 @@ export default function FrontLayout() {
   const allSessions: any[] = sessionsData?.data?.data || [];
 
   // 分组：任务（workspace_name 为空）和空间（按 workspace_name 分组）
-  const tasks = allSessions.filter((s) => !s.workspace_name);
+  const filterFn = (s: any) => {
+    if (!sidebarSearchText.trim()) return true;
+    return s.title?.toLowerCase().includes(sidebarSearchText.toLowerCase());
+  };
+  const tasks = allSessions.filter((s) => !s.workspace_name).filter(filterFn);
   const spaceMap = new Map<string, any[]>();
-  allSessions.forEach((s) => {
+  allSessions.filter(filterFn).forEach((s) => {
     if (s.workspace_name) {
       const list = spaceMap.get(s.workspace_name) || [];
       list.push(s);
@@ -175,15 +182,30 @@ export default function FrontLayout() {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
-              <IconButton size="small" sx={{ color: c.text3, width: 28, height: 28, '&:hover': { color: c.text1, bgcolor: c.navHover } }}>
+              <IconButton size="small" onClick={() => { setSidebarSearchOpen(!sidebarSearchOpen); if (sidebarSearchOpen) setSidebarSearchText(''); }} sx={{ color: sidebarSearchOpen ? c.accent : c.text3, width: 28, height: 28, '&:hover': { color: c.text1, bgcolor: c.navHover } }}>
                 <Search sx={{ fontSize: 16 }} />
-              </IconButton>
-              <NotificationBell />
-              <IconButton size="small" sx={{ color: c.text3, width: 28, height: 28, '&:hover': { color: c.text1, bgcolor: c.navHover } }}>
-                <Settings sx={{ fontSize: 16 }} />
               </IconButton>
             </Box>
           </Box>
+
+          {/* 侧栏搜索过滤框 */}
+          <Collapse in={sidebarSearchOpen}>
+            <Box sx={{ mb: 1.5, px: 0.5 }}>
+              <TextField
+                fullWidth size="small" autoFocus
+                placeholder="搜索对话..."
+                value={sidebarSearchText}
+                onChange={(e) => setSidebarSearchText(e.target.value)}
+                slotProps={{ input: { sx: { fontSize: 13, py: 0.75 } } }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: c.border },
+                  },
+                }}
+              />
+            </Box>
+          </Collapse>
 
           {/* 新建对话按钮 */}
           <Box
@@ -395,47 +417,34 @@ export default function FrontLayout() {
         {/* ---- 底部：快捷入口 + 用户 ---- */}
         <Divider sx={{ borderColor: c.border }} />
         <Box sx={{ px: 2, py: 1.5 }}>
-          <Box sx={{ display: 'flex', gap: 0.5, mb: 1.5 }}>
+          {/* 用户信息行：头像+姓名 | 铃铛+设置 */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
             <Box
+              onClick={(e) => setAnchorEl(e.currentTarget)}
               sx={{
-                display: 'flex', alignItems: 'center', gap: 0.5,
-                px: 1.25, py: 0.6, borderRadius: 1.5,
-                bgcolor: c.navHover, cursor: 'pointer',
-                color: c.text2, fontSize: 11.5, fontWeight: 500,
-                transition: 'all 0.15s',
-                '&:hover': { bgcolor: c.accentGlow, color: c.accent },
+                display: 'flex', alignItems: 'center', gap: 1,
+                flex: 1, minWidth: 0, cursor: 'pointer',
+                px: 1, py: 0.5, borderRadius: 1.5,
+                '&:hover': { bgcolor: c.navHover },
               }}
             >
-              <MenuBook sx={{ fontSize: 13 }} />
-              知识库
+              <Avatar sx={{
+                width: 28, height: 28, fontSize: 11,
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 2px 6px rgba(99,102,241,0.25)',
+              }}>
+                {user?.name?.charAt(0) || 'A'}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1, lineHeight: 1.2 }}>
+                  {user?.name || 'Admin'}
+                </Typography>
+                <Typography sx={{ fontSize: 10, color: c.text3 }}>{user?.role || 'admin'}</Typography>
+              </Box>
             </Box>
-          </Box>
-
-          {/* 用户信息 */}
-          <Box
-            onClick={(e) => setAnchorEl(e.currentTarget)}
-            sx={{
-              display: 'flex', alignItems: 'center', gap: 1,
-              px: 1, py: 0.75, borderRadius: 1.5,
-              cursor: 'pointer', transition: 'all 0.15s',
-              '&:hover': { bgcolor: c.navHover },
-            }}
-          >
-            <Avatar sx={{
-              width: 28, height: 28, fontSize: 11,
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              boxShadow: '0 2px 6px rgba(99,102,241,0.25)',
-            }}>
-              {user?.name?.charAt(0) || 'A'}
-            </Avatar>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1, lineHeight: 1.2 }}>
-                {user?.name || 'Admin'}
-              </Typography>
-              <Typography sx={{ fontSize: 10, color: c.text3 }}>{user?.role || 'admin'}</Typography>
-            </Box>
-            <IconButton size="small" sx={{ color: c.text3, width: 24, height: 24 }}>
-              <Logout sx={{ fontSize: 14 }} />
+            <NotificationBell placement="up" dark={isDark} />
+            <IconButton size="small" onClick={(e) => setSettingsAnchor(e.currentTarget)} sx={{ color: c.text3, width: 28, height: 28, '&:hover': { color: c.text1, bgcolor: c.navHover } }}>
+              <Settings sx={{ fontSize: 16 }} />
             </IconButton>
           </Box>
         </Box>
@@ -455,6 +464,31 @@ export default function FrontLayout() {
           <MenuItem onClick={() => { logout(); setAnchorEl(null); }}
             sx={{ fontSize: 12.5, color: '#ef4444' }}>
             <Logout sx={{ fontSize: 16, mr: 1 }} /> 退出登录
+          </MenuItem>
+        </Menu>
+
+        {/* 设置菜单 */}
+        <Menu
+          anchorEl={settingsAnchor} open={Boolean(settingsAnchor)} onClose={() => setSettingsAnchor(null)}
+          transformOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+          anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+          sx={{ '& .MuiPaper-root': { mt: -0.5, minWidth: 200, bgcolor: c.sidebarBg, border: '1px solid', borderColor: c.border, borderRadius: 2 } }}
+        >
+          <MenuItem onClick={() => toggleMode()} sx={{ fontSize: 12.5, color: c.text1, gap: 1 }}>
+            {isDark ? <LightMode sx={{ fontSize: 16, color: c.text2 }} /> : <DarkMode sx={{ fontSize: 16, color: c.text2 }} />}
+            <Typography sx={{ flex: 1, fontSize: 12.5 }}>{isDark ? '浅色模式' : '深色模式'}</Typography>
+            <Switch checked={isDark} size="small" onClick={(e) => e.stopPropagation()}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': { color: '#6366f1' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#6366f1' },
+              }}
+            />
+          </MenuItem>
+          <Divider sx={{ borderColor: c.border }} />
+          <MenuItem onClick={() => { setViewMode('admin'); navigate('/'); setSettingsAnchor(null); }}
+            sx={{ fontSize: 12.5, color: c.text1, gap: 1 }}>
+            <Settings sx={{ fontSize: 16, color: c.text2 }} />
+            <Typography sx={{ fontSize: 12.5 }}>切换到后台</Typography>
           </MenuItem>
         </Menu>
       </Box>

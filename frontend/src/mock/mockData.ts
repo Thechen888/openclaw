@@ -190,7 +190,7 @@ const chatMessages: Record<string, any[]> = {
     { id: 'm-cs3-1', role: 'user', content: '数据库查询很慢，怎么优化？', created_at: dayAgo(5), tokens: 10, model: 'gpt-4o' },
     { id: 'm-cs3-2', role: 'assistant', content: '## 数据库查询优化建议\n\n1. **添加索引**：对 WHERE、JOIN、ORDER BY 的列建索引\n2. **避免全表扫描**：检查 EXPLAIN 输出\n3. **分页优化**：使用游标分页代替 OFFSET\n4. **查询改写**：避免 SELECT *，只查需要的列\n5. **缓存**：对热点数据使用 Redis 缓存\n\n能提供具体的慢查询 SQL 吗？我可以针对性优化。', created_at: dayAgo(5), tokens: 130, model: 'gpt-4o' },
     { id: 'm-cs3-3', role: 'user', content: '这个查询要 5 秒：SELECT * FROM orders WHERE status = "pending" ORDER BY created_at DESC', created_at: dayAgo(4), tokens: 20, model: 'gpt-4o' },
-    { id: 'm-cs3-4', role: 'assistant', content: '针对这条查询的优化方案：\n\n```sql\n-- 创建复合索引\nCREATE INDEX idx_orders_status_created ON orders(status, created_at DESC);\n\n-- 改写查询（只查需要的列）\nSELECT id, order_no, amount, created_at\nFROM orders\nWHERE status = \'pending\'\nORDER BY created_at DESC\nLIMIT 50;\n```\n\n**关键点**：\n- 复合索引覆盖 WHERE + ORDER BY\n- 避免 SELECT *，减少 IO\n- 加 LIMIT 防止返回过多数据', created_at: dayAgo(4), tokens: 140, model: 'gpt-4o' },
+    { id: 'm-cs3-4', role: 'assistant', content: '针对这条查询的优化方案：\n\n```sql\n-- 创建复合索引\nCREATE INDEX idx_orders_status_created ON orders(status, created_at DESC);\n\n-- 改写查询（只查需要的列）\nSELECT id, order_no, amount, created_at\nFROM orders\nWHERE status = \'pending\'\nORDER BY created_at DESC\nLIMIT 50;\n```\n\n**关键点**：\n- 复合索引覆盖 WHERE + ORDER BY\n- 避免 SELECT *，减少 IO\n- 加 LIMIT 防止返回过多数据', created_at: dayAgo(4), tokens: 140, model: 'gpt-4o', attachments: [{ name: '索引优化方案.sql', type: 'sql', content: '-- 数据库索引优化方案\n-- 生成时间：2026-08-25\n\n-- 1. 主查询优化：复合索引覆盖 WHERE + ORDER BY\nCREATE INDEX idx_orders_status_created\n  ON orders (status, created_at DESC);\n\n-- 2. 关联查询索引：用户表外键\nCREATE INDEX idx_orders_user_id\n  ON orders (user_id);\n\n-- 3. 统计查询覆盖索引\nCREATE INDEX idx_orders_amount_status\n  ON orders (amount, status)\n  INCLUDE (order_no, created_at);\n\n-- 4. 改写后的查询示例\nSELECT id, order_no, amount, created_at\nFROM orders\nWHERE status = \'pending\'\nORDER BY created_at DESC\nLIMIT 50;' }] },
   ],
   'cs-4': [
     { id: 'm-cs4-1', role: 'user', content: 'React 应用越来越慢，有什么优化方案？', created_at: dayAgo(7), tokens: 12, model: 'claude-3.5-sonnet' },
@@ -206,12 +206,12 @@ const chatMessages: Record<string, any[]> = {
   ],
   'cs-7': [
     { id: 'm-cs7-1', role: 'user', content: '帮我生成本周工作周报', created_at: dayAgo(14), tokens: 12, model: 'glm-4' },
-    { id: 'm-cs7-2', role: 'assistant', content: '## 本周工作周报\n\n### 已完成\n- 完成用户管理模块的 CRUD 接口开发\n- 修复了 3 个线上 Bug（登录超时、数据导出异常、权限校验遗漏）\n- 参与产品需求评审，完成技术方案设计\n\n### 进行中\n- Agent 工作流引擎开发（进度 60%）\n- 单元测试覆盖率提升至 75%\n\n### 下周计划\n- 完成工作流引擎核心逻辑\n- 启动性能优化专项\n\n需要调整内容吗？', created_at: dayAgo(14), tokens: 160, model: 'glm-4' },
+    { id: 'm-cs7-2', role: 'assistant', content: '## 本周工作周报\n\n### 已完成\n- 完成用户管理模块的 CRUD 接口开发\n- 修复了 3 个线上 Bug（登录超时、数据导出异常、权限校验遗漏）\n- 参与产品需求评审，完成技术方案设计\n\n### 进行中\n- Agent 工作流引擎开发（进度 60%）\n- 单元测试覆盖率提升至 75%\n\n### 下周计划\n- 完成工作流引擎核心逻辑\n- 启动性能优化专项\n\n需要调整内容吗？', created_at: dayAgo(14), tokens: 160, model: 'glm-4', attachments: [{ name: '2026年8月第4周周报.html', type: 'html', content: '<h1>2026年8月第4周工作周报</h1><h2>一、本周完成工作</h2><ul><li>完成用户管理模块 CRUD 接口开发，覆盖增删改查全部 12 个端点</li><li>修复线上 Bug 3 项：登录超时（Token 刷新竞态）、数据导出异常（分页越界）、权限校验遗漏（/api/agents/:id/debug）</li><li>参与 v2.3 产品需求评审，输出技术方案设计文档</li><li>完成 Agent 工作流引擎核心调度逻辑（DAG 解析 + 节点执行）</li></ul><h2>二、进行中工作</h2><ul><li>Agent 工作流引擎开发（整体进度 60%，预计下周完成）</li><li>单元测试覆盖率从 62% 提升至 75%</li><li>编写 API 接口文档（Swagger OpenAPI 3.0 格式）</li></ul><h2>三、下周计划</h2><ul><li>完成工作流引擎可视化画布与节点编排</li><li>启动性能优化专项：接口 P99 延迟从 800ms 降至 300ms</li><li>协助 QA 完成 v2.3 回归测试</li></ul><h2>四、风险与阻塞</h2><p>模型网关在并发超过 200 QPS 时偶发超时，需运维协助排查网络层配置。</p>' }] },
   ],
   // cs-9: 采购申请审批跟进
   'cs-9': [
     { id: 'm-cs9-1', role: 'user', content: '帮我查一下采购申请 PO-2026-0831 的审批进度', created_at: ago(180), tokens: 15, model: 'gpt-4o' },
-    { id: 'm-cs9-2', role: 'assistant', content: '## 采购申请 PO-2026-0831 审批状态\n\n**状态：审批未通过（已驳回）**\n\n**驳回原因**：预算超出部门季度额度\n\n**详细说明**：\n- 申请金额：¥85,000\n- 部门季度剩余额度：¥62,000\n- 超出额度：¥23,000\n\n**建议方案**：\n1. **缩减采购数量重报**：将采购数量从 200 台降至 150 台，金额控制在 ¥63,750\n2. **申请临时额度**：向财务部提交临时额度申请，说明采购紧急程度\n\n你可以直接告诉我怎么处理，我来帮你重新整理申请材料。', created_at: ago(170), tokens: 200, model: 'gpt-4o' },
+    { id: 'm-cs9-2', role: 'assistant', content: '## 采购申请 PO-2026-0831 审批状态\n\n**状态：审批未通过（已驳回）**\n\n**驳回原因**：预算超出部门季度额度\n\n**详细说明**：\n- 申请金额：¥85,000\n- 部门季度剩余额度：¥62,000\n- 超出额度：¥23,000\n\n**建议方案**：\n1. **缩减采购数量重报**：将采购数量从 200 台降至 150 台，金额控制在 ¥63,750\n2. **申请临时额度**：向财务部提交临时额度申请，说明采购紧急程度\n\n你可以直接告诉我怎么处理，我来帮你重新整理申请材料。', created_at: ago(170), tokens: 200, model: 'gpt-4o', attachments: [{ name: '采购申请单-PO-2026-0831.pdf', type: 'pdf', content: '采购申请单\n═══════════════════════════════\n单号：PO-2026-0831\n申请日期：2026-08-28\n申请部门：技术部\n申请人：张伟\n\n一、采购明细\n───────────────────────────────\n品名          数量    单价      小计\n办公笔记本    200台   ¥425     ¥85,000\n\n二、审批记录\n───────────────────────────────\n部门主管  审批通过  2026-08-28\n财务审核  审批驳回  2026-08-29\n  驳回原因：超出部门季度预算额度\n\n三、备注\n───────────────────────────────\n请缩减数量后重新提交，或申请临时额度。' }] },
   ],
   // cs-handoff-1: 转交会话
   'cs-handoff-1': [
@@ -552,7 +552,7 @@ export function handleMockRequest(method: string, url: string, params: any, data
     chatMessages[ns.id] = [];
     return ok(ns);
   }
-  if (url.match(/\/chat\/sessions/) && m === 'get') { return paginate(chatSessions, p); }
+  if (url.match(/\/chat\/sessions/) && m === 'get') { return paginate(chatSessions.filter(s => !s.user_id || s.user_id === 'u-1'), p); }
 
   // ---- 通知 ----
   if (url.match(/\/notifications\/read-all$/) && m === 'post') {
@@ -571,7 +571,7 @@ export function handleMockRequest(method: string, url: string, params: any, data
     notifications.unshift(nn);
     return ok(nn);
   }
-  if (url.match(/\/notifications/) && m === 'get') { return ok([...notifications].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())); }
+  if (url.match(/\/notifications/) && m === 'get') { return ok(notifications.filter(n => n.user_id === 'u-1').sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())); }
 
   // ---- RAG 知识库 ----
   if (url.match(/\/rag\/knowledge-bases\/([^/]+)\/analytics/) && m === 'get') {
