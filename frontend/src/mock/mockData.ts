@@ -516,6 +516,59 @@ export function handleMockRequest(method: string, url: string, params: any, data
     if (session) { session.message_count = chatMessages[sid].length; session.last_message_at = new Date().toISOString(); }
     return ok(userMsg);
   }
+  // ---- 群组成员管理 ----
+  if (url.match(/\/chat\/sessions\/([^/]+)\/members\/([^/]+)$/) && m === 'delete') {
+    const sid = url.match(/\/chat\/sessions\/([^/]+)\/members/)![1];
+    const uid = url.match(/\/members\/([^/]+)$/)![1];
+    const session = chatSessions.find(s => s.id === sid);
+    if (!session) return ok(null);
+    // 群主不可退出
+    if (uid === 'u-1' && session.creator_id === 'u-1') return ok(session);
+    const removedUser = users.find(u => u.id === uid);
+    const removedName = removedUser?.name || uid;
+    const isSelfExit = uid === 'u-1';
+    const sysContent = isSelfExit ? `${removedName} 退出了群组` : `${removedName} 被移出群组`;
+    if (session.member_ids) session.member_ids = session.member_ids.filter((id: string) => id !== uid);
+    if (!chatMessages[sid]) chatMessages[sid] = [];
+    chatMessages[sid].push({ id: 'm-' + Date.now(), role: 'system', content: sysContent, created_at: new Date().toISOString() });
+    session.message_count = chatMessages[sid].length;
+    session.last_message_at = new Date().toISOString();
+    return ok(session);
+  }
+  if (url.match(/\/chat\/sessions\/([^/]+)\/members$/) && m === 'post') {
+    const sid = url.match(/\/chat\/sessions\/([^/]+)\/members/)![1];
+    const session = chatSessions.find(s => s.id === sid);
+    if (!session) return ok(null);
+    const userIds: string[] = d.user_ids || [];
+    const newMembers = userIds.filter((uid: string) => !(session.member_ids || []).includes(uid));
+    const wasGroup = session.session_type === 'group';
+    // 转群或追加
+    if (!wasGroup) {
+      session.session_type = 'group';
+      session.creator_id = 'u-1';
+    }
+    session.member_ids = [...new Set(['u-1', ...(session.member_ids || []), ...newMembers])];
+    // 系统消息
+    const newNames = newMembers.map((uid: string) => users.find(u => u.id === uid)?.name || uid);
+    const sysContent = wasGroup
+      ? `张伟 邀请 ${newNames.join('、')} 加入了群组`
+      : `张伟 发起了群组协作，邀请 ${newNames.join('、')} 加入`;
+    if (!chatMessages[sid]) chatMessages[sid] = [];
+    chatMessages[sid].push({ id: 'm-' + Date.now(), role: 'system', content: sysContent, created_at: new Date().toISOString() });
+    session.message_count = chatMessages[sid].length;
+    session.last_message_at = new Date().toISOString();
+    // 为每个新成员创建通知
+    newMembers.forEach((uid: string, idx: number) => {
+      notifications.unshift({
+        id: 'n-' + Date.now() + idx, user_id: uid, type: 'share',
+        title: `张伟 邀请你加入群组「${session.title}」`,
+        content: '加入后可查看全部历史对话并参与协作',
+        action_kind: 'chat', session_id: sid,
+        read: false, created_at: new Date().toISOString(),
+      });
+    });
+    return ok(session);
+  }
   if (url.match(/\/chat\/sessions\/([^/]+)\/share$/) && m === 'post') {
     const sid = url.match(/\/chat\/sessions\/([^/]+)\/share/)![1];
     const source = chatSessions.find(s => s.id === sid);

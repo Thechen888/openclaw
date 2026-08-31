@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Paper, Avatar, TextField, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem, Switch, Button,
@@ -14,12 +14,13 @@ import {
   ExpandMore, ExpandLess, Description, Score,
   AttachFile, Extension, MenuBook, Code,
   AccessTime, LastPage, KeyboardArrowUp,
-  Download,
+  Download, PersonAdd,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { chatApi } from '../../api/client';
 import ShareDialog from './ShareDialog';
+import AddMembersDialog from './AddMembersDialog';
 
 // =================== 相对时间 ===================
 function formatTime(dateStr?: string) {
@@ -157,6 +158,7 @@ function SourcesPanel({ sources }: { sources: any[] }) {
 // =================== 主组件 ===================
 export default function ConversationPage() {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
   const qc = useQueryClient();
   const [input, setInput] = useState('');
@@ -197,6 +199,13 @@ export default function ConversationPage() {
 
   // 右栏概览面板
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+  // 拉人弹窗
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
+
+  // 群成员操作菜单
+  const [memberMenuAnchor, setMemberMenuAnchor] = useState<null | HTMLElement>(null);
+  const [memberMenuUid, setMemberMenuUid] = useState<string | null>(null);
 
   // 产物预览 Drawer
   const [previewArtifact, setPreviewArtifact] = useState<{ name: string; type: string; content: string } | null>(null);
@@ -266,7 +275,7 @@ export default function ConversationPage() {
         { id: 'u-5', name: '陈晨' },
       ];
     },
-    enabled: isGroup,
+    enabled: !!sessionId,
   });
   const allUsers: any[] = allUsersData || [];
 
@@ -297,6 +306,25 @@ export default function ConversationPage() {
     onError: () => {
       enqueueSnackbar('发送失败', { variant: 'error' });
       setSending(false);
+    },
+  });
+
+  // 移除成员 mutation
+  const removeMemberMut = useMutation({
+    mutationFn: ({ uid }: { uid: string }) => chatApi.sessions.removeMember(sessionId!, uid),
+    onSuccess: (_res, variables) => {
+      qc.invalidateQueries({ queryKey: ['chat-session', sessionId] });
+      qc.invalidateQueries({ queryKey: ['chat-messages', sessionId] });
+      qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+      // 自己退出后跳转到聊天首页
+      if (variables.uid === 'u-1') {
+        navigate('/chat');
+      }
+      setMemberMenuAnchor(null);
+      setMemberMenuUid(null);
+    },
+    onError: () => {
+      enqueueSnackbar('操作失败', { variant: 'error' });
     },
   });
 
@@ -499,6 +527,15 @@ export default function ConversationPage() {
           </IconButton>
         </Tooltip>
 
+        {/* 工具栏：拉人进群 / 转为群组 */}
+        {!isReadonly && (
+          <Tooltip title={isGroup ? '拉人进群' : '转为群组'}>
+            <IconButton size="small" onClick={() => setAddMembersOpen(true)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
+              <PersonAdd sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        )}
+
         {/* 工具栏：历史提问 */}
         <Tooltip title="历史提问">
           <IconButton size="small" onClick={(e) => setHistoryAnchor(e.currentTarget)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
@@ -545,6 +582,14 @@ export default function ConversationPage() {
           </Box>
         ) : (
           messages.map((msg: any) => {
+            // 系统消息：居中灰字
+            if (msg.role === 'system') {
+              return (
+                <Box key={msg.id} sx={{ display: 'flex', justifyContent: 'center', my: 1.5 }}>
+                  <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{msg.content}</Typography>
+                </Box>
+              );
+            }
             // 群模式：判断消息归属
             const isSelf = isGroup && msg.role === 'user' && msg.user_id === 'u-1';
             const isOtherUser = isGroup && msg.role === 'user' && msg.user_id !== 'u-1';
@@ -1062,6 +1107,16 @@ export default function ConversationPage() {
         sourceReadonly={isReadonly}
       />
 
+      {/* ===== 拉人弹窗 ===== */}
+      <AddMembersDialog
+        open={addMembersOpen}
+        onClose={() => setAddMembersOpen(false)}
+        sessionId={sessionId!}
+        sessionTitle={session?.title || ''}
+        isGroup={isGroup}
+        existingMemberIds={session?.member_ids || []}
+      />
+
       {/* ===== 历史提问菜单 ===== */}
       <Menu
         anchorEl={historyAnchor} open={Boolean(historyAnchor)} onClose={() => setHistoryAnchor(null)}
@@ -1136,6 +1191,21 @@ export default function ConversationPage() {
               )}
             </Box>
 
+            {/* 单人会话：拉人转为群组按钮 */}
+            {!isGroup && !isReadonly && (
+              <Box
+                onClick={() => setAddMembersOpen(true)}
+                sx={{
+                  display: 'flex', alignItems: 'center', gap: 1, mb: 3, px: 1.5, py: 1,
+                  border: '1px solid', borderColor: 'divider', borderRadius: 2,
+                  cursor: 'pointer', '&:hover': { borderColor: '#6366f1', '& .convert-text': { color: '#6366f1' } },
+                }}
+              >
+                <PersonAdd sx={{ fontSize: 16, color: 'text.secondary' }} />
+                <Typography className="convert-text" sx={{ fontSize: 12, color: 'text.secondary', transition: 'color 0.2s' }}>拉人转为群组，共同协作</Typography>
+              </Box>
+            )}
+
             {/* 群组区块 */}
             {isGroup && (
               <Box sx={{ mb: 3 }}>
@@ -1152,24 +1222,69 @@ export default function ConversationPage() {
                     const isCreator = mid === session?.creator_id;
                     const mColor = getUserColor(mid);
                     return (
-                      <Tooltip key={mid} title={`${memberUser?.name || mid}${isCreator ? '（群主）' : ''}`}>
-                        <Box sx={{ position: 'relative' }}>
+                      <Box
+                        key={mid}
+                        onClick={(e: React.MouseEvent<HTMLElement>) => {
+                          // 群主本人无操作菜单
+                          if (isCreator && mid === 'u-1') return;
+                          setMemberMenuUid(mid);
+                          setMemberMenuAnchor(e.currentTarget);
+                        }}
+                        sx={{ position: 'relative', cursor: (isCreator && mid === 'u-1') ? 'default' : 'pointer' }}
+                      >
+                        <Tooltip title={`${memberUser?.name || mid}${isCreator ? '（群主）' : ''}`}>
                           <Avatar sx={{ width: 32, height: 32, fontSize: 12, fontWeight: 600, bgcolor: mColor, color: 'white' }}>
                             {(memberUser?.name || '?').charAt(0)}
                           </Avatar>
-                          {isCreator && (
-                            <Box sx={{
-                              position: 'absolute', top: -4, right: -6,
-                              bgcolor: '#f59e0b', color: 'white',
-                              fontSize: 8, fontWeight: 700, lineHeight: '14px',
-                              px: 0.5, borderRadius: 1,
-                            }}>群主</Box>
-                          )}
-                        </Box>
-                      </Tooltip>
+                        </Tooltip>
+                        {isCreator && (
+                          <Box sx={{
+                            position: 'absolute', top: -4, right: -6,
+                            bgcolor: '#f59e0b', color: 'white',
+                            fontSize: 8, fontWeight: 700, lineHeight: '14px',
+                            px: 0.5, borderRadius: 1,
+                          }}>群主</Box>
+                        )}
+                      </Box>
                     );
                   })}
+                  {/* + 添加成员按钮 */}
+                  <Tooltip title="添加成员">
+                    <Box
+                      onClick={() => setAddMembersOpen(true)}
+                      sx={{
+                        width: 32, height: 32, borderRadius: '50%',
+                        border: '1.5px dashed', borderColor: 'text.disabled',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
+                        color: 'text.disabled',
+                      }}
+                    >
+                      <Add sx={{ fontSize: 16 }} />
+                    </Box>
+                  </Tooltip>
                 </Box>
+                {/* 成员操作菜单 */}
+                <Menu
+                  anchorEl={memberMenuAnchor}
+                  open={Boolean(memberMenuAnchor)}
+                  onClose={() => { setMemberMenuAnchor(null); setMemberMenuUid(null); }}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                >
+                  {(() => {
+                    const uid = memberMenuUid;
+                    const isCreator = session?.creator_id === 'u-1';
+                    const isSelf = uid === 'u-1';
+                    if (isCreator && !isSelf) {
+                      return <MenuItem onClick={() => { if (uid) removeMemberMut.mutate({ uid }); }} sx={{ fontSize: 13, color: '#ef4444' }}>移出群组</MenuItem>;
+                    }
+                    if (isSelf && !isCreator) {
+                      return <MenuItem onClick={() => removeMemberMut.mutate({ uid: 'u-1' })} sx={{ fontSize: 13, color: '#ef4444' }}>退出群组</MenuItem>;
+                    }
+                    return null;
+                  })()}
+                </Menu>
               </Box>
             )}
 
