@@ -247,11 +247,48 @@ export default function ConversationPage() {
 
   const isReadonly = session?.readonly === true;
   const sharedFrom = session?.shared_from;
+  const isGroup = session?.session_type === 'group';
   const currentModel = MODELS.find(m => m.id === selectedModel) || MODELS[0];
+
+  // 群组：人机分流目标
+  const [targetAI, setTargetAI] = useState(true);
+
+  // 群组：用户列表查询（用于解析成员）
+  const { data: allUsersData } = useQuery({
+    queryKey: ['all-users-for-group'],
+    queryFn: async () => {
+      // 直接返回已知用户列表（mock 模式）
+      return [
+        { id: 'u-1', name: '张伟' },
+        { id: 'u-2', name: '李思' },
+        { id: 'u-3', name: '王五' },
+        { id: 'u-4', name: '赵六' },
+        { id: 'u-5', name: '陈晨' },
+      ];
+    },
+    enabled: isGroup,
+  });
+  const allUsers: any[] = allUsersData || [];
+
+  // 群组：文字头像色板
+  const AVATAR_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const getUserColor = (userId?: string) => {
+    if (!userId) return '#6366f1';
+    if (userId === 'u-1') return '#6366f1'; // 自己固定紫色
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  };
+  const getUserName = (userId?: string) => {
+    if (!userId) return '';
+    const u = allUsers.find((x: any) => x.id === userId);
+    return u?.name || '';
+  };
 
   // 发送消息 mutation
   const sendMut = useMutation({
-    mutationFn: (content: string) => chatApi.messages.send(sessionId!, content),
+    mutationFn: ({ content, extra }: { content: string; extra?: { to_ai?: boolean; user_name?: string } }) =>
+      chatApi.messages.send(sessionId!, content, extra),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chat-messages', sessionId] });
       qc.invalidateQueries({ queryKey: ['chat-sessions'] });
@@ -270,7 +307,8 @@ export default function ConversationPage() {
   const handleSend = () => {
     if (!input.trim() || sending || isReadonly) return;
     setSending(true);
-    sendMut.mutate(input.trim());
+    const extra = isGroup ? { to_ai: targetAI, user_name: '张伟' } : undefined;
+    sendMut.mutate({ content: input.trim(), extra });
     setInput('');
   };
 
@@ -411,6 +449,9 @@ export default function ConversationPage() {
         <Typography sx={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
           {session.title}
         </Typography>
+        {isGroup && (
+          <Chip label="群组" size="small" icon={<Person sx={{ fontSize: 12 }} />} sx={{ height: 22, fontSize: 11, bgcolor: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 500, '& .MuiChip-icon': { color: '#10b981' } }} />
+        )}
         {isReadonly && (
           <Chip label="只读分享" size="small" sx={{ height: 22, fontSize: 11, bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 500 }} />
         )}
@@ -503,11 +544,21 @@ export default function ConversationPage() {
             <Typography color="text.secondary">暂无消息</Typography>
           </Box>
         ) : (
-          messages.map((msg: any) => (
+          messages.map((msg: any) => {
+            // 群模式：判断消息归属
+            const isSelf = isGroup && msg.role === 'user' && msg.user_id === 'u-1';
+            const isOtherUser = isGroup && msg.role === 'user' && msg.user_id !== 'u-1';
+            const isAI = msg.role === 'assistant';
+            const msgOnRight = !isGroup ? msg.role === 'user' : isSelf;
+            const msgOnLeft = !isGroup ? msg.role !== 'user' : !isSelf;
+            const userColor = getUserColor(msg.user_id);
+            const userName = msg.user_name || getUserName(msg.user_id);
+
+            return (
             <Box key={msg.id} ref={(el: HTMLDivElement | null) => { msgRefs.current[msg.id] = el; }} sx={{
-              display: 'flex', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-              mb: 3, gap: 1.5, maxWidth: msg.role === 'user' ? '70%' : '85%',
-              ml: msg.role === 'user' ? 'auto' : 0,
+              display: 'flex', flexDirection: msgOnRight ? 'row-reverse' : 'row',
+              mb: 3, gap: 1.5, maxWidth: msgOnRight ? '70%' : '85%',
+              ml: msgOnRight ? 'auto' : 0,
               transition: 'all 0.3s',
               ...(highlightedMsgId === msg.id ? { outline: '2px solid #6366f1', outlineOffset: 4, borderRadius: 2 } : {}),
               ...(flashMsgId === msg.id ? { animation: 'flashBg 1.2s ease-out' } : {}),
@@ -525,18 +576,40 @@ export default function ConversationPage() {
                   }}
                 />
               )}
-              <Avatar sx={{
-                width: 32, height: 32, flexShrink: 0, fontSize: 13,
-                bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
-                border: msg.role === 'assistant' ? '1px solid' : 'none',
-                borderColor: 'divider',
-              }}>
-                {msg.role === 'user' ? <Person sx={{ fontSize: 16 }} /> : <SmartToy sx={{ fontSize: 16 }} />}
-              </Avatar>
+              {/* 头像 */}
+              {isGroup && msg.role === 'user' ? (
+                <Avatar sx={{
+                  width: 32, height: 32, flexShrink: 0, fontSize: 13, fontWeight: 600,
+                  bgcolor: userColor, color: 'white',
+                }}>
+                  {(msg.user_name || '?').charAt(0)}
+                </Avatar>
+              ) : (
+                <Avatar sx={{
+                  width: 32, height: 32, flexShrink: 0, fontSize: 13,
+                  bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
+                  border: msg.role === 'assistant' ? '1px solid' : 'none',
+                  borderColor: 'divider',
+                }}>
+                  {msg.role === 'user' ? <Person sx={{ fontSize: 16 }} /> : <SmartToy sx={{ fontSize: 16 }} />}
+                </Avatar>
+              )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
+                {/* 群模式：发送人姓名（他人的消息） */}
+                {isGroup && isOtherUser && (
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: userColor, mb: 0.5, ml: 0.5 }}>
+                    {userName}
+                    {msg.to_ai === false && (
+                      <Box component="span" sx={{ ml: 0.5, fontSize: 10, color: 'text.secondary', fontWeight: 400 }}>对人</Box>
+                    )}
+                  </Typography>
+                )}
+                {isGroup && isSelf && msg.to_ai === false && (
+                  <Typography sx={{ fontSize: 10, color: 'text.secondary', mb: 0.5, textAlign: 'right', mr: 0.5 }}>对人</Typography>
+                )}
                 <Paper elevation={0} sx={{
-                  p: 2, bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
-                  color: msg.role === 'user' ? 'white' : 'text.primary', borderRadius: 2,
+                  p: 2, bgcolor: msgOnRight && !isGroup ? '#6366f1' : isGroup && isSelf ? '#6366f1' : 'transparent',
+                  color: (msgOnRight && !isGroup) || (isGroup && isSelf) ? 'white' : 'text.primary', borderRadius: 2,
                   ...(selectMode ? { cursor: 'pointer', border: selectedIds.has(msg.id) ? '1.5px solid #6366f1' : '1px solid transparent' } : {}),
                 }}
                   onClick={selectMode ? () => toggleSelect(msg.id) : undefined}
@@ -578,11 +651,12 @@ export default function ConversationPage() {
                 {msg.role === 'assistant' && msg.sources && <SourcesPanel sources={msg.sources} />}
               </Box>
             </Box>
-          ))
+            );
+          })
         )}
 
         {/* AI 正在思考 */}
-        {sending && (
+        {sending && !(isGroup && !targetAI) && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, ml: 5.5 }}>
             <CircularProgress size={16} sx={{ color: '#6366f1' }} />
             <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>AI 正在思考...</Typography>
@@ -717,6 +791,22 @@ export default function ConversationPage() {
 
           {/* 底部工具栏 */}
           <Box sx={{ px: 1.5, pb: 1.5, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            {/* 群模式：人机分流切换 */}
+            {isGroup && (
+              <Chip
+                label={targetAI ? '对 AI' : '对人'}
+                size="small"
+                onClick={() => setTargetAI(!targetAI)}
+                sx={{
+                  fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                  bgcolor: targetAI ? '#6366f1' : 'action.hover',
+                  color: targetAI ? 'white' : 'text.secondary',
+                  border: targetAI ? 'none' : '1px solid',
+                  borderColor: targetAI ? 'transparent' : 'divider',
+                  '&:hover': { bgcolor: targetAI ? '#4f46e5' : 'action.selected' },
+                }}
+              />
+            )}
             {/* + 按钮 */}
             <Box onClick={(e) => { setPlusAnchor(e.currentTarget); setPlusMenuOpen(!plusMenuOpen); setPlusSubMenu(null); }} sx={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 2,
@@ -989,7 +1079,7 @@ export default function ConversationPage() {
               sx={{ py: 1.25, px: 2, whiteSpace: 'normal', lineHeight: 1.5 }}>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }} noWrap>
-                  {msg.content.length > 20 ? msg.content.slice(0, 20) + '...' : msg.content}
+                  {isGroup && msg.user_name ? `${msg.user_name}：` : ''}{msg.content.length > 20 ? msg.content.slice(0, 20) + '...' : msg.content}
                 </Typography>
                 <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{formatTime(msg.created_at)}</Typography>
               </Box>
@@ -1045,6 +1135,65 @@ export default function ConversationPage() {
                 </Box>
               )}
             </Box>
+
+            {/* 群组区块 */}
+            {isGroup && (
+              <Box sx={{ mb: 3 }}>
+                <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1 }}>群组信息</Typography>
+                {/* 权限上下文 */}
+                <Typography sx={{ fontSize: 11, color: 'info.main', mb: 1.5, lineHeight: 1.5 }}>
+                  本群 AI 调用使用创建人权限
+                </Typography>
+                {/* 成员 */}
+                <Typography sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>成员</Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+                  {(session?.member_ids || []).map((mid: string) => {
+                    const memberUser = allUsers.find((u: any) => u.id === mid);
+                    const isCreator = mid === session?.creator_id;
+                    const mColor = getUserColor(mid);
+                    return (
+                      <Tooltip key={mid} title={`${memberUser?.name || mid}${isCreator ? '（群主）' : ''}`}>
+                        <Box sx={{ position: 'relative' }}>
+                          <Avatar sx={{ width: 32, height: 32, fontSize: 12, fontWeight: 600, bgcolor: mColor, color: 'white' }}>
+                            {(memberUser?.name || '?').charAt(0)}
+                          </Avatar>
+                          {isCreator && (
+                            <Box sx={{
+                              position: 'absolute', top: -4, right: -6,
+                              bgcolor: '#f59e0b', color: 'white',
+                              fontSize: 8, fontWeight: 700, lineHeight: '14px',
+                              px: 0.5, borderRadius: 1,
+                            }}>群主</Box>
+                          )}
+                        </Box>
+                      </Tooltip>
+                    );
+                  })}
+                </Box>
+                {/* 本群可用 Agent */}
+                <Typography sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>本群可用 Agent</Typography>
+                {(session?.agent_ids?.length ?? 0) > 0 ? (
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
+                    {session.agent_ids.map((aid: string) => (
+                      <Chip key={aid} label={aid} size="small" sx={{ fontSize: 11, height: 22, bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1' }} />
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography sx={{ fontSize: 11, color: 'text.disabled', mb: 1.5 }}>未配置</Typography>
+                )}
+                {/* 本群可用技能 */}
+                <Typography sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>本群可用技能</Typography>
+                {(session?.skill_ids?.length ?? 0) > 0 ? (
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {session.skill_ids.map((sid: string) => (
+                      <Chip key={sid} label={sid} size="small" sx={{ fontSize: 11, height: 22, bgcolor: 'rgba(245,158,11,0.1)', color: '#f59e0b' }} />
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>未配置</Typography>
+                )}
+              </Box>
+            )}
 
             {/* 区块三：产物 */}
             <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>产物</Typography>

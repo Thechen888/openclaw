@@ -439,8 +439,8 @@ export const chatApi = {
   },
   messages: {
     list: (sessionId: string) => api.get(`/chat/sessions/${sessionId}/messages`),
-    send: (sessionId: string, content: string) =>
-      api.post(`/chat/sessions/${sessionId}/messages`, { content }),
+    send: (sessionId: string, content: string, extra?: { to_ai?: boolean; user_name?: string }) =>
+      api.post(`/chat/sessions/${sessionId}/messages`, { content, ...extra }),
   },
 };
 

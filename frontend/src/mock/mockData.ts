@@ -41,7 +41,7 @@ const users = [
   { id: 'u-1', name: '张伟', email: 'zhangwei@example.com', role: 'admin', org_id: 'org-1', status: 'active', avatar_url: '', created_at: dayAgo(90) },
   { id: 'u-2', name: '李思', email: 'lisi@example.com', role: 'user', org_id: 'org-1', status: 'active', avatar_url: '', created_at: dayAgo(60) },
   { id: 'u-3', name: '王五', email: 'wangwu@example.com', role: 'user', org_id: 'org-2', status: 'active', avatar_url: '', created_at: dayAgo(45) },
-  { id: 'u-4', name: '赵敏', email: 'zhaomin@example.com', role: 'user', org_id: 'org-2', status: 'active', avatar_url: '', created_at: dayAgo(30) },
+  { id: 'u-4', name: '赵六', email: 'zhaoliu@example.com', role: 'user', org_id: 'org-2', status: 'active', avatar_url: '', created_at: dayAgo(30) },
   { id: 'u-5', name: '陈晨', email: 'chenchen@example.com', role: 'user', org_id: 'org-3', status: 'active', avatar_url: '', created_at: dayAgo(20) },
 ];
 
@@ -165,6 +165,8 @@ const chatSessions: any[] = [
   { id: 'cs-handoff-1', title: '【转交】ERP审批失败排查', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: false, shared_from: { name: '王五', note: '这单 ERP 审批卡住了，客户催得紧，你帮我看看怎么推进' }, message_count: 4, created_at: ago(90), updated_at: ago(80), last_message_at: ago(80) },
   // 分享会话（只读）
   { id: 'cs-shared-1', title: '【分享】CRM销售话术讨论', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: true, shared_from: { name: '李思', note: '这段分析你看看，下次评审用得上' }, message_count: 3, created_at: ago(60), updated_at: ago(50), last_message_at: ago(50) },
+  // 群组会话
+  { id: 'grp-1', title: '销售预测平台攻坚群', user_id: 'u-1', session_type: 'group', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], agent_ids: ['ag-1'], skill_ids: ['sk-1'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40) },
 ];
 
 const chatMessages: Record<string, any[]> = {
@@ -225,6 +227,14 @@ const chatMessages: Record<string, any[]> = {
     { id: 'm-shared-1', role: 'user', content: '帮我优化 CRM 系统的销售话术模板', created_at: ago(60), tokens: 15, model: 'gpt-4o' },
     { id: 'm-shared-2', role: 'assistant', content: '## CRM 销售话术优化建议\n\n### 初次接触\n- 原话术："你好，我是XX公司的销售经理"\n- 优化后："您好，我是XX公司的[姓名]，看到贵公司在[领域]发展很快，我们帮助过类似企业提升了30%的效率"\n\n### 需求挖掘\n- 使用 SPIN 提问法：背景→难点→暗示→价值\n- 避免直接推销，先了解客户痛点\n\n### 异议处理\n- 价格异议：强调 ROI 和长期价值\n- 竞品对比：突出差异化优势，不贬低对手\n\n### 促成交易\n- 假设成交法："您看是周三还是周五方便签约？"\n- 限时优惠：制造紧迫感', created_at: ago(55), tokens: 220, model: 'gpt-4o' },
     { id: 'm-shared-3', role: 'user', content: '很好，帮我整理成一份话术手册', created_at: ago(50), tokens: 10, model: 'gpt-4o' },
+  ],
+  // grp-1: 群组会话
+  'grp-1': [
+    { id: 'm-grp-1', role: 'user', user_id: 'u-3', user_name: '王五', to_ai: false, content: '预测模型 v2 的 bug 我修完了，大家回归一下', created_at: ago(120), tokens: 0, model: '' },
+    { id: 'm-grp-2', role: 'user', user_id: 'u-2', user_name: '李思', to_ai: false, content: '收到，下午我跑一遍回归', created_at: ago(100), tokens: 0, model: '' },
+    { id: 'm-grp-3', role: 'user', user_id: 'u-1', user_name: '张伟', to_ai: true, content: '帮我汇总一下本周各区域的销售预测完成情况', created_at: ago(80), tokens: 15, model: 'gpt-4o' },
+    { id: 'm-grp-4', role: 'assistant', reply_to_name: '张伟', content: '@张伟 本周各区域销售预测汇总如下：\n\n| 区域 | 预测目标 | 实际完成 | 完成率 |\n|------|---------|---------|--------|\n| 华东 | 1,200万 | 1,104万 | 92% |\n| 华南 | 980万 | 931万 | 95% |\n| 华北 | 860万 | 843万 | 98% |\n| 西南 | 520万 | 452万 | 87% |\n| 华中 | 740万 | 718万 | 97% |\n\n**整体完成率 93.2%**，其中华东和西南区域偏低，建议重点关注。\n\n- 华东：受促销退单影响，约 96万订单延迟确认\n- 西南：新客户拓展不及预期，缺口约 68万\n- 其他区域均接近或超过目标', created_at: ago(75), tokens: 220, model: 'gpt-4o' },
+    { id: 'm-grp-5', role: 'user', user_id: 'u-4', user_name: '赵六', to_ai: false, content: '数据口径和上周一致吗？别又混了退货单', created_at: ago(40), tokens: 0, model: '' },
   ],
 };
 
@@ -487,12 +497,22 @@ export function handleMockRequest(method: string, url: string, params: any, data
   if (url.match(/\/chat\/sessions\/([^/]+)\/messages$/) && m === 'post') {
     const sid = url.match(/\/chat\/sessions\/([^/]+)\/messages/)![1];
     if (!chatMessages[sid]) chatMessages[sid] = [];
-    const userMsg = { id: 'm-' + Date.now(), role: 'user', content: d.content, created_at: new Date().toISOString(), tokens: d.content?.length || 10, model: 'gpt-4o' };
-    chatMessages[sid].push(userMsg);
-    // 模拟 AI 回复
-    const aiMsg = { id: 'm-' + (Date.now() + 1), role: 'assistant', content: '收到你的消息："' + d.content + '"。这是 mock 模式下的自动回复，实际场景会调用 AI 模型生成回复。', created_at: new Date().toISOString(), tokens: 80, model: 'gpt-4o' };
-    chatMessages[sid].push(aiMsg);
     const session = chatSessions.find(s => s.id === sid);
+    const isGroup = session?.session_type === 'group';
+    const toAi = d.to_ai !== false; // default true
+    const userMsg: any = { id: 'm-' + Date.now(), role: 'user', content: d.content, created_at: new Date().toISOString(), tokens: d.content?.length || 10, model: 'gpt-4o' };
+    if (d.user_name) { userMsg.user_name = d.user_name; userMsg.user_id = 'u-1'; }
+    if (isGroup) { userMsg.to_ai = toAi; if (!toAi) { userMsg.tokens = 0; userMsg.model = ''; } }
+    chatMessages[sid].push(userMsg);
+    // AI 回复：仅 single 或 to_ai!==false 时生成
+    if (!isGroup || toAi) {
+      const aiContent = isGroup
+        ? `@${d.user_name || '张伟'} 收到你的消息："${d.content}"。这是 mock 模式下的自动回复。`
+        : '收到你的消息："' + d.content + '"。这是 mock 模式下的自动回复，实际场景会调用 AI 模型生成回复。';
+      const aiMsg: any = { id: 'm-' + (Date.now() + 1), role: 'assistant', content: aiContent, created_at: new Date().toISOString(), tokens: 80, model: 'gpt-4o' };
+      if (isGroup) aiMsg.reply_to_name = d.user_name || '张伟';
+      chatMessages[sid].push(aiMsg);
+    }
     if (session) { session.message_count = chatMessages[sid].length; session.last_message_at = new Date().toISOString(); }
     return ok(userMsg);
   }
@@ -514,6 +534,10 @@ export function handleMockRequest(method: string, url: string, params: any, data
         id: newId, title: newTitle, user_id: rid, mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto',
         status: 'active', workspace_name: '', readonly: mode === 'view',
         shared_from: { name: '张伟', note: d.note || '' },
+        session_type: source?.session_type, creator_id: source?.creator_id,
+        member_ids: source?.member_ids ? [...source.member_ids] : undefined,
+        agent_ids: source?.agent_ids ? [...source.agent_ids] : undefined,
+        skill_ids: source?.skill_ids ? [...source.skill_ids] : undefined,
         message_count: msgs.length, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString(),
       });
       chatMessages[newId] = msgs.map(msg => ({ ...msg, id: msg.id + '-copy-' + idx }));
@@ -553,7 +577,7 @@ export function handleMockRequest(method: string, url: string, params: any, data
     chatMessages[ns.id] = [];
     return ok(ns);
   }
-  if (url.match(/\/chat\/sessions/) && m === 'get') { return paginate(chatSessions.filter(s => !s.user_id || s.user_id === 'u-1'), p); }
+  if (url.match(/\/chat\/sessions/) && m === 'get') { return paginate(chatSessions.filter(s => (!s.user_id || s.user_id === 'u-1') || (s.session_type === 'group' && s.member_ids?.includes('u-1'))), p); }
 
   // ---- 通知 ----
   if (url.match(/\/notifications\/read-all$/) && m === 'post') {

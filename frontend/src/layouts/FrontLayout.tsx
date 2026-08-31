@@ -9,7 +9,7 @@ import {
   AutoStories, Search, Settings, Logout,
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
-  AccountTree, Share, DarkMode, LightMode,
+  AccountTree, Share, DarkMode, LightMode, Groups,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
 import { chatApi } from '../api/client';
 import NotificationBell from '../components/NotificationBell';
+import NewGroupDialog from '../pages/chat/NewGroupDialog';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -97,6 +98,8 @@ export default function FrontLayout() {
   const [settingsAnchor, setSettingsAnchor] = useState<null | HTMLElement>(null);
   const [spacesExpanded, setSpacesExpanded] = useState(true);
   const [tasksExpanded, setTasksExpanded] = useState(true);
+  const [groupsExpanded, setGroupsExpanded] = useState(true);
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sidebarSearchOpen, setSidebarSearchOpen] = useState(false);
   const [sidebarSearchText, setSidebarSearchText] = useState('');
   // 各导航分区展开状态（默认全部展开）
@@ -137,7 +140,8 @@ export default function FrontLayout() {
     if (!sidebarSearchText.trim()) return true;
     return s.title?.toLowerCase().includes(sidebarSearchText.toLowerCase());
   };
-  const tasks = allSessions.filter((s) => !s.workspace_name).filter(filterFn);
+  const tasks = allSessions.filter((s) => !s.workspace_name && s.session_type !== 'group').filter(filterFn);
+  const groupSessions = allSessions.filter((s) => s.session_type === 'group').filter(filterFn);
   const spaceMap = new Map<string, any[]>();
   allSessions.filter(filterFn).forEach((s) => {
     if (s.workspace_name) {
@@ -412,6 +416,70 @@ export default function FrontLayout() {
               ))}
             </Collapse>
           </Box>
+
+          {/* 群组 */}
+          <Box sx={{ mt: 1 }}>
+            <Box
+              onClick={() => setGroupsExpanded(!groupsExpanded)}
+              sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                px: 1, py: 0.75, cursor: 'pointer', borderRadius: 1,
+                '&:hover': { bgcolor: c.navHover },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Groups sx={{ fontSize: 14, color: c.text3 }} />
+                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: 11, color: c.text2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  群组
+                </Typography>
+                <Typography variant="caption" sx={{ fontSize: 10, color: c.text3 }}>
+                  ({groupSessions.length})
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                <Box
+                  component="span"
+                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); setNewGroupOpen(true); }}
+                  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: c.navHover }, color: c.text3 }}
+                >
+                  <Add sx={{ fontSize: 14 }} />
+                </Box>
+                {groupsExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
+              </Box>
+            </Box>
+            <Collapse in={groupsExpanded}>
+              <List dense disablePadding sx={{ pl: 1 }}>
+                {groupSessions.length === 0 ? (
+                  <Box sx={{ py: 2, px: 1.5 }}>
+                    <Typography sx={{ fontSize: 12, color: c.text3 }}>暂无群组</Typography>
+                  </Box>
+                ) : (
+                  groupSessions.map((session) => (
+                    <ListItemButton
+                      key={session.id}
+                      selected={activeId === session.id}
+                      onClick={() => { setActiveId(session.id); navigate(`/chat/${session.id}`); }}
+                      sx={{
+                        borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25,
+                        '&.Mui-selected': { bgcolor: c.navActive },
+                        '&:hover': { bgcolor: c.navHover },
+                      }}
+                    >
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10b981', mr: 1.5, flexShrink: 0 }} />
+                      <ListItemText
+                        primary={
+                          <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
+                        }
+                      />
+                      <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
+                        {session.last_message_at ? relativeTime(session.last_message_at) : ''}
+                      </Typography>
+                    </ListItemButton>
+                  ))
+                )}
+              </List>
+            </Collapse>
+          </Box>
         </Box>
 
         {/* ---- 底部：快捷入口 + 用户 ---- */}
@@ -497,6 +565,12 @@ export default function FrontLayout() {
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Outlet />
       </Box>
+
+      {/* 新建群组弹窗 */}
+      <NewGroupDialog
+        open={newGroupOpen}
+        onClose={() => setNewGroupOpen(false)}
+      />
     </Box>
   );
 }
