@@ -434,7 +434,7 @@ export const chatApi = {
     create: (data: any) => api.post('/chat/sessions', data),
     update: (id: string, data: any) => api.put(`/chat/sessions/${id}`, data),
     delete: (id: string) => api.delete(`/chat/sessions/${id}`),
-    share: (id: string, data: { recipient_ids: string[]; mode: 'view' | 'continue'; scope: 'session' | 'message'; message_id?: string; note?: string }) =>
+    share: (id: string, data: { recipient_ids: string[]; mode: 'view' | 'continue'; message_ids?: string[]; note?: string }) =>
       api.post(`/chat/sessions/${id}/share`, data),
   },
   messages: {

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import {
   Box, Typography, Paper, Avatar, TextField, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem, Switch, Button,
-  List, ListItemButton, ListItemText,
+  List, ListItemButton, ListItemText, Checkbox,
   Collapse, CircularProgress, Drawer,
 } from '@mui/material';
 import {
@@ -165,7 +165,7 @@ export default function ConversationPage() {
 
   // 分享弹窗
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareMsg, setShareMsg] = useState<{ id: string; content: string } | undefined>();
+  const [shareSelected, setShareSelected] = useState<{ id: string; role: string; content: string }[]>([]);
 
   // + 菜单
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
@@ -203,6 +203,20 @@ export default function ConversationPage() {
 
   // 消息 refs（用于 scrollIntoView）
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // ---- 选择模式 ----
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // ESC 退出选择模式
+  useEffect(() => {
+    if (!selectMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setSelectMode(false); setSelectedIds(new Set()); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectMode]);
 
   // 工作空间
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -276,14 +290,42 @@ export default function ConversationPage() {
     }
   };
 
-  const openShareDialog = (msg?: { id: string; content: string }) => {
-    if (msg) {
-      setShareMsg(msg);
+  const openShareDialog = (_msg?: { id: string; content: string }) => {
+    // 进入选择模式
+    setSelectMode(true);
+    if (_msg) {
+      // 入口 B：仅预选该条
+      setSelectedIds(new Set([_msg.id]));
     } else {
-      setShareMsg(undefined);
+      // 入口 A：默认全选
+      setSelectedIds(new Set(messages.map(m => m.id)));
     }
-    setShareOpen(true);
   };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (msgId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId); else next.add(msgId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === messages.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(messages.map(m => m.id)));
+    }
+  };
+
+  const selectedCount = selectedIds.size;
+  const allSelected = messages.length > 0 && selectedCount === messages.length;
+  const indeterminate = selectedCount > 0 && selectedCount < messages.length;
 
   // ---- 搜索逻辑 ----
   const searchResults = useMemo(() => {
@@ -444,7 +486,7 @@ export default function ConversationPage() {
             <Share sx={{ fontSize: 18, color: '#6366f1', mt: 0.25, flexShrink: 0 }} />
             <Box>
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#6366f1' }}>
-                本对话由 {sharedFrom.name} {isReadonly ? '分享' : '转交'}
+                本对话由 {sharedFrom.name} {isReadonly ? '分享' : '转交'}（共 {messages.length} 条消息）
               </Typography>
               {sharedFrom.note && (
                 <Typography sx={{ fontSize: 12.5, color: 'text.secondary', mt: 0.5, lineHeight: 1.6 }}>
@@ -469,7 +511,20 @@ export default function ConversationPage() {
               transition: 'all 0.3s',
               ...(highlightedMsgId === msg.id ? { outline: '2px solid #6366f1', outlineOffset: 4, borderRadius: 2 } : {}),
               ...(flashMsgId === msg.id ? { animation: 'flashBg 1.2s ease-out' } : {}),
+              ...(selectMode ? { maxWidth: '80%' } : {}),
             }}>
+              {/* 选择模式：勾选框 */}
+              {selectMode && (
+                <Checkbox
+                  checked={selectedIds.has(msg.id)}
+                  onChange={() => toggleSelect(msg.id)}
+                  sx={{
+                    flexShrink: 0, alignSelf: 'flex-start', mt: 0.5,
+                    color: 'text.secondary',
+                    '&.Mui-checked': { color: '#6366f1' },
+                  }}
+                />
+              )}
               <Avatar sx={{
                 width: 32, height: 32, flexShrink: 0, fontSize: 13,
                 bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
@@ -482,7 +537,10 @@ export default function ConversationPage() {
                 <Paper elevation={0} sx={{
                   p: 2, bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
                   color: msg.role === 'user' ? 'white' : 'text.primary', borderRadius: 2,
-                }}>
+                  ...(selectMode ? { cursor: 'pointer', border: selectedIds.has(msg.id) ? '1.5px solid #6366f1' : '1px solid transparent' } : {}),
+                }}
+                  onClick={selectMode ? () => toggleSelect(msg.id) : undefined}
+                >
                   {msg.role === 'user' ? (
                     <Typography sx={{ fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</Typography>
                   ) : renderContent(msg.content)}
@@ -504,7 +562,7 @@ export default function ConversationPage() {
                   </Box>
                 )}
 
-                {msg.role === 'assistant' && (
+                {msg.role === 'assistant' && !selectMode && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
                     <Tooltip title="复制"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ContentCopy sx={{ fontSize: 14 }} /></IconButton></Tooltip>
                     <Tooltip title="有用"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ThumbUp sx={{ fontSize: 14 }} /></IconButton></Tooltip>
@@ -532,6 +590,60 @@ export default function ConversationPage() {
         )}
         <div ref={messagesEndRef} />
       </Box>
+
+      {/* ===== 选择模式底部操作条 ===== */}
+      {selectMode && (
+        <Box sx={{
+          position: 'relative', mx: 2, mb: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          px: 2.5, py: 1.5, borderRadius: 2.5,
+          bgcolor: 'background.paper',
+          border: '1px solid', borderColor: 'divider',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+          zIndex: 10,
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Checkbox
+              checked={allSelected}
+              indeterminate={indeterminate}
+              onChange={toggleSelectAll}
+              sx={{ color: 'text.secondary', '&.Mui-checked': { color: '#6366f1' } }}
+            />
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
+              已选 {selectedCount} 条
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Tooltip title={selectedCount === 0 ? '至少选择一条消息' : ''}>
+              <span>
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={selectedCount === 0}
+                  onClick={() => {
+                    const selectedMsgs = messages
+                      .filter(m => selectedIds.has(m.id))
+                      .map(m => ({ id: m.id, role: m.role, content: m.content }));
+                    setShareOpen(true);
+                    setShareSelected(selectedMsgs);
+                  }}
+                  sx={{
+                    fontSize: 13, textTransform: 'none', borderRadius: 2,
+                    bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' },
+                    '&.Mui-disabled': { bgcolor: 'rgba(99,102,241,0.3)', color: 'rgba(255,255,255,0.5)' },
+                    boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
+                  }}
+                >
+                  发送给同事
+                </Button>
+              </span>
+            </Tooltip>
+            <IconButton size="small" onClick={exitSelectMode} sx={{ color: 'text.secondary' }}>
+              <Close sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+        </Box>
+      )}
 
       {/* ===== 只读模式提示 ===== */}
       {isReadonly ? (
@@ -853,10 +965,11 @@ export default function ConversationPage() {
       {/* ===== 分享弹窗 ===== */}
       <ShareDialog
         open={shareOpen}
-        onClose={() => { setShareOpen(false); setShareMsg(undefined); }}
+        onClose={() => { setShareOpen(false); setShareSelected([]); exitSelectMode(); }}
         sessionId={sessionId!}
         sessionTitle={session?.title || ''}
-        message={shareMsg}
+        selectedMessages={shareSelected}
+        sourceReadonly={isReadonly}
       />
 
       {/* ===== 历史提问菜单 ===== */}

@@ -3,9 +3,9 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Box, Typography, TextField, IconButton, Chip,
   RadioGroup, FormControlLabel, Radio, Button,
-  InputAdornment,
+  InputAdornment, Collapse,
 } from '@mui/material';
-import { Close, Search } from '@mui/icons-material';
+import { Close, Search, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { chatApi, usersApi } from '../../api/client';
@@ -15,19 +15,20 @@ interface ShareDialogProps {
   onClose: () => void;
   sessionId: string;
   sessionTitle: string;
-  message?: { id: string; content: string };
+  selectedMessages: { id: string; role: string; content: string }[];
+  sourceReadonly?: boolean;
 }
 
-export default function ShareDialog({ open, onClose, sessionId, sessionTitle, message }: ShareDialogProps) {
+export default function ShareDialog({ open, onClose, sessionId, sessionTitle, selectedMessages, sourceReadonly }: ShareDialogProps) {
   const { enqueueSnackbar } = useSnackbar();
   const qc = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
-  const [scope, setScope] = useState<'session' | 'message'>(message ? 'message' : 'session');
   const [mode, setMode] = useState<'continue' | 'view'>('continue');
   const [note, setNote] = useState('');
+  const [previewExpanded, setPreviewExpanded] = useState(false);
 
   // 防抖搜索
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -64,9 +65,9 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
     setSearchText('');
     setDebouncedSearch('');
     setSelectedUsers([]);
-    setScope(message ? 'message' : 'session');
     setMode('continue');
     setNote('');
+    setPreviewExpanded(false);
     onClose();
   };
 
@@ -75,8 +76,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
     shareMut.mutate({
       recipient_ids: selectedUsers.map((u) => u.id),
       mode,
-      scope: message && scope === 'message' ? 'message' : 'session',
-      message_id: message && scope === 'message' ? message.id : undefined,
+      message_ids: selectedMessages.map(m => m.id),
       note: note.trim() || undefined,
     });
   };
@@ -86,7 +86,7 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
     if (selectedUsers.length === 0) return '';
     const names = selectedUsers.map((u) => u.name).join('、');
     const action = mode === 'continue' ? '可以继续这段对话' : '仅可查看';
-    return `${names} 将在通知中心收到通知，并${action}`;
+    return `${names} 将在通知中心收到通知，并${action}（共 ${selectedMessages.length} 条消息）`;
   })();
 
   return (
@@ -114,6 +114,42 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pb: 1 }}>
+        {/* 已精选消息摘要 */}
+        <Box sx={{ mb: 2 }}>
+          <Box
+            onClick={() => setPreviewExpanded(!previewExpanded)}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 0.5,
+              cursor: 'pointer', py: 0.5,
+              '&:hover': { bgcolor: 'action.hover' },
+              borderRadius: 1.5, px: 1,
+            }}
+          >
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', flex: 1 }}>
+              已精选 {selectedMessages.length} 条消息
+            </Typography>
+            {previewExpanded ? <ExpandLess sx={{ fontSize: 16, color: 'text.secondary' }} /> : <ExpandMore sx={{ fontSize: 16, color: 'text.secondary' }} />}
+          </Box>
+          <Collapse in={previewExpanded}>
+            <Box sx={{ mt: 0.5, maxHeight: 160, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, py: 0.5 }}>
+              {selectedMessages.map((m, idx) => (
+                <Box key={m.id} sx={{
+                  px: 2, py: 0.75, fontSize: 12,
+                  borderBottom: idx < selectedMessages.length - 1 ? '1px solid' : 'none',
+                  borderColor: 'divider',
+                }}>
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: m.role === 'user' ? '#6366f1' : 'text.secondary', mb: 0.25 }}>
+                    {m.role === 'user' ? '我：' : 'AI：'}
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: 'text.primary', lineHeight: 1.5 }}>
+                    {m.content.length > 30 ? m.content.slice(0, 30) + '...' : m.content}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Collapse>
+        </Box>
+
         {/* 搜索同事 */}
         <Box sx={{ mb: 2 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>搜索同事</Typography>
@@ -193,29 +229,6 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
           )}
         </Box>
 
-        {/* 分享范围（仅消息级入口时显示） */}
-        {message && (
-          <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>分享范围</Typography>
-            <RadioGroup
-              value={scope}
-              onChange={(e) => setScope(e.target.value as 'session' | 'message')}
-              row
-            >
-              <FormControlLabel
-                value="message"
-                control={<Radio size="small" sx={{ color: 'text.disabled', '&.Mui-checked': { color: '#6366f1' } }} />}
-                label={<Typography sx={{ fontSize: 13 }}>仅这条消息</Typography>}
-              />
-              <FormControlLabel
-                value="session"
-                control={<Radio size="small" sx={{ color: 'text.disabled', '&.Mui-checked': { color: '#6366f1' } }} />}
-                label={<Typography sx={{ fontSize: 13 }}>整个对话</Typography>}
-              />
-            </RadioGroup>
-          </Box>
-        )}
-
         {/* 对方收到后 */}
         <Box sx={{ mb: 2 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>对方收到后</Typography>
@@ -226,7 +239,17 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, me
             <FormControlLabel
               value="continue"
               control={<Radio size="small" sx={{ color: 'text.disabled', '&.Mui-checked': { color: '#6366f1' } }} />}
-              label={<Typography sx={{ fontSize: 13 }}>可以继续聊（转交，对话上下文完整带过去）</Typography>}
+              label={
+                <Box>
+                  <Typography sx={{ fontSize: 13 }}>可以继续聊（转交，对话上下文完整带过去）</Typography>
+                  {sourceReadonly && (
+                    <Typography sx={{ fontSize: 11, color: 'text.disabled', mt: 0.25 }}>
+                      转发的对话仅支持只读分享
+                    </Typography>
+                  )}
+                </Box>
+              }
+              disabled={sourceReadonly}
             />
             <FormControlLabel
               value="view"

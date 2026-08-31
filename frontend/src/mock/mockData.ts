@@ -500,15 +500,15 @@ export function handleMockRequest(method: string, url: string, params: any, data
     const sid = url.match(/\/chat\/sessions\/([^/]+)\/share/)![1];
     const source = chatSessions.find(s => s.id === sid);
     const mode = d.mode || 'continue';
-    const scope = d.scope || 'session';
+    const messageIds: string[] | undefined = d.message_ids;
     const prefix = mode === 'view' ? '【分享】' : '【转交】';
     const sharedSessions: string[] = [];
     (d.recipient_ids || []).forEach((rid: string, idx: number) => {
       const newId = 'cs-' + Date.now() + idx;
       const newTitle = prefix + (source?.title || '对话');
       const srcMsgs = chatMessages[sid] || [];
-      const msgs = scope === 'message' && d.message_id
-        ? srcMsgs.filter(msg => msg.id === d.message_id)
+      const msgs = messageIds && messageIds.length > 0
+        ? messageIds.map(mid => srcMsgs.find(m => m.id === mid)).filter(Boolean)
         : [...srcMsgs];
       chatSessions.push({
         id: newId, title: newTitle, user_id: rid, mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto',
@@ -520,10 +520,11 @@ export function handleMockRequest(method: string, url: string, params: any, data
       sharedSessions.push(newId);
       // 创建通知
       const recipient = users.find(u => u.id === rid);
+      const msgCountSuffix = msgs.length > 0 ? `（共 ${msgs.length} 条消息）` : '';
       notifications.unshift({
         id: 'n-' + Date.now() + idx, user_id: rid, type: 'share',
         title: `张伟 ${mode === 'view' ? '向你分享了' : '转交给你'}一段对话`,
-        content: `${source?.title || '对话'}，附言：${d.note || ''}`,
+        content: `${source?.title || '对话'}，附言：${d.note || ''}${msgCountSuffix}`,
         from_name: '张伟', action_kind: 'chat', session_id: newId,
         read: false, created_at: new Date().toISOString(),
       });
