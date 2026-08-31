@@ -436,7 +436,7 @@ export const chatApi = {
     delete: (id: string) => api.delete(`/chat/sessions/${id}`),
     share: (id: string, data: { recipient_ids: string[]; mode: 'view' | 'continue'; message_ids?: string[]; note?: string }) =>
       api.post(`/chat/sessions/${id}/share`, data),
-    addMembers: (id: string, userIds: string[]) => api.post(`/chat/sessions/${id}/members`, { user_ids: userIds }),
+    addMembers: (id: string, userIds: string[], title?: string) => api.post(`/chat/sessions/${id}/members`, { user_ids: userIds, ...(title ? { title } : {}) }),
     removeMember: (id: string, uid: string) => api.delete(`/chat/sessions/${id}/members/${uid}`),
   },
   messages: {

@@ -228,23 +228,6 @@ export default function FrontLayout() {
             <Typography sx={{ fontWeight: 600, fontSize: 13 }}>新建对话</Typography>
           </Box>
 
-          {/* 新建群组按钮 */}
-          <Box
-            onClick={() => setNewGroupOpen(true)}
-            sx={{
-              display: 'flex', alignItems: 'center', gap: 1,
-              px: 1.5, py: 1, borderRadius: 2, mb: 1.5,
-              border: '1px solid', borderColor: c.border,
-              bgcolor: 'transparent', color: c.text2,
-              cursor: 'pointer', fontWeight: 500, fontSize: 13,
-              transition: 'all 0.2s',
-              '&:hover': { borderColor: c.accent, color: c.accent },
-            }}
-          >
-            <Groups sx={{ fontSize: 16 }} />
-            <Typography sx={{ fontWeight: 500, fontSize: 13 }}>新建群组</Typography>
-          </Box>
-
           {/* 导航分区：三模块九页 + 知识库/技能/Token转售（均可折叠） */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
             {NAV_SECTIONS.map((section) => {
@@ -458,9 +441,9 @@ export default function FrontLayout() {
                   <Box
                     component="span"
                     onClick={(e: React.MouseEvent) => { e.stopPropagation(); setNewGroupOpen(true); }}
-                    sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 1, cursor: 'pointer', '&:hover': { bgcolor: c.navHover, color: c.accent }, color: c.text3 }}
+                    sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 1, cursor: 'pointer', color: c.text2, '&:hover': { bgcolor: alpha(c.accent, 0.12), color: c.accent } }}
                   >
-                    <Add sx={{ fontSize: 14 }} />
+                    <Add sx={{ fontSize: 16 }} />
                   </Box>
                 </Tooltip>
                 {groupsExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
@@ -469,11 +452,16 @@ export default function FrontLayout() {
             <Collapse in={groupsExpanded}>
               <List dense disablePadding sx={{ pl: 1 }}>
                 {groupSessions.length === 0 ? (
-                  <Box sx={{ py: 2, px: 1.5 }}>
-                    <Typography
-                      onClick={() => setNewGroupOpen(true)}
-                      sx={{ fontSize: 12, color: c.accent, cursor: 'pointer', '&:hover': { color: '#4f46e5' } }}
-                    >+ 创建群组</Typography>
+                  <Box
+                    onClick={() => setNewGroupOpen(true)}
+                    sx={{
+                      mx: 1, my: 0.5, py: 0.75, px: 1.5,
+                      border: '1px dashed', borderColor: c.border, borderRadius: '8px',
+                      cursor: 'pointer', textAlign: 'center',
+                      '&:hover': { borderColor: c.accent, '& .empty-group-text': { color: c.accent } },
+                    }}
+                  >
+                    <Typography className="empty-group-text" sx={{ fontSize: 12.5, color: c.text3, transition: 'color 0.2s' }}>+ 新建群组</Typography>
                   </Box>
                 ) : (
                   groupSessions.map((session) => (
@@ -490,7 +478,12 @@ export default function FrontLayout() {
                       <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10b981', mr: 1.5, flexShrink: 0 }} />
                       <ListItemText
                         primary={
-                          <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
+                            {session.member_ids?.length > 0 && (
+                              <Typography sx={{ fontSize: 10, color: c.text3, flexShrink: 0 }}>· {session.member_ids.length}人</Typography>
+                            )}
+                          </Box>
                         }
                       />
                       <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>

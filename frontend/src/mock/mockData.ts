@@ -2825,8 +2825,6 @@ const chatSessions: any[] = [
   { id: 'cs-t1', title: '帮我写一段 Python 快排', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 2, created_at: dayAgo(1), updated_at: ago(30), last_message_at: ago(30) },
   { id: 'cs-3', title: '数据库索引优化建议', user_id: 'u-1', mode: 'ask', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 4, created_at: dayAgo(5), updated_at: dayAgo(4), last_message_at: dayAgo(4) },
   { id: 'cs-4', title: 'React性能优化方案', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-2', model_policy: '极致', status: 'active', workspace_name: 'openclaw-main', message_count: 8, created_at: dayAgo(7), updated_at: dayAgo(6), last_message_at: dayAgo(6) },
-  { id: 'cs-5', title: 'Kubernetes部署配置', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(10), updated_at: dayAgo(9), last_message_at: dayAgo(9) },
-  { id: 'cs-6', title: '产品需求评审要点', user_id: 'u-1', mode: 'plan', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(12), updated_at: dayAgo(11), last_message_at: dayAgo(11) },
   { id: 'cs-7', title: '周报自动生成', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-3', model_policy: '性能', status: 'active', workspace_name: 'openclaw-main', message_count: 6, created_at: dayAgo(14), updated_at: dayAgo(13), last_message_at: dayAgo(13) },
   // 任务：采购申请审批跟进
   { id: 'cs-9', title: '采购申请审批跟进', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 2, created_at: ago(180), updated_at: ago(170), last_message_at: ago(170) },
@@ -2836,6 +2834,7 @@ const chatSessions: any[] = [
   { id: 'cs-shared-1', title: '【分享】CRM销售话术讨论', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: true, shared_from: { name: '李思', note: '这段分析你看看，下次评审用得上' }, message_count: 3, created_at: ago(60), updated_at: ago(50), last_message_at: ago(50) },
   // 群组会话
   { id: 'grp-1', title: '销售预测平台攻坚群', user_id: 'u-1', session_type: 'group', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40) },
+  { id: 'grp-2', title: '新产品评审群', user_id: 'u-2', session_type: 'group', creator_id: 'u-2', member_ids: ['u-1', 'u-2', 'u-3'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(25) },
 ];
 
 const chatMessages: Record<string, any[]> = {
@@ -2867,14 +2866,6 @@ const chatMessages: Record<string, any[]> = {
     { id: 'm-cs4-1', role: 'user', content: 'React 应用越来越慢，有什么优化方案？', created_at: dayAgo(7), tokens: 12, model: 'claude-3.5-sonnet' },
     { id: 'm-cs4-2', role: 'assistant', content: '## React 性能优化方案\n\n### 渲染优化\n- `React.memo` 避免不必要的重渲染\n- `useMemo` / `useCallback` 缓存计算结果和回调\n- 虚拟列表（react-window）处理长列表\n\n### 代码分割\n- `React.lazy` + `Suspense` 路由级懒加载\n- 动态 import 按需加载组件\n\n### 状态管理\n- 状态下沉：将 state 放在尽可能低的层级\n- 使用 Zustand/Jotai 替代全局 Context\n\n### 构建优化\n- Tree shaking 移除死代码\n- 图片压缩与 WebP 格式', created_at: dayAgo(7), tokens: 200, model: 'claude-3.5-sonnet' },
   ],
-  'cs-5': [
-    { id: 'm-cs5-1', role: 'user', content: '帮我写一个 K8s Deployment 配置', created_at: dayAgo(10), tokens: 12, model: 'gpt-4o' },
-    { id: 'm-cs5-2', role: 'assistant', content: '```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: openclaw-api\n  labels:\n    app: openclaw\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: openclaw\n  template:\n    metadata:\n      labels:\n        app: openclaw\n    spec:\n      containers:\n      - name: api\n        image: openclaw/api:latest\n        ports:\n        - containerPort: 8000\n        resources:\n          requests:\n            memory: "256Mi"\n            cpu: "250m"\n          limits:\n            memory: "512Mi"\n            cpu: "500m"\n        livenessProbe:\n          httpGet:\n            path: /health\n            port: 8000\n          initialDelaySeconds: 10\n```\n\n包含 3 副本、资源限制和健康检查。需要 Service 配置吗？', created_at: dayAgo(10), tokens: 180, model: 'gpt-4o' },
-  ],
-  'cs-6': [
-    { id: 'm-cs6-1', role: 'user', content: '产品需求评审需要注意哪些要点？', created_at: dayAgo(12), tokens: 12, model: 'gpt-4o' },
-    { id: 'm-cs6-2', role: 'assistant', content: '## 产品需求评审要点\n\n1. **用户价值**：需求是否解决真实用户痛点\n2. **可行性**：技术实现难度与工期评估\n3. **边界条件**：异常流程和边界情况是否覆盖\n4. **数据指标**：如何衡量需求上线效果\n5. **依赖关系**：是否依赖其他模块或外部服务\n6. **安全合规**：数据隐私和权限设计', created_at: dayAgo(12), tokens: 120, model: 'gpt-4o' },
-  ],
   'cs-7': [
     { id: 'm-cs7-1', role: 'user', content: '帮我生成本周工作周报', created_at: dayAgo(14), tokens: 12, model: 'glm-4' },
     { id: 'm-cs7-2', role: 'assistant', content: '## 本周工作周报\n\n### 已完成\n- 完成用户管理模块的 CRUD 接口开发\n- 修复了 3 个线上 Bug（登录超时、数据导出异常、权限校验遗漏）\n- 参与产品需求评审，完成技术方案设计\n\n### 进行中\n- Agent 工作流引擎开发（进度 60%）\n- 单元测试覆盖率提升至 75%\n\n### 下周计划\n- 完成工作流引擎核心逻辑\n- 启动性能优化专项\n\n需要调整内容吗？', created_at: dayAgo(14), tokens: 160, model: 'glm-4', attachments: [{ name: '2026年8月第4周周报.html', type: 'html', content: '<h1>2026年8月第4周工作周报</h1><h2>一、本周完成工作</h2><ul><li>完成用户管理模块 CRUD 接口开发，覆盖增删改查全部 12 个端点</li><li>修复线上 Bug 3 项：登录超时（Token 刷新竞态）、数据导出异常（分页越界）、权限校验遗漏（/api/agents/:id/debug）</li><li>参与 v2.3 产品需求评审，输出技术方案设计文档</li><li>完成 Agent 工作流引擎核心调度逻辑（DAG 解析 + 节点执行）</li></ul><h2>二、进行中工作</h2><ul><li>Agent 工作流引擎开发（整体进度 60%，预计下周完成）</li><li>单元测试覆盖率从 62% 提升至 75%</li><li>编写 API 接口文档（Swagger OpenAPI 3.0 格式）</li></ul><h2>三、下周计划</h2><ul><li>完成工作流引擎可视化画布与节点编排</li><li>启动性能优化专项：接口 P99 延迟从 800ms 降至 300ms</li><li>协助 QA 完成 v2.3 回归测试</li></ul><h2>四、风险与阻塞</h2><p>模型网关在并发超过 200 QPS 时偶发超时，需运维协助排查网络层配置。</p>' }] },
@@ -2904,6 +2895,12 @@ const chatMessages: Record<string, any[]> = {
     { id: 'm-grp-3', role: 'user', user_id: 'u-1', user_name: '张伟', to_ai: true, content: '帮我汇总一下本周各区域的销售预测完成情况', created_at: ago(80), tokens: 15, model: 'gpt-4o' },
     { id: 'm-grp-4', role: 'assistant', reply_to_name: '张伟', content: '@张伟 本周各区域销售预测汇总如下：\n\n| 区域 | 预测目标 | 实际完成 | 完成率 |\n|------|---------|---------|--------|\n| 华东 | 1,200万 | 1,104万 | 92% |\n| 华南 | 980万 | 931万 | 95% |\n| 华北 | 860万 | 843万 | 98% |\n| 西南 | 520万 | 452万 | 87% |\n| 华中 | 740万 | 718万 | 97% |\n\n**整体完成率 93.2%**，其中华东和西南区域偏低，建议重点关注。\n\n- 华东：受促销退单影响，约 96万订单延迟确认\n- 西南：新客户拓展不及预期，缺口约 68万\n- 其他区域均接近或超过目标', created_at: ago(75), tokens: 220, model: 'gpt-4o' },
     { id: 'm-grp-5', role: 'user', user_id: 'u-4', user_name: '赵六', to_ai: false, content: '数据口径和上周一致吗？别又混了退货单', created_at: ago(40), tokens: 0, model: '' },
+  ],
+  // grp-2: 群组会话(李思是群主,张伟是成员)
+  'grp-2': [
+    { id: 'm-grp2-1', role: 'user', user_id: 'u-2', user_name: '李思', to_ai: true, content: '帮我整理一下新产品评审会的议程模板', created_at: ago(50), tokens: 15, model: 'gpt-4o' },
+    { id: 'm-grp2-2', role: 'assistant', reply_to_name: '李思', content: '@李思 新产品评审会议程模板如下:\n\n1. **产品方案介绍**(15分钟):背景、目标用户、核心功能\n2. **技术方案评审**(20分钟):架构设计、关键技术点、风险\n3. **资源与排期**(10分钟):人力投入、里程碑计划\n4. **讨论与决议**(15分钟):评审意见汇总、待办确认\n\n需要我根据具体产品调整吗?', created_at: ago(49), tokens: 120, model: 'gpt-4o' },
+    { id: 'm-grp2-3', role: 'user', user_id: 'u-1', user_name: '张伟', to_ai: false, content: '我这边评审材料下午发群里', created_at: ago(25), tokens: 0, model: '' },
   ],
 };
 
@@ -5049,6 +5046,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     if (!wasGroup) {
       session.session_type = 'group';
       session.creator_id = 'u-1';
+      if (data.title && data.title.trim()) session.title = data.title.trim();
     }
     session.member_ids = [...new Set(['u-1', ...(session.member_ids || []), ...newMembers])];
     // 系统消息

@@ -529,7 +529,7 @@ export default function ConversationPage() {
 
         {/* 工具栏：拉人进群 / 转为群组 */}
         {!isReadonly && (
-          <Tooltip title={isGroup ? '拉人进群' : '转为群组'}>
+          <Tooltip title={isGroup ? '添加成员' : '转为群组'}>
             <IconButton size="small" onClick={() => setAddMembersOpen(true)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
               <PersonAdd sx={{ fontSize: 18 }} />
             </IconButton>
@@ -1202,7 +1202,7 @@ export default function ConversationPage() {
                 }}
               >
                 <PersonAdd sx={{ fontSize: 16, color: 'text.secondary' }} />
-                <Typography className="convert-text" sx={{ fontSize: 12, color: 'text.secondary', transition: 'color 0.2s' }}>拉人转为群组，共同协作</Typography>
+                <Typography className="convert-text" sx={{ fontSize: 12, color: 'text.secondary', transition: 'color 0.2s' }}>转为群组，邀请成员协作</Typography>
               </Box>
             )}
 

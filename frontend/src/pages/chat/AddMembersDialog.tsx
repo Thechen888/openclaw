@@ -18,13 +18,19 @@ interface AddMembersDialogProps {
   existingMemberIds: string[];
 }
 
-export default function AddMembersDialog({ open, onClose, sessionId, isGroup, existingMemberIds }: AddMembersDialogProps) {
+export default function AddMembersDialog({ open, onClose, sessionId, sessionTitle, isGroup, existingMemberIds }: AddMembersDialogProps) {
   const { enqueueSnackbar } = useSnackbar();
   const qc = useQueryClient();
 
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+  const [groupName, setGroupName] = useState(sessionTitle);
+
+  // 弹窗打开时同步 sessionTitle
+  useEffect(() => {
+    if (open) setGroupName(sessionTitle);
+  }, [open, sessionTitle]);
 
   // 防抖搜索
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -46,10 +52,10 @@ export default function AddMembersDialog({ open, onClose, sessionId, isGroup, ex
 
   // 添加成员 mutation
   const addMut = useMutation({
-    mutationFn: (userIds: string[]) => chatApi.sessions.addMembers(sessionId, userIds),
+    mutationFn: (userIds: string[]) => chatApi.sessions.addMembers(sessionId, userIds, !isGroup ? groupName : undefined),
     onSuccess: () => {
       const count = selectedUsers.length;
-      enqueueSnackbar(isGroup ? `已拉入 ${count} 人` : '已转为群组', { variant: 'success' });
+      enqueueSnackbar(isGroup ? `已添加 ${count} 名成员` : '已转为群组', { variant: 'success' });
       qc.invalidateQueries({ queryKey: ['chat-session', sessionId] });
       qc.invalidateQueries({ queryKey: ['chat-sessions'] });
       handleClose();
@@ -63,6 +69,7 @@ export default function AddMembersDialog({ open, onClose, sessionId, isGroup, ex
     setSearchText('');
     setDebouncedSearch('');
     setSelectedUsers([]);
+    setGroupName(sessionTitle);
     onClose();
   };
 
@@ -89,16 +96,32 @@ export default function AddMembersDialog({ open, onClose, sessionId, isGroup, ex
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{isGroup ? '拉人进群' : '转为群组并拉人'}</Typography>
+        <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{isGroup ? '添加成员' : '转为群组'}</Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: 'text.secondary' }}>
           <Close sx={{ fontSize: 18 }} />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pb: 1 }}>
+        {/* 群组名称（仅非群组时显示） */}
+        {!isGroup && (
+          <TextField
+            fullWidth size="small" autoFocus
+            label="群组名称"
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            sx={{
+              mb: 1.5,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2, fontSize: 13,
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+              },
+            }}
+          />
+        )}
         {/* 搜索用户 */}
         <TextField
-          fullWidth size="small" autoFocus
+          fullWidth size="small" autoFocus={isGroup}
           placeholder="搜索用户添加..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -159,10 +182,10 @@ export default function AddMembersDialog({ open, onClose, sessionId, isGroup, ex
 
       <DialogActions sx={{ px: 3, pb: 2, flexDirection: 'column', alignItems: 'stretch', gap: 1 }}>
         {/* 说明 */}
-        <Typography sx={{ fontSize: 11, color: 'info.main', lineHeight: 1.6 }}>
+        <Typography sx={{ fontSize: 11.5, color: 'text.secondary', lineHeight: 1.6 }}>
           新成员将看到本对话的全部历史消息。
         </Typography>
-        <Typography sx={{ fontSize: 11, color: 'info.main', lineHeight: 1.6 }}>
+        <Typography sx={{ fontSize: 11.5, color: 'text.secondary', lineHeight: 1.6 }}>
           本群 AI 调用使用创建人（张伟）的全部权限，群成员均可发起对话。
         </Typography>
         <Button
@@ -175,7 +198,7 @@ export default function AddMembersDialog({ open, onClose, sessionId, isGroup, ex
             '&.Mui-disabled': { bgcolor: 'action.disabledBackground' },
           }}
         >
-          {addMut.isPending ? '处理中...' : (isGroup ? '拉入群组' : '转为群组')}
+          {addMut.isPending ? '处理中...' : (isGroup ? '添加' : '转为群组')}
         </Button>
       </DialogActions>
     </Dialog>
