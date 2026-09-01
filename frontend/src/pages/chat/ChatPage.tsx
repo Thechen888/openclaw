@@ -3,20 +3,20 @@ import {
   Box, TextField, Typography, Paper, Chip, Avatar,
   CircularProgress, Divider, Menu, MenuItem,
   Collapse, List, ListItemButton, ListItemText, Button,
-  Switch, Tooltip,
+  Switch, Tooltip, Badge,
 } from '@mui/material';
 import {
   Add, Send, SmartToy, Person, MenuBook, AutoAwesome,
   ExpandMore, ExpandLess, Description, Score,
-  Psychology, AttachFile, Code, Extension, Cable,
+  Psychology, AttachFile, Code, Extension,
   CheckCircle, Mic, MicOff, KeyboardArrowDown,
-  Close, Folder, Search,
+  Close, Folder, Search, Shield, Build,
   ChatBubbleOutlined, InsertDriveFile, AutoFixHigh,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
-import { chatApi, ragApi, modelPoliciesApi } from '../../api/client';
+import { chatApi, ragApi, skillsApi, agentsApi, modelPoliciesApi } from '../../api/client';
 
 // =================== Markdown渲染 ===================
 function formatMessage(content: string) {
@@ -121,18 +121,6 @@ const MODES = [
   { id: 'ask', label: '问答', icon: <Psychology sx={{ fontSize: 16 }} />, desc: '精准回答，简洁高效' },
 ];
 
-const SKILLS_MOCK = [
-  { id: 's1', name: '文档总结', desc: '自动提取文档要点' },
-  { id: 's2', name: '代码审查', desc: '检查代码质量与规范' },
-  { id: 's3', name: '数据分析', desc: '可视化数据分析报告' },
-];
-
-const KB_MOCK = [
-  { id: 'kb1', name: '产品文档库', count: 128 },
-  { id: 'kb2', name: '技术规范库', count: 56 },
-  { id: 'kb3', name: '常见问题库', count: 234 },
-];
-
 const WORKSPACES = [
   { id: '123', name: '123' },
   { id: 'openclaw-main', name: 'openclaw-main' },
@@ -185,6 +173,17 @@ export default function ChatPage() {
   const [permAnchor, setPermAnchor] = useState<null | HTMLElement>(null);
   const [selectedPerm, setSelectedPerm] = useState('default');
 
+  // 工具栏按钮
+  const [modeAnchor, setModeAnchor] = useState<null | HTMLElement>(null);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const [skillAnchor, setSkillAnchor] = useState<null | HTMLElement>(null);
+  const [skillMenuOpen, setSkillMenuOpen] = useState(false);
+  const [kbAnchor, setKbAnchor] = useState<null | HTMLElement>(null);
+  const [kbMenuOpen, setKbMenuOpen] = useState(false);
+  const [agentAnchor, setAgentAnchor] = useState<null | HTMLElement>(null);
+  const [agentMenuOpen, setAgentMenuOpen] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+
   // 数据查询
   const { data: sessionsData } = useQuery({
     queryKey: ['chat-sessions'],
@@ -197,6 +196,22 @@ export default function ChatPage() {
     queryFn: () => ragApi.knowledgeBases.list({ page: 1, page_size: 200 }),
   });
   const kbs: any[] = kbData?.data?.data || [];
+
+  // API 查询：已安装技能
+  const { data: skillsData, isLoading: skillsLoading } = useQuery({
+    queryKey: ['chat-skills-installed'],
+    queryFn: () => skillsApi.installed({ page: 1, page_size: 50 }),
+    enabled: skillMenuOpen,
+  });
+  const installedSkills: any[] = skillsData?.data?.data || [];
+
+  // API 查询：智能体列表
+  const { data: agentsData } = useQuery({
+    queryKey: ['chat-agents'],
+    queryFn: () => agentsApi.list({ page: 1, page_size: 50 }),
+    enabled: agentMenuOpen,
+  });
+  const publishedAgents: any[] = (agentsData?.data?.data || []).filter((a: any) => a.status === 'published');
 
   const currentSession = sessions.find((s: any) => s.id === selectedSession);
   const currentModel = MODELS.find(m => m.id === selectedModel) || MODELS[0];
@@ -279,19 +294,6 @@ export default function ChatPage() {
     setAttachedFiles(prev => prev.filter(f => f !== file));
   };
 
-  // 子菜单展开状态
-  const [plusSubMenu, setPlusSubMenu] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<any>(null);
-
-  // Mock 智能体列表
-  const AGENTS_MOCK = [
-    { id: 'a1', name: '产品管理专家', desc: '擅长产品规划与需求分析', color: '#8b5cf6' },
-    { id: 'a2', name: '代码审查Bot', desc: '代码质量检查与优化建议', color: '#06b6d4' },
-    { id: 'a3', name: '数据分析Agent', desc: '数据可视化与洞察报告', color: '#10b981' },
-    { id: 'a4', name: '客服助手', desc: '智能客服与问题解答', color: '#f59e0b' },
-    { id: 'a5', name: '周报生成器', desc: '自动生成工作总结与周报', color: '#ef4444' },
-  ];
-
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {!selectedSession ? (
@@ -363,8 +365,24 @@ export default function ChatPage() {
           {/* 输入框 */}
           <Box sx={{ width: '100%', maxWidth: 720, position: 'relative', zIndex: 1 }}>
             {/* 已选内容标签（文件/技能/知识库） */}
-            {(attachedFiles.length > 0 || selectedSkills.length > 0 || selectedKBs.length > 0) && (
+            {(attachedFiles.length > 0 || selectedAgent || selectedSkills.length > 0 || selectedKBs.length > 0) && (
               <Box sx={{ display: 'flex', gap: 0.5, mb: 1.5, flexWrap: 'wrap', px: 0.5, alignItems: 'center' }}>
+                {/* 智能体 */}
+                {selectedAgent && (
+                  <Box key="agent" sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.3,
+                    px: 1, py: 0.3, borderRadius: 1.5, fontSize: 12, fontWeight: 500,
+                    bgcolor: 'rgba(139,92,246,0.1)', color: '#a78bfa',
+                    border: '1px solid rgba(139,92,246,0.15)',
+                    '& .close-icon': { opacity: 0, transition: 'opacity 0.15s', fontSize: 13 },
+                    '&:hover .close-icon': { opacity: 1 },
+                  }}>
+                    <SmartToy sx={{ fontSize: 12 }} />
+                    {selectedAgent.name}
+                    <Close className="close-icon" sx={{ fontSize: 13, cursor: 'pointer', ml: 0.2 }}
+                      onClick={() => setSelectedAgent(null)} />
+                  </Box>
+                )}
                 {/* 文件 */}
                 {attachedFiles.map((file) => (
                   <Box key={`f-${file}`} sx={{
@@ -383,7 +401,7 @@ export default function ChatPage() {
                 ))}
                 {/* 技能 */}
                 {selectedSkills.map((skillId) => {
-                  const skill = SKILLS_MOCK.find(s => s.id === skillId);
+                  const skill = installedSkills.find(s => s.id === skillId);
                   return skill ? (
                     <Box key={`s-${skillId}`} sx={{
                       display: 'flex', alignItems: 'center', gap: 0.3,
@@ -394,7 +412,7 @@ export default function ChatPage() {
                       '&:hover .close-icon': { opacity: 1 },
                     }}>
                       <AutoFixHigh sx={{ fontSize: 12 }} />
-                      {skill.name}
+                      {skill.skill_name}
                       <Close className="close-icon" sx={{ fontSize: 13, cursor: 'pointer', ml: 0.2 }}
                         onClick={() => setSelectedSkills(prev => prev.filter(s => s !== skillId))} />
                     </Box>
@@ -402,7 +420,7 @@ export default function ChatPage() {
                 })}
                 {/* 知识库 */}
                 {selectedKBs.map((kbId) => {
-                  const kb = KB_MOCK.find(k => k.id === kbId);
+                  const kb = kbs.find(k => k.id === kbId);
                   return kb ? (
                     <Box key={`k-${kbId}`} sx={{
                       display: 'flex', alignItems: 'center', gap: 0.3,
@@ -448,147 +466,133 @@ export default function ChatPage() {
               {/* 输入框底部工具栏 */}
               <Box sx={{ px: 2, pb: 1.5, display: 'flex', alignItems: 'center', gap: 0.75 }}>
                 {/* + 按钮 */}
-                <Box
-                  onClick={(e) => { setPlusAnchor(e.currentTarget); setPlusMenuOpen(!plusMenuOpen); setPlusSubMenu(null); }}
-                  sx={{
+                <Tooltip title="添加文件">
+                  <Box onClick={(e) => { setPlusAnchor(e.currentTarget); setPlusMenuOpen(!plusMenuOpen); }} sx={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 34, height: 34, borderRadius: 2,
                     cursor: 'pointer', color: 'text.secondary',
                     transition: 'all 0.15s', flexShrink: 0,
                     '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
-                  }}
-                >
-                  <Add sx={{ fontSize: 20 }} />
-                </Box>
-
-                {/* 已选智能体 Tab */}
-                {selectedAgent && (
-                  <Box sx={{
-                    display: 'flex', alignItems: 'center', gap: 0.4,
-                    px: 1, py: 0.35, borderRadius: 1.5, fontSize: 12, fontWeight: 500,
-                    bgcolor: `${selectedAgent.color}15`, color: selectedAgent.color,
-                    border: `1px solid ${selectedAgent.color}30`,
-                    cursor: 'default',
-                    '& .close-icon': { opacity: 0, transition: 'opacity 0.15s', fontSize: 14 },
-                    '&:hover .close-icon': { opacity: 1 },
+                  }}><Add sx={{ fontSize: 20 }} /></Box>
+                </Tooltip>
+                {/* 权限胶囊 */}
+                <Tooltip title="切换权限">
+                  <Box onClick={(e) => { setPermAnchor(e.currentTarget); setPermMenuOpen(!permMenuOpen); }} sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.4, px: 1.5, py: 0.75, borderRadius: 2,
+                    cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'text.secondary',
+                    border: '1px solid', borderColor: 'divider', transition: 'all 0.15s',
+                    '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
                   }}>
-                    <SmartToy sx={{ fontSize: 13 }} />
-                    {selectedAgent.name}
-                    <Close className="close-icon" sx={{ fontSize: 14, cursor: 'pointer', ml: 0.25 }}
-                      onClick={() => setSelectedAgent(null)} />
+                    <Shield sx={{ fontSize: 15 }} />{PERMISSIONS.find(p => p.id === selectedPerm)?.label || '默认权限'}
+                    <KeyboardArrowDown sx={{ fontSize: 16, ml: 0.15 }} />
                   </Box>
-                )}
-
-                {/* 已选模式 Tab */}
-                {selectedMode !== 'chat' && (
-                  <Box sx={{
-                    display: 'flex', alignItems: 'center', gap: 0.4,
-                    px: 1, py: 0.35, borderRadius: 1.5, fontSize: 12, fontWeight: 500,
-                    bgcolor: 'rgba(99,102,241,0.1)', color: '#818cf8',
-                    border: '1px solid rgba(99,102,241,0.2)',
-                    cursor: 'default',
-                    '& .close-icon': { opacity: 0, transition: 'opacity 0.15s', fontSize: 14 },
-                    '&:hover .close-icon': { opacity: 1 },
+                </Tooltip>
+                {/* 空间胶囊 */}
+                <Tooltip title="选择工作空间">
+                  <Box onClick={(e) => { setWorkspaceAnchor(e.currentTarget); setWorkspaceMenuOpen(!workspaceMenuOpen); }} sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.4, px: 1.5, py: 0.75, borderRadius: 2,
+                    cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'text.secondary',
+                    border: '1px solid', borderColor: 'divider', transition: 'all 0.15s',
+                    '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
                   }}>
-                    <ChatBubbleOutlined sx={{ fontSize: 13 }} />
-                    {MODES.find(m => m.id === selectedMode)?.label || '模式'}
-                    <Close className="close-icon" sx={{ fontSize: 14, cursor: 'pointer', ml: 0.25 }}
-                      onClick={() => setSelectedMode('chat')} />
+                    <Folder sx={{ fontSize: 15 }} />{selectedWorkspace || '选择空间'}
+                    <KeyboardArrowDown sx={{ fontSize: 16, ml: 0.15 }} />
                   </Box>
-                )}
+                </Tooltip>
+                {/* 智能体按钮 */}
+                <Tooltip title="选择智能体">
+                  <Box onClick={(e) => { setAgentAnchor(e.currentTarget); setAgentMenuOpen(true); }} sx={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    color: selectedAgent ? '#6366f1' : 'text.secondary',
+                    bgcolor: selectedAgent ? 'rgba(99,102,241,0.08)' : 'transparent',
+                    '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+                  }}><SmartToy sx={{ fontSize: 20 }} /></Box>
+                </Tooltip>
+                {/* 技能按钮 */}
+                <Tooltip title="选择技能">
+                  <Box onClick={(e) => { setSkillAnchor(e.currentTarget); setSkillMenuOpen(true); }} sx={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    color: selectedSkills.length > 0 ? '#6366f1' : 'text.secondary',
+                    bgcolor: selectedSkills.length > 0 ? 'rgba(99,102,241,0.08)' : 'transparent',
+                    '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+                  }}>
+                    <Badge badgeContent={selectedSkills.length} color="primary" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}>
+                      <Build sx={{ fontSize: 20 }} />
+                    </Badge>
+                  </Box>
+                </Tooltip>
+                {/* 知识库按钮 */}
+                <Tooltip title="选择知识库">
+                  <Box onClick={(e) => { setKbAnchor(e.currentTarget); setKbMenuOpen(true); }} sx={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    color: selectedKBs.length > 0 ? '#6366f1' : 'text.secondary',
+                    bgcolor: selectedKBs.length > 0 ? 'rgba(99,102,241,0.08)' : 'transparent',
+                    '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+                  }}>
+                    <Badge badgeContent={selectedKBs.length} color="primary" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}>
+                      <MenuBook sx={{ fontSize: 20 }} />
+                    </Badge>
+                  </Box>
+                </Tooltip>
+                {/* 模式按钮 */}
+                <Tooltip title="对话模式：对话/规划/问答">
+                  <Box onClick={(e) => { setModeAnchor(e.currentTarget); setModeMenuOpen(true); }} sx={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    color: selectedMode !== 'chat' ? '#6366f1' : 'text.secondary',
+                    bgcolor: selectedMode !== 'chat' ? 'rgba(99,102,241,0.08)' : 'transparent',
+                    '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+                  }}><Psychology sx={{ fontSize: 20 }} /></Box>
+                </Tooltip>
 
                 <Box sx={{ flex: 1 }} />
 
                 {/* 语音输入 */}
-                <Box
-                  onClick={toggleRecording}
-                  sx={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 34, height: 34, borderRadius: 2,
-                    cursor: 'pointer',
-                    color: isRecording ? '#ef4444' : 'text.secondary',
-                    bgcolor: isRecording ? 'rgba(239,68,68,0.1)' : 'transparent',
-                    transition: 'all 0.2s',
-                    '&:hover': { color: isRecording ? '#dc2626' : '#6366f1', bgcolor: isRecording ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.06)' },
-                  }}
-                >
+                <Box onClick={toggleRecording} sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 34, borderRadius: 2,
+                  cursor: 'pointer',
+                  color: isRecording ? '#ef4444' : 'text.secondary',
+                  bgcolor: isRecording ? 'rgba(239,68,68,0.1)' : 'transparent',
+                  transition: 'all 0.2s',
+                  '&:hover': { color: isRecording ? '#dc2626' : '#6366f1', bgcolor: isRecording ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.06)' },
+                }}>
                   {isRecording ? <MicOff sx={{ fontSize: 18 }} /> : <Mic sx={{ fontSize: 18 }} />}
                 </Box>
 
                 {/* 模型选择 */}
-                <Box
-                  onClick={(e) => { setModelAnchor(e.currentTarget); setModelMenuOpen(!modelMenuOpen); }}
-                  sx={{
-                    display: 'flex', alignItems: 'center', gap: 0.5,
-                    px: 1.5, py: 0.6, borderRadius: 2,
-                    cursor: 'pointer', color: 'text.secondary', fontSize: 13, fontWeight: 500,
-                    border: '1px solid', borderColor: 'divider',
-                    transition: 'all 0.15s',
-                    '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
-                  }}
-                >
-                  <SmartToy sx={{ fontSize: 15 }} />
+                <Box onClick={(e) => { setModelAnchor(e.currentTarget); setModelMenuOpen(!modelMenuOpen); }} sx={{
+                  display: 'flex', alignItems: 'center', gap: 0.5,
+                  px: 1.5, py: 0.75, borderRadius: 2,
+                  cursor: 'pointer', color: 'text.secondary', fontSize: 13, fontWeight: 500,
+                  border: '1px solid', borderColor: 'divider',
+                  transition: 'all 0.15s',
+                  '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
+                }}>
+                  <SmartToy sx={{ fontSize: 16 }} />
                   {currentModel.name}
                   {maxMode && <Chip label="Max" size="small" sx={{ height: 16, fontSize: 9, ml: 0.5, bgcolor: '#6366f1', color: 'white' }} />}
-                  <KeyboardArrowDown sx={{ fontSize: 16, ml: 0.25 }} />
+                  <KeyboardArrowDown sx={{ fontSize: 16 }} />
                 </Box>
 
                 {/* 发送按钮 */}
-                <Box
-                  onClick={handleSend}
-                  sx={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 38, height: 38, borderRadius: 2.5,
-                    cursor: input.trim() && !sending ? 'pointer' : 'default',
-                    bgcolor: input.trim() && !sending ? '#6366f1' : 'action.disabledBackground',
-                    color: input.trim() && !sending ? 'white' : 'text.disabled',
-                    transition: 'all 0.2s',
-                    '&:hover': { bgcolor: input.trim() && !sending ? '#4f46e5' : undefined },
-                    boxShadow: input.trim() && !sending ? '0 2px 12px rgba(99,102,241,0.4)' : 'none',
-                  }}
-                >
+                <Box onClick={handleSend} sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 38, height: 38, borderRadius: 2.5,
+                  cursor: input.trim() && !sending ? 'pointer' : 'default',
+                  bgcolor: input.trim() && !sending ? '#6366f1' : 'action.disabledBackground',
+                  color: input.trim() && !sending ? 'white' : 'text.disabled',
+                  transition: 'all 0.2s',
+                  '&:hover': { bgcolor: input.trim() && !sending ? '#4f46e5' : undefined },
+                  boxShadow: input.trim() && !sending ? '0 2px 12px rgba(99,102,241,0.4)' : 'none',
+                }}>
                   <Send sx={{ fontSize: 17 }} />
                 </Box>
               </Box>
             </Paper>
-
-            {/* 底部：工作空间 + 权限（左对齐） */}
-            <Box sx={{ mt: 1.5, display: 'flex', gap: 0.75, justifyContent: 'flex-start' }}>
-              <Box
-                onClick={(e) => { setWorkspaceAnchor(e.currentTarget); setWorkspaceMenuOpen(!workspaceMenuOpen); }}
-                sx={{
-                  display: 'flex', alignItems: 'center', gap: 0.4,
-                  px: 1.25, py: 0.5, borderRadius: 1.5,
-                  cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                  color: 'text.secondary',
-                  border: '1px solid', borderColor: 'divider',
-                  bgcolor: 'background.paper',
-                  transition: 'all 0.15s',
-                  '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
-                }}
-              >
-                <Folder sx={{ fontSize: 13 }} />
-                {selectedWorkspace || '选择工作空间'}
-                <KeyboardArrowDown sx={{ fontSize: 14, ml: 0.25 }} />
-              </Box>
-              <Box
-                onClick={(e) => { setPermAnchor(e.currentTarget); setPermMenuOpen(!permMenuOpen); }}
-                sx={{
-                  display: 'flex', alignItems: 'center', gap: 0.4,
-                  px: 1.25, py: 0.5, borderRadius: 1.5,
-                  cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                  color: 'text.secondary',
-                  border: '1px solid', borderColor: 'divider',
-                  bgcolor: 'background.paper',
-                  transition: 'all 0.15s',
-                  '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
-                }}
-              >
-                <CheckCircle sx={{ fontSize: 13 }} />
-                {PERMISSIONS.find(p => p.id === selectedPerm)?.label || '默认权限'}
-                <KeyboardArrowDown sx={{ fontSize: 14, ml: 0.25 }} />
-              </Box>
-            </Box>
 
             {/* 工作空间选择菜单 */}
             <Menu
@@ -747,7 +751,7 @@ export default function ChatPage() {
                   title: '知识增强',
                   desc: '接入知识库，回答更精准专业',
                   gradient: 'linear-gradient(135deg, #06b6d4, #22d3ee)',
-                  action: () => setPlusSubMenu('kb'),
+                  action: () => setKbMenuOpen(true),
                 },
               ].map((card) => (
                 <Box
@@ -784,9 +788,9 @@ export default function ChatPage() {
               ))}
             </Box>
 
-            {/* ===== + 弹出菜单 ===== */}
+            {/* ===== + 弹出菜单（文件上传） ===== */}
             <Menu
-              anchorEl={plusAnchor} open={plusMenuOpen} onClose={() => { setPlusMenuOpen(false); setPlusSubMenu(null); }}
+              anchorEl={plusAnchor} open={plusMenuOpen} onClose={() => setPlusMenuOpen(false)}
               transformOrigin={{ horizontal: 'left', vertical: 'bottom' }}
               anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
               sx={{
@@ -798,201 +802,15 @@ export default function ChatPage() {
                 },
               }}
             >
-              {!plusSubMenu ? (
-                <>
-                  {/* 添加文件 */}
-                  <MenuItem
-                    onClick={() => setPlusSubMenu('file')}
-                    sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                  >
-                    <AttachFile sx={{ fontSize: 18, color: '#6366f1' }} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>添加文件</Typography>
-                      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>上传图片、文档等</Typography>
-                    </Box>
-                    <ExpandMore sx={{ fontSize: 16, color: 'text.disabled' }} />
-                  </MenuItem>
-
-                  {/* 模式 */}
-                  <MenuItem
-                    onClick={() => setPlusSubMenu('mode')}
-                    sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                  >
-                    <SmartToy sx={{ fontSize: 18, color: '#8b5cf6' }} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>模式</Typography>
-                      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                        {MODES.find(m => m.id === selectedMode)?.label || '对话'}
-                      </Typography>
-                    </Box>
-                    <ExpandMore sx={{ fontSize: 16, color: 'text.disabled' }} />
-                  </MenuItem>
-
-                  {/* 技能 */}
-                  <MenuItem
-                    onClick={() => setPlusSubMenu('skill')}
-                    sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                  >
-                    <Extension sx={{ fontSize: 18, color: '#f59e0b' }} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>技能</Typography>
-                      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                        {selectedSkills.length > 0 ? `已选 ${selectedSkills.length} 个` : '选择技能插件'}
-                      </Typography>
-                    </Box>
-                    <ExpandMore sx={{ fontSize: 16, color: 'text.disabled' }} />
-                  </MenuItem>
-
-                  {/* 智能体 */}
-                  <MenuItem
-                    onClick={() => setPlusSubMenu('agent')}
-                    sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                  >
-                    <SmartToy sx={{ fontSize: 18, color: '#06b6d4' }} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>智能体</Typography>
-                      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                        {selectedAgent ? selectedAgent.name : '选择智能体'}
-                      </Typography>
-                    </Box>
-                    <ExpandMore sx={{ fontSize: 16, color: 'text.disabled' }} />
-                  </MenuItem>
-
-                  {/* 知识库 */}
-                  <MenuItem
-                    onClick={() => setPlusSubMenu('kb')}
-                    sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                  >
-                    <MenuBook sx={{ fontSize: 18, color: '#10b981' }} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>知识库</Typography>
-                      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                        {selectedKBs.length > 0 ? `已选 ${selectedKBs.length} 个` : '选择知识库'}
-                      </Typography>
-                    </Box>
-                    <ExpandMore sx={{ fontSize: 16, color: 'text.disabled' }} />
-                  </MenuItem>
-                </>
-              ) : plusSubMenu === 'file' ? (
-                <>
-                  <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>添加文件</Typography>
-                    <Box onClick={() => setPlusSubMenu(null)} sx={{ cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                      <ExpandMore sx={{ fontSize: 18, transform: 'rotate(90deg)' }} />
-                    </Box>
-                  </Box>
-                  <Divider />
-                  {['上传图片', '上传文档', '从工作空间选择'].map((item) => (
-                    <MenuItem key={item} onClick={() => {
-                      setAttachedFiles(prev => [...prev, item === '上传图片' ? 'image.png' : item === '上传文档' ? 'document.pdf' : 'workspace-file.tsx']);
-                      setPlusMenuOpen(false); setPlusSubMenu(null);
-                    }} sx={{ py: 1, px: 2, gap: 1.5 }}>
-                      <Folder sx={{ fontSize: 16, color: '#6366f1' }} />
-                      <Typography sx={{ fontSize: 13 }}>{item}</Typography>
-                    </MenuItem>
-                  ))}
-                </>
-              ) : plusSubMenu === 'mode' ? (
-                <>
-                  <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>选择模式</Typography>
-                    <Box onClick={() => setPlusSubMenu(null)} sx={{ cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                      <ExpandMore sx={{ fontSize: 18, transform: 'rotate(90deg)' }} />
-                    </Box>
-                  </Box>
-                  <Divider />
-                  {MODES.map((mode) => (
-                    <MenuItem
-                      key={mode.id}
-                      selected={selectedMode === mode.id}
-                      onClick={() => { setSelectedMode(mode.id); setPlusMenuOpen(false); setPlusSubMenu(null); }}
-                      sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                    >
-                      <Box sx={{ color: '#8b5cf6' }}>{mode.icon}</Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{mode.label}</Typography>
-                        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{mode.desc}</Typography>
-                      </Box>
-                      {selectedMode === mode.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
-                    </MenuItem>
-                  ))}
-                </>
-              ) : plusSubMenu === 'agent' ? (
-                <>
-                  <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>选择智能体</Typography>
-                    <Box onClick={() => setPlusSubMenu(null)} sx={{ cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                      <ExpandMore sx={{ fontSize: 18, transform: 'rotate(90deg)' }} />
-                    </Box>
-                  </Box>
-                  <Divider />
-                  {AGENTS_MOCK.map((agent) => (
-                    <MenuItem
-                      key={agent.id}
-                      selected={selectedAgent?.id === agent.id}
-                      onClick={() => { setSelectedAgent(agent); setPlusMenuOpen(false); setPlusSubMenu(null); }}
-                      sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                    >
-                      <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: agent.color, color: 'white' }}>
-                        <SmartToy sx={{ fontSize: 14 }} />
-                      </Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{agent.name}</Typography>
-                        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{agent.desc}</Typography>
-                      </Box>
-                      {selectedAgent?.id === agent.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
-                    </MenuItem>
-                  ))}
-                </>
-              ) : plusSubMenu === 'skill' ? (
-                <>
-                  <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>选择技能</Typography>
-                    <Box onClick={() => setPlusSubMenu(null)} sx={{ cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                      <ExpandMore sx={{ fontSize: 18, transform: 'rotate(90deg)' }} />
-                    </Box>
-                  </Box>
-                  <Divider />
-                  {SKILLS_MOCK.map((skill) => (
-                    <MenuItem
-                      key={skill.id}
-                      onClick={() => toggleSkill(skill.id)}
-                      sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                    >
-                      <Extension sx={{ fontSize: 16, color: '#f59e0b' }} />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{skill.name}</Typography>
-                        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{skill.desc}</Typography>
-                      </Box>
-                      {selectedSkills.includes(skill.id) && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
-                    </MenuItem>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>选择知识库</Typography>
-                    <Box onClick={() => setPlusSubMenu(null)} sx={{ cursor: 'pointer', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                      <ExpandMore sx={{ fontSize: 18, transform: 'rotate(90deg)' }} />
-                    </Box>
-                  </Box>
-                  <Divider />
-                  {KB_MOCK.map((kb) => (
-                    <MenuItem
-                      key={kb.id}
-                      onClick={() => toggleKB(kb.id)}
-                      sx={{ py: 1.25, px: 2, gap: 1.5 }}
-                    >
-                      <MenuBook sx={{ fontSize: 16, color: '#10b981' }} />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{kb.name}</Typography>
-                        <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{kb.count} 篇文档</Typography>
-                      </Box>
-                      {selectedKBs.includes(kb.id) && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
-                    </MenuItem>
-                  ))}
-                </>
-              )}
+              {['上传图片', '上传文档', '从工作空间选择'].map((item) => (
+                <MenuItem key={item} onClick={() => {
+                  setAttachedFiles(prev => [...prev, item === '上传图片' ? 'image.png' : item === '上传文档' ? 'document.pdf' : 'workspace-file.tsx']);
+                  setPlusMenuOpen(false);
+                }} sx={{ py: 1, px: 2, gap: 1.5 }}>
+                  <Folder sx={{ fontSize: 16, color: '#6366f1' }} />
+                  <Typography sx={{ fontSize: 13 }}>{item}</Typography>
+                </MenuItem>
+              ))}
             </Menu>
 
             {/* ===== 模型选择弹出菜单 ===== */}
@@ -1075,6 +893,72 @@ export default function ChatPage() {
                 <SmartToy sx={{ fontSize: 16 }} />
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }}>配置自定义模型</Typography>
               </MenuItem>
+            </Menu>
+
+            {/* ===== 智能体选择菜单 ===== */}
+            <Menu anchorEl={agentAnchor} open={agentMenuOpen} onClose={() => setAgentMenuOpen(false)}
+              transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+              sx={{ '& .MuiPaper-root': { mt: 0.5, minWidth: 260, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', py: 0.5 } }}>
+              <MenuItem onClick={() => { setSelectedAgent(null); setAgentMenuOpen(false); }} sx={{ py: 1.25, px: 2, gap: 1.5 }}>
+                <SmartToy sx={{ fontSize: 16, color: 'text.secondary' }} />
+                <Typography sx={{ fontSize: 13, flex: 1, color: 'text.secondary' }}>不使用智能体</Typography>
+                {!selectedAgent && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+              </MenuItem>
+              <Divider />
+              {publishedAgents.length === 0 ? (
+                <MenuItem disabled sx={{ py: 1.25, px: 2 }}><Typography sx={{ fontSize: 13, color: 'text.secondary' }}>暂无可用智能体</Typography></MenuItem>
+              ) : publishedAgents.map((agent: any) => (
+                <MenuItem key={agent.id} selected={selectedAgent?.id === agent.id} onClick={() => { setSelectedAgent(agent); setAgentMenuOpen(false); }} sx={{ py: 1.25, px: 2, gap: 1.5 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: agent.avatar_color || '#6366f1', flexShrink: 0 }} />
+                  <Box sx={{ flex: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 500 }}>{agent.name}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary' }} noWrap>{agent.description || ''}</Typography></Box>
+                  {selectedAgent?.id === agent.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+                </MenuItem>
+              ))}
+            </Menu>
+
+            {/* ===== 技能选择菜单 ===== */}
+            <Menu anchorEl={skillAnchor} open={skillMenuOpen} onClose={() => setSkillMenuOpen(false)}
+              transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+              sx={{ '& .MuiPaper-root': { mt: 0.5, minWidth: 220, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', py: 0.5 } }}>
+              {skillsLoading ? (
+                <MenuItem disabled sx={{ py: 1.25, px: 2 }}><Typography sx={{ fontSize: 13, color: 'text.secondary' }}>加载中...</Typography></MenuItem>
+              ) : installedSkills.length === 0 ? (
+                <MenuItem disabled sx={{ py: 1.25, px: 2 }}><Typography sx={{ fontSize: 13, color: 'text.secondary' }}>暂无已安装技能</Typography></MenuItem>
+              ) : installedSkills.map((skill: any) => (
+                <MenuItem key={skill.id} onClick={() => toggleSkill(skill.id)} sx={{ py: 1.25, px: 2, gap: 1.5 }}>
+                  <Extension sx={{ fontSize: 16, color: '#f59e0b' }} />
+                  <Box sx={{ flex: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 500 }}>{skill.skill_name}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{skill.description || ''}</Typography></Box>
+                  {selectedSkills.includes(skill.id) && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+                </MenuItem>
+              ))}
+            </Menu>
+
+            {/* ===== 知识库选择菜单 ===== */}
+            <Menu anchorEl={kbAnchor} open={kbMenuOpen} onClose={() => setKbMenuOpen(false)}
+              transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+              sx={{ '& .MuiPaper-root': { mt: 0.5, minWidth: 220, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', py: 0.5 } }}>
+              {kbs.length === 0 ? (
+                <MenuItem disabled sx={{ py: 1.25, px: 2 }}><Typography sx={{ fontSize: 13, color: 'text.secondary' }}>暂无知识库</Typography></MenuItem>
+              ) : kbs.map((kb: any) => (
+                <MenuItem key={kb.id} onClick={() => toggleKB(kb.id)} sx={{ py: 1.25, px: 2, gap: 1.5 }}>
+                  <MenuBook sx={{ fontSize: 16, color: '#10b981' }} />
+                  <Box sx={{ flex: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 500 }}>{kb.name}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{kb.doc_count || 0} 篇文档</Typography></Box>
+                  {selectedKBs.includes(kb.id) && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+                </MenuItem>
+              ))}
+            </Menu>
+
+            {/* ===== 模式选择菜单 ===== */}
+            <Menu anchorEl={modeAnchor} open={modeMenuOpen} onClose={() => setModeMenuOpen(false)}
+              transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+              sx={{ '& .MuiPaper-root': { mt: 0.5, minWidth: 220, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', py: 0.5 } }}>
+              {MODES.map((mode) => (
+                <MenuItem key={mode.id} selected={selectedMode === mode.id} onClick={() => { setSelectedMode(mode.id); setModeMenuOpen(false); }} sx={{ py: 1.25, px: 2, gap: 1.5 }}>
+                  <Box sx={{ color: '#8b5cf6' }}>{mode.icon}</Box>
+                  <Box sx={{ flex: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 500 }}>{mode.label}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{mode.desc}</Typography></Box>
+                  {selectedMode === mode.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+                </MenuItem>
+              ))}
             </Menu>
           </Box>
         </Box>
@@ -1167,7 +1051,7 @@ export default function ChatPage() {
               />
               <Box sx={{ px: 1.5, pb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box
-                  onClick={(e) => { setPlusAnchor(e.currentTarget); setPlusMenuOpen(!plusMenuOpen); setPlusSubMenu(null); }}
+                  onClick={(e) => { setPlusAnchor(e.currentTarget); setPlusMenuOpen(!plusMenuOpen); }}
                   sx={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 32, height: 32, borderRadius: 2,

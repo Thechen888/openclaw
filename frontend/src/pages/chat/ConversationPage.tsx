@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Paper, Avatar, TextField, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem, Switch, Button,
-  List, ListItemButton, ListItemText, Checkbox,
+  List, ListItemButton, ListItemText, Checkbox, Badge,
   Collapse, CircularProgress, Drawer,
 } from '@mui/material';
 import {
@@ -14,11 +14,11 @@ import {
   ExpandMore, ExpandLess, Description, Score,
   AttachFile, Extension, MenuBook, Code,
   AccessTime, LastPage, KeyboardArrowUp,
-  Download, PersonAdd, Groups, Info,
+  Download, PersonAdd, Groups, Info, Shield, Build, Psychology,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
-import { chatApi, skillsApi, ragApi } from '../../api/client';
+import { chatApi, skillsApi, ragApi, agentsApi } from '../../api/client';
 import ShareDialog from './ShareDialog';
 import AddMembersDialog from './AddMembersDialog';
 
@@ -50,11 +50,6 @@ const MODES = [
   { id: 'ask', label: '问答', icon: <SmartToy sx={{ fontSize: 16 }} />, desc: '精准回答，简洁高效' },
 ];
 
-const WORKSPACES = [
-  { id: '123', name: '123' },
-  { id: 'openclaw-main', name: 'openclaw-main' },
-];
-
 const PERMISSIONS = [
   { id: 'default', label: '默认权限', desc: '使用系统默认的安全策略' },
   { id: 'public', label: '公开访问', desc: '所有用户均可查看对话内容' },
@@ -74,7 +69,7 @@ function renderContent(content: string) {
       return (
         <Box key={i} sx={{
           bgcolor: 'rgba(0,0,0,0.04)', p: 2, borderRadius: 1.5,
-          fontFamily: 'monospace', fontSize: 12, overflow: 'auto', my: 1,
+          fontFamily: 'monospace', fontSize: 13, overflow: 'auto', my: 1,
           border: '1px solid', borderColor: 'divider', whiteSpace: 'pre-wrap', lineHeight: 1.6,
         }}>
           {lang && !lines[0].includes(' ') && (
@@ -90,21 +85,21 @@ function renderContent(content: string) {
         {lines.map((line, j) => {
           if (line.startsWith('# ')) return <Typography key={j} sx={{ fontSize: 20, fontWeight: 700, mt: 1.5, mb: 0.5 }}>{line.slice(2)}</Typography>;
           if (line.startsWith('## ')) return <Typography key={j} sx={{ fontSize: 16, fontWeight: 700, mt: 1.5, mb: 0.5 }}>{line.slice(3)}</Typography>;
-          if (line.startsWith('### ')) return <Typography key={j} sx={{ fontSize: 14, fontWeight: 700, mt: 1, mb: 0.5 }}>{line.slice(4)}</Typography>;
+          if (line.startsWith('### ')) return <Typography key={j} sx={{ fontSize: 15, fontWeight: 700, mt: 1, mb: 0.5 }}>{line.slice(4)}</Typography>;
           if (line.startsWith('- **')) {
             const match = line.match(/^- \*\*(.+?)\*\*[：:]\s*(.+)$/);
-            if (match) return <Typography key={j} sx={{ fontSize: 13, lineHeight: 1.7, ml: 1, mb: 0.3 }}>• <Box component="span" sx={{ fontWeight: 700 }}>{match[1]}</Box>：{match[2]}</Typography>;
+            if (match) return <Typography key={j} sx={{ fontSize: 14, lineHeight: 1.75, ml: 1, mb: 0.3 }}>• <Box component="span" sx={{ fontWeight: 700 }}>{match[1]}</Box>：{match[2]}</Typography>;
           }
-          if (line.startsWith('- ')) return <Typography key={j} sx={{ fontSize: 13, lineHeight: 1.7, ml: 1, mb: 0.3 }}>• {line.slice(2)}</Typography>;
+          if (line.startsWith('- ')) return <Typography key={j} sx={{ fontSize: 14, lineHeight: 1.75, ml: 1, mb: 0.3 }}>• {line.slice(2)}</Typography>;
           if (/^\d+\.\s/.test(line)) {
             const match = line.match(/^(\d+)\.\s+\*\*(.+?)\*\*[ —-]\s*(.+)$/);
-            if (match) return <Typography key={j} sx={{ fontSize: 13, lineHeight: 1.7, ml: 1, mb: 0.3 }}>{match[1]}. <Box component="span" sx={{ fontWeight: 700 }}>{match[2]}</Box> — {match[3]}</Typography>;
-            return <Typography key={j} sx={{ fontSize: 13, lineHeight: 1.7, ml: 1, mb: 0.3 }}>{line}</Typography>;
+            if (match) return <Typography key={j} sx={{ fontSize: 14, lineHeight: 1.75, ml: 1, mb: 0.3 }}>{match[1]}. <Box component="span" sx={{ fontWeight: 700 }}>{match[2]}</Box> — {match[3]}</Typography>;
+            return <Typography key={j} sx={{ fontSize: 14, lineHeight: 1.75, ml: 1, mb: 0.3 }}>{line}</Typography>;
           }
           if (line.startsWith('---')) return <Divider key={j} sx={{ my: 1.5 }} />;
           const boldParts = line.split(/(\*\*[^*]+\*\*)/g);
           return (
-            <Typography key={j} sx={{ fontSize: 13, lineHeight: 1.7, mb: 0.3, whiteSpace: 'pre-wrap' }}>
+            <Typography key={j} sx={{ fontSize: 14, lineHeight: 1.75, mb: 0.3, whiteSpace: 'pre-wrap' }}>
               {boldParts.map((bp, k) => bp.startsWith('**') && bp.endsWith('**') ? <Box key={k} component="span" sx={{ fontWeight: 700 }}>{bp.slice(2, -2)}</Box> : bp)}
             </Typography>
           );
@@ -177,6 +172,11 @@ export default function ConversationPage() {
   // 群会话引导条
   const [guideDismissed, setGuideDismissed] = useState(false);
 
+  // 智能体选择
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+  const [agentAnchor, setAgentAnchor] = useState<null | HTMLElement>(null);
+  const [agentMenuOpen, setAgentMenuOpen] = useState(false);
+
   // API 查询：已安装技能
   const { data: skillsData, isLoading: skillsLoading } = useQuery({
     queryKey: ['skills-installed'],
@@ -192,6 +192,14 @@ export default function ConversationPage() {
     enabled: kbMenuOpen,
   });
   const knowledgeBases: any[] = kbData?.data?.data || [];
+
+  // API 查询：智能体列表
+  const { data: agentsData } = useQuery({
+    queryKey: ['agents-for-chat'],
+    queryFn: () => agentsApi.list({ page: 1, page_size: 50 }),
+    enabled: agentMenuOpen,
+  });
+  const publishedAgents: any[] = (agentsData?.data?.data || []).filter((a: any) => a.status === 'published');
 
   // 模型菜单
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
@@ -241,12 +249,6 @@ export default function ConversationPage() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [selectMode]);
-
-  // 工作空间
-  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
-  const [workspaceAnchor, setWorkspaceAnchor] = useState<null | HTMLElement>(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState('123');
-  const [workspaceSearch, setWorkspaceSearch] = useState('');
 
   // 权限
   const [permMenuOpen, setPermMenuOpen] = useState(false);
@@ -524,21 +526,21 @@ export default function ConversationPage() {
                 <Typography sx={{ fontSize: 11, color: 'text.secondary', whiteSpace: 'nowrap' }}>
                   {searchResults.length === 0 ? '无结果' : `${searchCurrentIdx + 1} / ${searchResults.length}`}
                 </Typography>
-                <IconButton size="small" onClick={() => navigateSearch('prev')} sx={{ width: 22, height: 22, color: 'text.secondary' }}>
+                <IconButton size="small" onClick={() => navigateSearch('prev')} sx={{ width: 26, height: 26, color: 'text.secondary' }}>
                   <KeyboardArrowUp sx={{ fontSize: 16 }} />
                 </IconButton>
-                <IconButton size="small" onClick={() => navigateSearch('next')} sx={{ width: 22, height: 22, color: 'text.secondary' }}>
+                <IconButton size="small" onClick={() => navigateSearch('next')} sx={{ width: 26, height: 26, color: 'text.secondary' }}>
                   <KeyboardArrowDown sx={{ fontSize: 16 }} />
                 </IconButton>
               </>
             )}
-            <IconButton size="small" onClick={() => { setSearchOpen(false); setSearchKeyword(''); setHighlightedMsgId(null); }} sx={{ width: 22, height: 22, color: 'text.secondary' }}>
+            <IconButton size="small" onClick={() => { setSearchOpen(false); setSearchKeyword(''); setHighlightedMsgId(null); }} sx={{ width: 26, height: 26, color: 'text.secondary' }}>
               <Close sx={{ fontSize: 14 }} />
             </IconButton>
           </Box>
         ) : (
           <Tooltip title="搜索对话内容">
-            <IconButton size="small" onClick={() => setSearchOpen(true)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
+            <IconButton size="small" onClick={() => setSearchOpen(true)} sx={{ color: 'text.secondary', width: 32, height: 32, '&:hover': { color: '#6366f1' } }}>
               <Search sx={{ fontSize: 18 }} />
             </IconButton>
           </Tooltip>
@@ -546,7 +548,7 @@ export default function ConversationPage() {
 
         {/* 工具栏：分享 */}
         <Tooltip title="分享">
-          <IconButton size="small" onClick={() => openShareDialog()} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
+          <IconButton size="small" onClick={() => openShareDialog()} sx={{ color: 'text.secondary', width: 32, height: 32, '&:hover': { color: '#6366f1' } }}>
             <Share sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
@@ -554,7 +556,7 @@ export default function ConversationPage() {
         {/* 工具栏：拉人进群 / 转为群组 */}
         {!isReadonly && (
           <Tooltip title={isGroup ? '添加成员' : '转为群组'}>
-            <IconButton size="small" onClick={() => setAddMembersOpen(true)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
+            <IconButton size="small" onClick={() => setAddMembersOpen(true)} sx={{ color: 'text.secondary', width: 32, height: 32, '&:hover': { color: '#6366f1' } }}>
               <PersonAdd sx={{ fontSize: 18 }} />
             </IconButton>
           </Tooltip>
@@ -562,21 +564,21 @@ export default function ConversationPage() {
 
         {/* 工具栏：历史提问 */}
         <Tooltip title="历史提问">
-          <IconButton size="small" onClick={(e) => setHistoryAnchor(e.currentTarget)} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
+          <IconButton size="small" onClick={(e) => setHistoryAnchor(e.currentTarget)} sx={{ color: 'text.secondary', width: 32, height: 32, '&:hover': { color: '#6366f1' } }}>
             <AccessTime sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
 
         {/* 工具栏：展开右栏 */}
         <Tooltip title={rightPanelOpen ? '收起概览' : '展开概览'}>
-          <IconButton size="small" onClick={() => setRightPanelOpen(!rightPanelOpen)} sx={{ width: 28, height: 28, color: rightPanelOpen ? '#6366f1' : 'text.secondary', '&:hover': { color: '#6366f1' } }}>
+          <IconButton size="small" onClick={() => setRightPanelOpen(!rightPanelOpen)} sx={{ width: 32, height: 32, color: rightPanelOpen ? '#6366f1' : 'text.secondary', '&:hover': { color: '#6366f1' } }}>
             <LastPage sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
       </Box>
 
       {/* 消息区域 */}
-      <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 3 }}>
+      <Box sx={{ flex: 1, overflow: 'auto', px: 4, py: 3 }}>
         {/* 转交/分享横幅 */}
         {sharedFrom && (
           <Box sx={{
@@ -626,7 +628,7 @@ export default function ConversationPage() {
             return (
             <Box key={msg.id} ref={(el: HTMLDivElement | null) => { msgRefs.current[msg.id] = el; }} sx={{
               display: 'flex', flexDirection: (msgOnRight && !selectMode) ? 'row-reverse' : 'row',
-              mb: 3, gap: 1.5, maxWidth: msgOnRight ? '70%' : '85%',
+              mb: 3, gap: 1.5, maxWidth: msgOnRight ? '78%' : '90%',
               ml: msgOnRight ? 'auto' : 0,
               transition: 'all 0.3s',
               ...(highlightedMsgId === msg.id ? { outline: '2px solid #6366f1', outlineOffset: 4, borderRadius: 2 } : {}),
@@ -648,19 +650,19 @@ export default function ConversationPage() {
               {/* 头像 */}
               {isGroup && msg.role === 'user' ? (
                 <Avatar sx={{
-                  width: 32, height: 32, flexShrink: 0, fontSize: 13, fontWeight: 600,
+                  width: 36, height: 36, flexShrink: 0, fontSize: 14, fontWeight: 600,
                   bgcolor: userColor, color: 'white',
                 }}>
                   {(msg.user_name || '?').charAt(0)}
                 </Avatar>
               ) : (
                 <Avatar sx={{
-                  width: 32, height: 32, flexShrink: 0, fontSize: 13,
+                  width: 36, height: 36, flexShrink: 0, fontSize: 14,
                   bgcolor: msg.role === 'user' ? '#6366f1' : 'transparent',
                   border: msg.role === 'assistant' ? '1px solid' : 'none',
                   borderColor: 'divider',
                 }}>
-                  {msg.role === 'user' ? <Person sx={{ fontSize: 16 }} /> : <SmartToy sx={{ fontSize: 16 }} />}
+                  {msg.role === 'user' ? <Person sx={{ fontSize: 18 }} /> : <SmartToy sx={{ fontSize: 18 }} />}
                 </Avatar>
               )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -684,7 +686,7 @@ export default function ConversationPage() {
                   onClick={selectMode ? () => toggleSelect(msg.id) : undefined}
                 >
                   {msg.role === 'user' ? (
-                    <Typography sx={{ fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</Typography>
+                    <Typography sx={{ fontSize: 14, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{msg.content}</Typography>
                   ) : renderContent(msg.content)}
                 </Paper>
 
@@ -706,11 +708,11 @@ export default function ConversationPage() {
 
                 {msg.role === 'assistant' && !selectMode && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-                    <Tooltip title="复制"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ContentCopy sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                    <Tooltip title="有用"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ThumbUp sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                    <Tooltip title="无用"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><ThumbDown sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                    <Tooltip title="分享"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }} onClick={() => openShareDialog({ id: msg.id, content: msg.content })}><Share sx={{ fontSize: 14 }} /></IconButton></Tooltip>
-                    <Tooltip title="更多"><IconButton size="small" sx={{ color: 'text.secondary', width: 28, height: 28 }}><MoreHoriz sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+                    <Tooltip title="复制"><IconButton size="small" sx={{ color: 'text.secondary', width: 32, height: 32 }}><ContentCopy sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                    <Tooltip title="有用"><IconButton size="small" sx={{ color: 'text.secondary', width: 32, height: 32 }}><ThumbUp sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                    <Tooltip title="无用"><IconButton size="small" sx={{ color: 'text.secondary', width: 32, height: 32 }}><ThumbDown sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                    <Tooltip title="分享"><IconButton size="small" sx={{ color: 'text.secondary', width: 32, height: 32 }} onClick={() => openShareDialog({ id: msg.id, content: msg.content })}><Share sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                    <Tooltip title="更多"><IconButton size="small" sx={{ color: 'text.secondary', width: 32, height: 32 }}><MoreHoriz sx={{ fontSize: 16 }} /></IconButton></Tooltip>
                     <Box sx={{ flex: 1 }} />
                     {msg.tokens != null && <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>共消耗 ◇ {Number(msg.tokens).toFixed(1)}</Typography>}
                     {msg.model && <Typography sx={{ fontSize: 11, color: 'text.secondary', ml: 0.5 }}>{msg.model}</Typography>}
@@ -804,8 +806,19 @@ export default function ConversationPage() {
       /* ===== 输入区域（与 ChatPage 完全一致） ===== */
       <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         {/* 已选内容标签 */}
-        {(attachedFiles.length > 0 || selectedSkills.length > 0 || selectedKBs.length > 0) && (
+        {(attachedFiles.length > 0 || selectedAgent || selectedSkills.length > 0 || selectedKBs.length > 0) && (
           <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap', px: 0.5, alignItems: 'center' }}>
+            {/* 智能体 chip */}
+            {selectedAgent && (
+              <Box sx={{
+                display: 'flex', alignItems: 'center', gap: 0.3, px: 1, py: 0.3, borderRadius: 1.5, fontSize: 12, fontWeight: 500,
+                bgcolor: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.15)',
+                '& .close-icon': { opacity: 0, transition: 'opacity 0.15s', fontSize: 13 }, '&:hover .close-icon': { opacity: 1 },
+              }}>
+                <SmartToy sx={{ fontSize: 12 }} />{selectedAgent.name}
+                <Close className="close-icon" sx={{ fontSize: 13, cursor: 'pointer', ml: 0.2 }} onClick={() => setSelectedAgent(null)} />
+              </Box>
+            )}
             {attachedFiles.map((file) => (
               <Box key={`f-${file}`} sx={{
                 display: 'flex', alignItems: 'center', gap: 0.3, px: 1, py: 0.3, borderRadius: 1.5, fontSize: 12, fontWeight: 500,
@@ -863,115 +876,140 @@ export default function ConversationPage() {
             placeholder="今天帮你做些什么？@引用对话文件，/调用技能与指令"
             sx={{
               '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-              '& .MuiInputBase-input': { px: 2.5, pt: 2, pb: 1, fontSize: 14 },
+              '& .MuiInputBase-input': { px: 2.5, pt: 2, pb: 1, fontSize: 15 },
             }}
           />
 
           {/* 底部工具栏 */}
-          <Box sx={{ px: 1.5, pb: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ px: 2, pb: 2, display: 'flex', alignItems: 'center', gap: 0.75 }}>
             {/* 群会话：发送至分段控件 */}
             {isGroup && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>发送至</Typography>
-                <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>发送至</Typography>
+                <Box sx={{ display: 'flex', borderRadius: 1.25, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
                   <Tooltip title="发送给 AI：触发智能回复，消耗 Token">
                     <Box onClick={() => setTargetAI(true)} sx={{
-                      display: 'flex', alignItems: 'center', gap: 0.3, px: 1, py: 0.35, cursor: 'pointer', fontSize: 12,
+                      display: 'flex', alignItems: 'center', gap: 0.3, px: 1.25, py: 0.5, cursor: 'pointer', fontSize: 12.5,
                       bgcolor: targetAI ? '#6366f1' : 'transparent', color: targetAI ? 'white' : 'text.secondary',
                       '&:hover': { bgcolor: targetAI ? '#6366f1' : 'action.selected' }, transition: 'all 0.15s',
-                    }}><SmartToy sx={{ fontSize: 13 }} />AI 助手</Box>
+                    }}><SmartToy sx={{ fontSize: 14 }} />AI 助手</Box>
                   </Tooltip>
                   <Box sx={{ width: '1px', bgcolor: 'divider' }} />
                   <Tooltip title="发送给群成员：仅成员间交流，不触发 AI 回复">
                     <Box onClick={() => setTargetAI(false)} sx={{
-                      display: 'flex', alignItems: 'center', gap: 0.3, px: 1, py: 0.35, cursor: 'pointer', fontSize: 12,
+                      display: 'flex', alignItems: 'center', gap: 0.3, px: 1.25, py: 0.5, cursor: 'pointer', fontSize: 12.5,
                       bgcolor: !targetAI ? 'action.selected' : 'transparent', color: !targetAI ? 'text.primary' : 'text.secondary',
                       '&:hover': { bgcolor: !targetAI ? 'action.selected' : 'action.hover' }, transition: 'all 0.15s',
-                    }}><Groups sx={{ fontSize: 13 }} />群成员</Box>
+                    }}><Groups sx={{ fontSize: 14 }} />群成员</Box>
                   </Tooltip>
                 </Box>
               </Box>
             )}
             {/* + 按钮：直接打开文件上传菜单 */}
-            <Box onClick={(e) => { setPlusAnchor(e.currentTarget); setPlusMenuOpen(true); }} sx={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 2,
-              cursor: 'pointer', color: 'text.secondary', transition: 'all 0.15s',
-              '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
-            }}><Add sx={{ fontSize: 20 }} /></Box>
-            {/* 模式按钮 */}
-            <Box onClick={(e) => { setModeAnchor(e.currentTarget); setModeMenuOpen(true); }} sx={{
-              display: 'flex', alignItems: 'center', gap: 0.3, px: 0.75, py: 0.35, borderRadius: 1.5,
-              cursor: 'pointer', fontSize: 12.5, color: 'text.secondary', '&:hover': { bgcolor: 'action.hover' },
-            }}><SmartToy sx={{ fontSize: 14 }} />{MODES.find(m => m.id === selectedMode)?.label || '对话'}</Box>
+            <Tooltip title="添加文件">
+              <Box onClick={(e) => { setPlusAnchor(e.currentTarget); setPlusMenuOpen(true); }} sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                cursor: 'pointer', color: 'text.secondary', transition: 'all 0.15s',
+                '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+              }}><Add sx={{ fontSize: 22 }} /></Box>
+            </Tooltip>
+            {/* 权限胶囊 */}
+            <Tooltip title="切换权限">
+              <Box onClick={(e) => { setPermAnchor(e.currentTarget); setPermMenuOpen(!permMenuOpen); }} sx={{
+                display: 'flex', alignItems: 'center', gap: 0.4, px: 1.5, py: 0.75, borderRadius: 2,
+                cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'text.secondary',
+                border: '1px solid', borderColor: 'divider', transition: 'all 0.15s',
+                '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
+              }}>
+                <Shield sx={{ fontSize: 15 }} />{PERMISSIONS.find(p => p.id === selectedPerm)?.label || '默认权限'}
+                <KeyboardArrowDown sx={{ fontSize: 16, ml: 0.15 }} />
+              </Box>
+            </Tooltip>
+            {/* 智能体按钮 */}
+            <Tooltip title="选择智能体">
+              <Box onClick={(e) => { setAgentAnchor(e.currentTarget); setAgentMenuOpen(true); }} sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                cursor: 'pointer', transition: 'all 0.15s',
+                color: selectedAgent ? '#6366f1' : 'text.secondary',
+                bgcolor: selectedAgent ? 'rgba(99,102,241,0.08)' : 'transparent',
+                '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+              }}><SmartToy sx={{ fontSize: 20 }} /></Box>
+            </Tooltip>
             {/* 技能按钮 */}
-            <Box onClick={(e) => { setSkillAnchor(e.currentTarget); setSkillMenuOpen(true); }} sx={{
-              display: 'flex', alignItems: 'center', gap: 0.3, px: 0.75, py: 0.35, borderRadius: 1.5,
-              cursor: 'pointer', fontSize: 12.5, color: 'text.secondary', '&:hover': { bgcolor: 'action.hover' },
-            }}><Extension sx={{ fontSize: 14 }} />技能{selectedSkills.length > 0 ? ` ${selectedSkills.length}` : ''}</Box>
+            <Tooltip title="选择技能">
+              <Box onClick={(e) => { setSkillAnchor(e.currentTarget); setSkillMenuOpen(true); }} sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                cursor: 'pointer', transition: 'all 0.15s', position: 'relative',
+                color: selectedSkills.length > 0 ? '#6366f1' : 'text.secondary',
+                bgcolor: selectedSkills.length > 0 ? 'rgba(99,102,241,0.08)' : 'transparent',
+                '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+              }}>
+                <Badge badgeContent={selectedSkills.length} color="primary" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}>
+                  <Build sx={{ fontSize: 20 }} />
+                </Badge>
+              </Box>
+            </Tooltip>
             {/* 知识库按钮 */}
-            <Box onClick={(e) => { setKbAnchor(e.currentTarget); setKbMenuOpen(true); }} sx={{
-              display: 'flex', alignItems: 'center', gap: 0.3, px: 0.75, py: 0.35, borderRadius: 1.5,
-              cursor: 'pointer', fontSize: 12.5, color: 'text.secondary', '&:hover': { bgcolor: 'action.hover' },
-            }}><MenuBook sx={{ fontSize: 14 }} />知识库{selectedKBs.length > 0 ? ` ${selectedKBs.length}` : ''}</Box>
+            <Tooltip title="选择知识库">
+              <Box onClick={(e) => { setKbAnchor(e.currentTarget); setKbMenuOpen(true); }} sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                cursor: 'pointer', transition: 'all 0.15s',
+                color: selectedKBs.length > 0 ? '#6366f1' : 'text.secondary',
+                bgcolor: selectedKBs.length > 0 ? 'rgba(99,102,241,0.08)' : 'transparent',
+                '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+              }}>
+                <Badge badgeContent={selectedKBs.length} color="primary" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}>
+                  <MenuBook sx={{ fontSize: 20 }} />
+                </Badge>
+              </Box>
+            </Tooltip>
+            {/* 模式按钮 */}
+            <Tooltip title="对话模式：对话/规划/问答">
+              <Box onClick={(e) => { setModeAnchor(e.currentTarget); setModeMenuOpen(true); }} sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
+                cursor: 'pointer', transition: 'all 0.15s',
+                color: selectedMode !== 'chat' ? '#6366f1' : 'text.secondary',
+                bgcolor: selectedMode !== 'chat' ? 'rgba(99,102,241,0.08)' : 'transparent',
+                '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
+              }}><Psychology sx={{ fontSize: 20 }} /></Box>
+            </Tooltip>
 
             <Box sx={{ flex: 1 }} />
 
             {/* 语音 */}
             <Box onClick={toggleRecording} sx={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 2,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 2,
               cursor: 'pointer', color: isRecording ? '#ef4444' : 'text.secondary',
               bgcolor: isRecording ? 'rgba(239,68,68,0.1)' : 'transparent', transition: 'all 0.2s',
               '&:hover': { color: isRecording ? '#dc2626' : '#6366f1', bgcolor: isRecording ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.06)' },
-            }}>{isRecording ? <Mic sx={{ fontSize: 18 }} /> : <Mic sx={{ fontSize: 18 }} />}</Box>
+            }}>{isRecording ? <Mic sx={{ fontSize: 20 }} /> : <Mic sx={{ fontSize: 20 }} />}</Box>
 
             {/* 模型选择 */}
             <Box onClick={(e) => { setModelAnchor(e.currentTarget); setModelMenuOpen(!modelMenuOpen); }} sx={{
-              display: 'flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.5, borderRadius: 1.5,
-              cursor: 'pointer', color: 'text.secondary', fontSize: 12, fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: 0.5, px: 1.5, py: 0.75, borderRadius: 2,
+              cursor: 'pointer', color: 'text.secondary', fontSize: 13, fontWeight: 500,
               border: '1px solid', borderColor: 'divider', transition: 'all 0.15s',
               '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
             }}>
-              <SmartToy sx={{ fontSize: 14 }} />{currentModel.name}
+              <SmartToy sx={{ fontSize: 16 }} />{currentModel.name}
               {maxMode && <Chip label="Max" size="small" sx={{ height: 16, fontSize: 9, ml: 0.5, bgcolor: '#6366f1', color: 'white' }} />}
-              <KeyboardArrowDown sx={{ fontSize: 14 }} />
+              <KeyboardArrowDown sx={{ fontSize: 16 }} />
             </Box>
 
             {/* 发送 */}
             <Box
               onClick={handleSend}
               sx={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 2,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 2.5,
                 cursor: input.trim() && !sending ? 'pointer' : 'default',
                 bgcolor: input.trim() && !sending ? '#6366f1' : 'action.disabledBackground',
                 color: input.trim() && !sending ? 'white' : 'text.disabled', transition: 'all 0.2s',
                 '&:hover': { bgcolor: input.trim() && !sending ? '#4f46e5' : undefined },
-                boxShadow: input.trim() && !sending ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
+                boxShadow: input.trim() && !sending ? '0 2px 12px rgba(99,102,241,0.4)' : 'none',
               }}
-            ><Send sx={{ fontSize: 15 }} /></Box>
+            ><Send sx={{ fontSize: 18 }} /></Box>
           </Box>
         </Paper>
-
-        {/* 工作空间 + 权限 */}
-        <Box sx={{ mt: 1, display: 'flex', gap: 0.75, justifyContent: 'flex-start' }}>
-          <Box onClick={(e) => { setWorkspaceAnchor(e.currentTarget); setWorkspaceMenuOpen(!workspaceMenuOpen); }} sx={{
-            display: 'flex', alignItems: 'center', gap: 0.4, px: 1.25, py: 0.5, borderRadius: 1.5,
-            cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'text.secondary',
-            border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'all 0.15s',
-            '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
-          }}>
-            <Folder sx={{ fontSize: 13 }} />{selectedWorkspace || '选择工作空间'}
-            <KeyboardArrowDown sx={{ fontSize: 14, ml: 0.25 }} />
-          </Box>
-          <Box onClick={(e) => { setPermAnchor(e.currentTarget); setPermMenuOpen(!permMenuOpen); }} sx={{
-            display: 'flex', alignItems: 'center', gap: 0.4, px: 1.25, py: 0.5, borderRadius: 1.5,
-            cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'text.secondary',
-            border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', transition: 'all 0.15s',
-            '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
-          }}>
-            <CheckCircle sx={{ fontSize: 13 }} />{PERMISSIONS.find(p => p.id === selectedPerm)?.label || '默认权限'}
-            <KeyboardArrowDown sx={{ fontSize: 14, ml: 0.25 }} />
-          </Box>
-        </Box>
       </Box>
       )}
 
@@ -982,6 +1020,27 @@ export default function ConversationPage() {
         {['上传图片', '上传文档', '从工作空间选择'].map((item) => (
           <MenuItem key={item} onClick={() => { setAttachedFiles(prev => [...prev, item === '上传图片' ? 'image.png' : item === '上传文档' ? 'document.pdf' : 'workspace-file.tsx']); setPlusMenuOpen(false); }} sx={{ py: 1, px: 2, gap: 1.5 }}>
             <Folder sx={{ fontSize: 16, color: '#6366f1' }} /><Typography sx={{ fontSize: 13 }}>{item}</Typography>
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* ===== 智能体选择菜单 ===== */}
+      <Menu anchorEl={agentAnchor} open={agentMenuOpen} onClose={() => setAgentMenuOpen(false)}
+        transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+        sx={{ '& .MuiPaper-root': { mt: 0.5, minWidth: 260, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', py: 0.5 } }}>
+        <MenuItem onClick={() => { setSelectedAgent(null); setAgentMenuOpen(false); }} sx={{ py: 1.25, px: 2, gap: 1.5 }}>
+          <SmartToy sx={{ fontSize: 16, color: 'text.secondary' }} />
+          <Typography sx={{ fontSize: 13, flex: 1, color: 'text.secondary' }}>不使用智能体</Typography>
+          {!selectedAgent && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+        </MenuItem>
+        <Divider />
+        {publishedAgents.length === 0 ? (
+          <MenuItem disabled sx={{ py: 1.25, px: 2 }}><Typography sx={{ fontSize: 13, color: 'text.secondary' }}>暂无可用智能体</Typography></MenuItem>
+        ) : publishedAgents.map((agent: any) => (
+          <MenuItem key={agent.id} selected={selectedAgent?.id === agent.id} onClick={() => { setSelectedAgent(agent); setAgentMenuOpen(false); }} sx={{ py: 1.25, px: 2, gap: 1.5 }}>
+            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: agent.avatar_color || '#6366f1', flexShrink: 0 }} />
+            <Box sx={{ flex: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 500 }}>{agent.name}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary' }} noWrap>{agent.description || ''}</Typography></Box>
+            {selectedAgent?.id === agent.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
           </MenuItem>
         ))}
       </Menu>
@@ -1063,30 +1122,6 @@ export default function ConversationPage() {
         </Box>
         <Divider />
         <MenuItem sx={{ py: 1.25, px: 2.5, gap: 1, color: '#6366f1' }}><SmartToy sx={{ fontSize: 16 }} /><Typography sx={{ fontSize: 13, fontWeight: 500 }}>配置自定义模型</Typography></MenuItem>
-      </Menu>
-
-      {/* ===== 工作空间选择菜单 ===== */}
-      <Menu anchorEl={workspaceAnchor} open={workspaceMenuOpen} onClose={() => setWorkspaceMenuOpen(false)}
-        transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
-        sx={{ '& .MuiPaper-root': { mt: 0.5, width: 260, borderRadius: 2.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden' } }}>
-        <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.6, borderRadius: 2, bgcolor: 'action.hover' }}>
-            <Search sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <input value={workspaceSearch} onChange={e => setWorkspaceSearch(e.target.value)} placeholder="搜索工作空间" style={{ background: 'none', border: 'none', outline: 'none', color: 'inherit', fontSize: 13, width: '100%' }} />
-          </Box>
-        </Box>
-        <Box sx={{ py: 0.5, maxHeight: 200, overflow: 'auto' }}>
-          {WORKSPACES.filter(w => w.name.toLowerCase().includes(workspaceSearch.toLowerCase())).map((ws) => (
-            <MenuItem key={ws.id} selected={selectedWorkspace === ws.id} onClick={() => { setSelectedWorkspace(ws.id); setWorkspaceMenuOpen(false); setWorkspaceSearch(''); }} sx={{ py: 1, px: 2.5, gap: 1.5 }}>
-              <Folder sx={{ fontSize: 16, color: '#f59e0b' }} /><Typography sx={{ fontSize: 13, flex: 1 }}>{ws.name}</Typography>
-              {selectedWorkspace === ws.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
-            </MenuItem>
-          ))}
-        </Box>
-        <Divider />
-        <MenuItem sx={{ py: 1.25, px: 2.5, gap: 1.5 }}><Add sx={{ fontSize: 16, color: '#6366f1' }} /><Typography sx={{ fontSize: 13, fontWeight: 500 }}>新建工作空间</Typography></MenuItem>
-        <MenuItem sx={{ py: 1.25, px: 2.5, gap: 1.5 }}><Folder sx={{ fontSize: 16, color: 'text.secondary' }} /><Typography sx={{ fontSize: 13 }}>打开本地文件夹</Typography></MenuItem>
-        <MenuItem selected={selectedWorkspace === ''} onClick={() => { setSelectedWorkspace(''); setWorkspaceMenuOpen(false); }} sx={{ py: 1.25, px: 2.5, gap: 1.5 }}><Close sx={{ fontSize: 16, color: 'text.secondary' }} /><Typography sx={{ fontSize: 13 }}>不使用工作空间</Typography></MenuItem>
       </Menu>
 
       {/* ===== 权限选择菜单 ===== */}
