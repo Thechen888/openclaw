@@ -27,7 +27,8 @@ function relativeTime(dateStr: string): string {
 // 类型图标映射
 const typeIconMap: Record<string, { icon: typeof Gavel; color: string }> = {
   approval: { icon: Gavel, color: '#f59e0b' },
-  share: { icon: Share, color: '#8b5cf6' },
+  share: { icon: Share, color: '#6366f1' },
+  collab: { icon: Share, color: '#6366f1' },
   permission: { icon: Shield, color: '#3b82f6' },
   system: { icon: Notifications, color: '#9ca3af' },
 };
@@ -65,9 +66,20 @@ export default function NotificationBell({ dark = false, placement = 'down' }: N
   const handleClick = (n: any) => {
     if (!n.read) markReadMut.mutate(n.id);
     setAnchorEl(null);
-    if (n.action_kind === 'chat' && n.session_id) {
+    const kind = n.action_kind;
+    const tid = n.target_id;
+    if (kind === 'chat' && n.session_id) {
       navigate(`/chat/${n.session_id}`);
+    } else if (kind === 'skill' && tid) {
+      navigate(`/skills/${tid}/detail`);
+    } else if (kind === 'agent' && tid) {
+      navigate(`/agents/${tid}`);
+    } else if (kind === 'report' && tid) {
+      navigate(`/reports/view/${tid}`);
+    } else if (kind === 'workflow') {
+      navigate('/workflows/my');
     }
+    // action_kind === 'none' → no navigation
   };
 
   const textColor = dark ? '#e4e4e7' : '#18181b';
@@ -174,6 +186,7 @@ export default function NotificationBell({ dark = false, placement = 'down' }: N
             notifications.map((n) => {
               const typeInfo = typeIconMap[n.type] || typeIconMap.system;
               const TypeIcon = typeInfo.icon;
+              const isClickable = n.action_kind && n.action_kind !== 'none';
               return (
                 <Box
                   key={n.id}
@@ -184,9 +197,9 @@ export default function NotificationBell({ dark = false, placement = 'down' }: N
                     gap: 1.5,
                     px: 2.5,
                     py: 1.5,
-                    cursor: 'pointer',
+                    cursor: isClickable ? 'pointer' : 'default',
                     transition: 'background 0.15s',
-                    '&:hover': { bgcolor: hoverBg },
+                    '&:hover': isClickable ? { bgcolor: hoverBg } : {},
                     borderBottom: '1px solid',
                     borderColor: borderColor,
                   }}
@@ -244,14 +257,14 @@ export default function NotificationBell({ dark = false, placement = 'down' }: N
                     </Box>
                   </Box>
 
-                  {/* 未读蓝点 */}
+                  {/* 未读类型色点 */}
                   {!n.read && (
                     <Box
                       sx={{
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        bgcolor: '#6366f1',
+                        bgcolor: typeInfo.color,
                         flexShrink: 0,
                         mt: 0.75,
                       }}

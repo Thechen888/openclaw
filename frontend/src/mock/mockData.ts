@@ -2922,6 +2922,8 @@ const notifications: any[] = [
   { id: 'n-2', user_id: 'u-1', type: 'share', title: '王五 转交给你一段对话', content: 'ERP审批失败排查，附言：这单 ERP 审批卡住了，客户催得紧，你帮我看看怎么推进', from_name: '王五', action_kind: 'chat', session_id: 'cs-handoff-1', read: false, created_at: ago(85) },
   { id: 'n-3', user_id: 'u-1', type: 'share', title: '李思 向你分享了一段对话', content: 'CRM销售话术讨论，附言：这段分析你看看，下次评审用得上', from_name: '李思', action_kind: 'chat', session_id: 'cs-shared-1', read: false, created_at: ago(55) },
   { id: 'n-4', user_id: 'u-1', type: 'permission', title: '知识库编辑请求已转交', content: '你申请编辑「售后标准问答库」的请求已通知负责人王五，处理结果会再通知你。', from_name: '系统', action_kind: 'none', session_id: '', read: true, created_at: dayAgo(1) },
+  { id: 'n-5', user_id: 'u-1', type: 'approval', title: '你发布的「2026年第19周运营周报」审核未通过', content: '驳回原因:数据口径说明缺失,请补充后重新提交', action_kind: 'report', target_id: 'rpt-1', read: false, created_at: ago(300) },
+  { id: 'n-6', user_id: 'u-1', type: 'collab', title: '群组「旧版客服对接群」已被群主解散', content: '群内会话与消息记录已删除', action_kind: 'none', read: true, created_at: dayAgo(2) },
 ];
 
 // =================== 路由匹配 & 响应 ===================
@@ -4014,6 +4016,8 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         const ri = reports.findIndex(r => r.id === rec.target_id);
         if (ri >= 0) reports[ri] = { ...reports[ri], status: 'published', scope: scopeValue, scope_role_ids: roleIdsVal, reject_reason: null, published_at: nowIso, updated_at: nowIso };
       }
+      const approveActionKind: Record<string, string> = { skill_publish: 'skill', agent_publish: 'agent', agent_share: 'agent', report_publish: 'report', workflow_publish: 'workflow' };
+      notifications.unshift({ id: 'n-' + Date.now(), user_id: rec.applicant, type: 'approval', title: `你发布的「${rec.target_name}」已通过审核`, content: '已上架到市场,范围:' + (data?.scope_type === 'roles' ? '指定角色' : '全公司'), action_kind: approveActionKind[rec.type] || 'none', target_id: rec.target_id, read: false, created_at: new Date().toISOString() });
     }
     return ok(idx >= 0 ? reviewRecords[idx] : null);
   }
@@ -4036,6 +4040,8 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         const ri = reports.findIndex(r => r.id === rec.target_id);
         if (ri >= 0) reports[ri] = { ...reports[ri], status: 'rejected', reject_reason: reason, updated_at: nowIso };
       }
+      const rejectActionKind: Record<string, string> = { skill_publish: 'skill', agent_publish: 'agent', agent_share: 'agent', report_publish: 'report', workflow_publish: 'workflow' };
+      notifications.unshift({ id: 'n-' + Date.now(), user_id: rec.applicant, type: 'approval', title: `你发布的「${rec.target_name}」审核未通过`, content: '驳回原因:' + reason + ',请修改后重新提交', action_kind: rejectActionKind[rec.type] || 'none', target_id: rec.target_id, read: false, created_at: new Date().toISOString() });
     }
     return ok(idx >= 0 ? reviewRecords[idx] : null);
   }
@@ -5067,6 +5073,9 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         s.message_count = chatMessages[s.id].length;
       }
     });
+    if (uid !== 'u-1') {
+      notifications.unshift({ id: 'n-' + Date.now(), user_id: uid, type: 'collab', title: `你已被移出群组「${g.name}」`, content: '如有疑问请联系群主', action_kind: 'none', read: false, created_at: new Date().toISOString() });
+    }
     return ok(g);
   }
   if (path.match(/\/chat\/groups\/([^/]+)$/) && method === 'put') {
@@ -5082,6 +5091,10 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const gid = path.match(/\/chat\/groups\/([^/]+)$/)![1];
     const gi = chatGroups.findIndex((x: any) => x.id === gid);
     if (gi >= 0 && chatGroups[gi].creator_id === 'u-1') {
+      const dissolvedGroup = chatGroups[gi];
+      dissolvedGroup.member_ids.filter((uid: string) => uid !== 'u-1').forEach((uid: string) => {
+        notifications.unshift({ id: 'n-' + Date.now() + '-' + uid, user_id: uid, type: 'collab', title: `群组「${dissolvedGroup.name}」已被群主解散`, content: '群内会话与消息记录已删除', action_kind: 'none', read: false, created_at: new Date().toISOString() });
+      });
       chatGroups.splice(gi, 1);
       chatSessions.filter((s: any) => s.group_id === gid).forEach((s: any) => { delete chatMessages[s.id]; });
       for (let i = chatSessions.length - 1; i >= 0; i--) { if (chatSessions[i].group_id === gid) chatSessions.splice(i, 1); }
