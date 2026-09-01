@@ -491,9 +491,16 @@ export default function ConversationPage() {
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
       {/* 标题栏 */}
       <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
-          {session.title}
-        </Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {session.group_name && (
+            <Typography sx={{ fontSize: 11, color: 'text.secondary', lineHeight: 1.2, mb: 0.25 }}>
+              {session.group_name} · 群组
+            </Typography>
+          )}
+          <Typography sx={{ fontSize: 16, fontWeight: 700 }} noWrap>
+            {session.title}
+          </Typography>
+        </Box>
         {isGroup && (
           <Chip label="群组" size="small" icon={<Person sx={{ fontSize: 12 }} />} sx={{ height: 22, fontSize: 11, bgcolor: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 500, '& .MuiChip-icon': { color: '#10b981' } }} />
         )}

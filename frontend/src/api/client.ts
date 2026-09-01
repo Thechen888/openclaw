@@ -439,6 +439,15 @@ export const chatApi = {
     addMembers: (id: string, userIds: string[], title?: string) => api.post(`/chat/sessions/${id}/members`, { user_ids: userIds, ...(title ? { title } : {}) }),
     removeMember: (id: string, uid: string) => api.delete(`/chat/sessions/${id}/members/${uid}`),
   },
+  groups: {
+    list: () => api.get('/chat/groups'),
+    create: (data: { name: string; member_ids: string[] }) => api.post('/chat/groups', data),
+    update: (id: string, data: { name: string }) => api.put(`/chat/groups/${id}`, data),
+    delete: (id: string) => api.delete(`/chat/groups/${id}`),
+    createSession: (id: string, title?: string) => api.post(`/chat/groups/${id}/sessions`, { title }),
+    addMembers: (id: string, userIds: string[]) => api.post(`/chat/groups/${id}/members`, { user_ids: userIds }),
+    removeMember: (id: string, uid: string) => api.delete(`/chat/groups/${id}/members/${uid}`),
+  },
   messages: {
     list: (sessionId: string) => api.get(`/chat/sessions/${sessionId}/messages`),
     send: (sessionId: string, content: string, extra?: { to_ai?: boolean; user_name?: string }) =>

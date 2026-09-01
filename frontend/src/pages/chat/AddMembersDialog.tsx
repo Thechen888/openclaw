@@ -12,13 +12,14 @@ import { chatApi, usersApi } from '../../api/client';
 interface AddMembersDialogProps {
   open: boolean;
   onClose: () => void;
-  sessionId: string;
-  sessionTitle: string;
-  isGroup: boolean;
-  existingMemberIds: string[];
+  sessionId?: string;
+  sessionTitle?: string;
+  isGroup?: boolean;
+  existingMemberIds?: string[];
+  groupId?: string;
 }
 
-export default function AddMembersDialog({ open, onClose, sessionId, sessionTitle, isGroup, existingMemberIds }: AddMembersDialogProps) {
+export default function AddMembersDialog({ open, onClose, sessionId = '', sessionTitle = '', isGroup = false, existingMemberIds = [], groupId }: AddMembersDialogProps) {
   const { enqueueSnackbar } = useSnackbar();
   const qc = useQueryClient();
 
@@ -52,12 +53,20 @@ export default function AddMembersDialog({ open, onClose, sessionId, sessionTitl
 
   // 添加成员 mutation
   const addMut = useMutation({
-    mutationFn: (userIds: string[]) => chatApi.sessions.addMembers(sessionId, userIds, !isGroup ? groupName : undefined),
+    mutationFn: (userIds: string[]) => {
+      if (groupId) return chatApi.groups.addMembers(groupId, userIds);
+      return chatApi.sessions.addMembers(sessionId, userIds, !isGroup ? groupName : undefined);
+    },
     onSuccess: () => {
       const count = selectedUsers.length;
-      enqueueSnackbar(isGroup ? `已添加 ${count} 名成员` : '已转为群组', { variant: 'success' });
-      qc.invalidateQueries({ queryKey: ['chat-session', sessionId] });
-      qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+      enqueueSnackbar(groupId ? `已添加 ${count} 名成员` : isGroup ? `已添加 ${count} 名成员` : '已转为群组', { variant: 'success' });
+      if (groupId) {
+        qc.invalidateQueries({ queryKey: ['chat-groups'] });
+        qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+      } else {
+        qc.invalidateQueries({ queryKey: ['chat-session', sessionId] });
+        qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+      }
       handleClose();
     },
     onError: () => {
@@ -96,7 +105,7 @@ export default function AddMembersDialog({ open, onClose, sessionId, sessionTitl
       }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{isGroup ? '添加成员' : '转为群组'}</Typography>
+        <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{groupId ? '添加成员' : isGroup ? '添加成员' : '转为群组'}</Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: 'text.secondary' }}>
           <Close sx={{ fontSize: 18 }} />
         </IconButton>
@@ -104,7 +113,7 @@ export default function AddMembersDialog({ open, onClose, sessionId, sessionTitl
 
       <DialogContent sx={{ px: 3, pb: 1, pt: 2.5 }}>
         {/* 群组名称（仅非群组时显示） */}
-        {!isGroup && (
+        {!isGroup && !groupId && (
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 0.5 }}>群组名称</Typography>
             <TextField
@@ -123,7 +132,7 @@ export default function AddMembersDialog({ open, onClose, sessionId, sessionTitl
         )}
         {/* 搜索用户 */}
         <TextField
-          fullWidth size="small" autoFocus={isGroup}
+          fullWidth size="small" autoFocus={isGroup || !!groupId}
           placeholder="搜索用户添加..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -200,7 +209,7 @@ export default function AddMembersDialog({ open, onClose, sessionId, sessionTitl
             '&.Mui-disabled': { bgcolor: 'action.disabledBackground' },
           }}
         >
-          {addMut.isPending ? '处理中...' : (isGroup ? '添加' : '转为群组')}
+          {addMut.isPending ? '处理中...' : (groupId ? '添加' : isGroup ? '添加' : '转为群组')}
         </Button>
       </DialogActions>
     </Dialog>

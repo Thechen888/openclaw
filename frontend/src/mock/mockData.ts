@@ -2819,6 +2819,12 @@ const workspaceAuditLogs: any[] = [
 ];
 
 // =================== 聊天会话与消息 ===================
+// ---- 群组(容器):群下可挂多条会话 ----
+const chatGroups: any[] = [
+  { id: 'g-1', name: '销售预测平台攻坚群', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], created_at: dayAgo(2) },
+  { id: 'g-2', name: '新产品评审群', creator_id: 'u-2', member_ids: ['u-1', 'u-2', 'u-3'], created_at: dayAgo(1) },
+];
+
 const chatSessions: any[] = [
   { id: 'cs-1', title: '关于API设计规范', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: 'openclaw-main', message_count: 6, created_at: dayAgo(3), updated_at: ago(120), last_message_at: ago(120) },
   { id: 'cs-2', title: '项目新手指引', user_id: 'u-1', mode: 'plan', model_policy_id: 'mp-2', model_policy: '性能', status: 'active', workspace_name: '项目新手指引', message_count: 4, created_at: dayAgo(2), updated_at: ago(60), last_message_at: ago(60) },
@@ -2833,8 +2839,9 @@ const chatSessions: any[] = [
   // 分享会话（只读）
   { id: 'cs-shared-1', title: '【分享】CRM销售话术讨论', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: true, shared_from: { name: '李思', note: '这段分析你看看，下次评审用得上' }, message_count: 3, created_at: ago(60), updated_at: ago(50), last_message_at: ago(50) },
   // 群组会话
-  { id: 'grp-1', title: '销售预测平台攻坚群', user_id: 'u-1', session_type: 'group', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40) },
-  { id: 'grp-2', title: '新产品评审群', user_id: 'u-2', session_type: 'group', creator_id: 'u-2', member_ids: ['u-1', 'u-2', 'u-3'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(25) },
+  { id: 'grp-1', title: '预测模型 v2 回归跟进', user_id: 'u-1', session_type: 'group', group_id: 'g-1', group_name: '销售预测平台攻坚群', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40) },
+  { id: 'grp-2', title: '新品定价方案评审', user_id: 'u-2', session_type: 'group', group_id: 'g-2', group_name: '新产品评审群', creator_id: 'u-2', member_ids: ['u-1', 'u-2', 'u-3'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(25) },
+  { id: 'grp-3', title: '数据口径对齐', user_id: 'u-1', session_type: 'group', group_id: 'g-1', group_name: '销售预测平台攻坚群', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(90) },
 ];
 
 const chatMessages: Record<string, any[]> = {
@@ -2901,6 +2908,11 @@ const chatMessages: Record<string, any[]> = {
     { id: 'm-grp2-1', role: 'user', user_id: 'u-2', user_name: '李思', to_ai: true, content: '帮我整理一下新产品评审会的议程模板', created_at: ago(50), tokens: 15, model: 'gpt-4o' },
     { id: 'm-grp2-2', role: 'assistant', reply_to_name: '李思', content: '@李思 新产品评审会议程模板如下:\n\n1. **产品方案介绍**(15分钟):背景、目标用户、核心功能\n2. **技术方案评审**(20分钟):架构设计、关键技术点、风险\n3. **资源与排期**(10分钟):人力投入、里程碑计划\n4. **讨论与决议**(15分钟):评审意见汇总、待办确认\n\n需要我根据具体产品调整吗?', created_at: ago(49), tokens: 120, model: 'gpt-4o' },
     { id: 'm-grp2-3', role: 'user', user_id: 'u-1', user_name: '张伟', to_ai: false, content: '我这边评审材料下午发群里', created_at: ago(25), tokens: 0, model: '' },
+  ],
+  'grp-3': [
+    { id: 'm-grp3-1', role: 'user', user_id: 'u-1', user_name: '张伟', to_ai: false, content: '预测口径按自然周还是按账期?先对齐再跑模型', created_at: ago(150), tokens: 0, model: '' },
+    { id: 'm-grp3-2', role: 'user', user_id: 'u-4', user_name: '赵六', to_ai: false, content: '按账期,财务这边只认账期数据', created_at: ago(120), tokens: 0, model: '' },
+    { id: 'm-grp3-3', role: 'assistant', content: '已记录:本次预测统一按账期口径。需要我整理一份口径说明文档吗?', created_at: ago(100), tokens: 60, model: 'gpt-4o' },
   ],
 };
 
@@ -4989,6 +5001,94 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   if (/^\/workspace\/api-keys\/[^/]+$/.test(path) && method === 'delete') return ok(null);
   if (path === '/workspace/audit-logs' && method === 'get') return paginate(workspaceAuditLogs, p.page, p.page_size, p.search);
 
+  // ---- 群组(容器)路由 ----
+  if (path === '/chat/groups' && method === 'get') {
+    return ok(chatGroups.filter((g: any) => g.member_ids?.includes('u-1')));
+  }
+  if (path === '/chat/groups' && method === 'post') {
+    const gid = 'g-' + Date.now();
+    const group: any = { id: gid, name: data.name || '未命名群组', creator_id: 'u-1', member_ids: [...new Set(['u-1', ...(data.member_ids || [])])], created_at: new Date().toISOString() };
+    chatGroups.unshift(group);
+    const sid = 'cs-' + Date.now();
+    const session: any = { id: sid, title: '新的讨论', user_id: 'u-1', session_type: 'group', group_id: gid, group_name: group.name, creator_id: 'u-1', member_ids: [...group.member_ids], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString() };
+    chatSessions.unshift(session);
+    chatMessages[sid] = [{ id: 'm-' + Date.now(), role: 'system', content: `张伟 创建了群组「${group.name}」`, created_at: new Date().toISOString() }];
+    group.member_ids.filter((uid: string) => uid !== 'u-1').forEach((uid: string, idx: number) => {
+      notifications.unshift({ id: 'n-' + Date.now() + idx, user_id: uid, type: 'share', title: `张伟 邀请你加入群组「${group.name}」`, content: '加入后可查看群内会话并参与协作', action_kind: 'chat', session_id: sid, read: false, created_at: new Date().toISOString() });
+    });
+    return ok({ group, session });
+  }
+  if (path.match(/\/chat\/groups\/([^/]+)\/sessions$/) && method === 'post') {
+    const gid = path.match(/\/chat\/groups\/([^/]+)\/sessions/)![1];
+    const g = chatGroups.find((x: any) => x.id === gid);
+    if (!g) return ok(null);
+    const sid = 'cs-' + Date.now();
+    const session: any = { id: sid, title: data.title || '新的讨论', user_id: 'u-1', session_type: 'group', group_id: gid, group_name: g.name, creator_id: g.creator_id, member_ids: [...g.member_ids], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString() };
+    chatSessions.unshift(session);
+    chatMessages[sid] = [{ id: 'm-' + Date.now(), role: 'system', content: `张伟 发起了新会话「${session.title}」`, created_at: new Date().toISOString() }];
+    return ok(session);
+  }
+  if (path.match(/\/chat\/groups\/([^/]+)\/members$/) && method === 'post') {
+    const gid = path.match(/\/chat\/groups\/([^/]+)\/members/)![1];
+    const g = chatGroups.find((x: any) => x.id === gid);
+    if (!g) return ok(null);
+    const newMembers = (data.user_ids || []).filter((uid: string) => !g.member_ids.includes(uid));
+    g.member_ids = [...g.member_ids, ...newMembers];
+    const names = newMembers.map((uid: string) => users.find((u: any) => u.id === uid)?.name || uid).join('、');
+    chatSessions.forEach((s: any) => {
+      if (s.group_id === gid) {
+        s.member_ids = [...new Set([...(s.member_ids || []), ...newMembers])];
+        if (newMembers.length > 0) {
+          if (!chatMessages[s.id]) chatMessages[s.id] = [];
+          chatMessages[s.id].push({ id: 'm-' + Date.now() + '-' + s.id, role: 'system', content: `张伟 邀请 ${names} 加入了群组`, created_at: new Date().toISOString() });
+          s.message_count = chatMessages[s.id].length;
+          s.last_message_at = new Date().toISOString();
+        }
+      }
+    });
+    newMembers.forEach((uid: string, idx: number) => {
+      notifications.unshift({ id: 'n-' + Date.now() + idx, user_id: uid, type: 'share', title: `张伟 邀请你加入群组「${g.name}」`, content: '加入后可查看群内会话并参与协作', action_kind: 'chat', read: false, created_at: new Date().toISOString() });
+    });
+    return ok(g);
+  }
+  if (path.match(/\/chat\/groups\/([^/]+)\/members\/([^/]+)$/) && method === 'delete') {
+    const gid = path.match(/\/chat\/groups\/([^/]+)\/members/)![1];
+    const uid = path.match(/\/members\/([^/]+)$/)![1];
+    const g = chatGroups.find((x: any) => x.id === gid);
+    if (!g) return ok(null);
+    if (uid === g.creator_id) return ok(g);
+    const name = users.find((u: any) => u.id === uid)?.name || uid;
+    g.member_ids = g.member_ids.filter((id: string) => id !== uid);
+    chatSessions.forEach((s: any) => {
+      if (s.group_id === gid) {
+        s.member_ids = (s.member_ids || []).filter((id: string) => id !== uid);
+        if (!chatMessages[s.id]) chatMessages[s.id] = [];
+        chatMessages[s.id].push({ id: 'm-' + Date.now() + '-' + s.id, role: 'system', content: uid === 'u-1' ? `${name} 退出了群组` : `${name} 被移出群组`, created_at: new Date().toISOString() });
+        s.message_count = chatMessages[s.id].length;
+      }
+    });
+    return ok(g);
+  }
+  if (path.match(/\/chat\/groups\/([^/]+)$/) && method === 'put') {
+    const gid = path.match(/\/chat\/groups\/([^/]+)$/)![1];
+    const g = chatGroups.find((x: any) => x.id === gid);
+    if (g && g.creator_id === 'u-1' && data.name?.trim()) {
+      g.name = data.name.trim();
+      chatSessions.forEach((s: any) => { if (s.group_id === gid) s.group_name = g.name; });
+    }
+    return ok(g || null);
+  }
+  if (path.match(/\/chat\/groups\/([^/]+)$/) && method === 'delete') {
+    const gid = path.match(/\/chat\/groups\/([^/]+)$/)![1];
+    const gi = chatGroups.findIndex((x: any) => x.id === gid);
+    if (gi >= 0 && chatGroups[gi].creator_id === 'u-1') {
+      chatGroups.splice(gi, 1);
+      chatSessions.filter((s: any) => s.group_id === gid).forEach((s: any) => { delete chatMessages[s.id]; });
+      for (let i = chatSessions.length - 1; i >= 0; i--) { if (chatSessions[i].group_id === gid) chatSessions.splice(i, 1); }
+    }
+    return ok({ deleted: true });
+  }
+
   // ---- 聊天会话 ----
   if (path.match(/\/chat\/sessions\/([^/]+)\/messages$/) && method === 'get') {
     const sid = path.match(/\/chat\/sessions\/([^/]+)\/messages/)![1];
@@ -5047,6 +5147,15 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       session.session_type = 'group';
       session.creator_id = 'u-1';
       if (data.title && data.title.trim()) session.title = data.title.trim();
+      chatGroups.unshift({ id: 'g-' + Date.now(), name: session.title, creator_id: 'u-1', member_ids: ['u-1', ...newMembers], created_at: new Date().toISOString() });
+      session.group_id = chatGroups[0].id;
+      session.group_name = session.title;
+    } else if (session.group_id) {
+      const g = chatGroups.find((x: any) => x.id === session.group_id);
+      if (g) {
+        g.member_ids = [...new Set([...g.member_ids, ...newMembers])];
+        chatSessions.forEach((s: any) => { if (s.group_id === session.group_id) s.member_ids = [...new Set([...(s.member_ids || []), ...newMembers])]; });
+      }
     }
     session.member_ids = [...new Set(['u-1', ...(session.member_ids || []), ...newMembers])];
     // 系统消息

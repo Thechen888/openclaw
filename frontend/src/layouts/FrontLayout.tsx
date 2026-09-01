@@ -11,16 +11,18 @@ import {
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
   AccountTree, Share, DarkMode, LightMode, Groups,
-  MoreHoriz, ChecklistRounded, Edit, Delete, Close,
+  MoreHoriz, ChecklistRounded, Edit, Delete, Close, PersonAdd,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSnackbar } from 'notistack';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
 import { chatApi } from '../api/client';
 import NotificationBell from '../components/NotificationBell';
 import NewGroupDialog from '../pages/chat/NewGroupDialog';
+import AddMembersDialog from '../pages/chat/AddMembersDialog';
 import ShareDialog from '../pages/chat/ShareDialog';
 
 const SIDEBAR_WIDTH = 280;
@@ -97,6 +99,7 @@ export default function FrontLayout() {
   const { setViewMode } = useViewModeStore();
   const { user, logout } = useAuthStore();
   const { mode: themeMode, toggleMode } = useThemeStore();
+  const { enqueueSnackbar } = useSnackbar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [settingsAnchor, setSettingsAnchor] = useState<null | HTMLElement>(null);
   const [spacesExpanded, setSpacesExpanded] = useState(true);
@@ -118,6 +121,16 @@ export default function FrontLayout() {
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareDialogState, setShareDialogState] = useState<{ sessionId: string; sessionTitle: string; messages: any[]; sourceReadonly: boolean } | null>(null);
+  const [addMembersGroupOpen, setAddMembersGroupOpen] = useState(false);
+  const [addMembersGroupId, setAddMembersGroupId] = useState<string | null>(null);
+  const [groupMenuAnchor, setGroupMenuAnchor] = useState<null | { left: number; top: number }>(null);
+  const [groupMenuGroup, setGroupMenuGroup] = useState<any>(null);
+  const [groupRenamingId, setGroupRenamingId] = useState<string | null>(null);
+  const [groupRenameValue, setGroupRenameValue] = useState('');
+  const [groupDeleteOpen, setGroupDeleteOpen] = useState(false);
+  const [groupDeleteTarget, setGroupDeleteTarget] = useState<any>(null);
+  const [sessionDeleteOpen, setSessionDeleteOpen] = useState(false);
+  const [sessionDeleteTarget, setSessionDeleteTarget] = useState<any>(null);
   const qc = useQueryClient();
   const invalidateSessions = useCallback(() => { qc.invalidateQueries({ queryKey: ['chat-sessions'] }); }, [qc]);
   // 各导航分区展开状态（默认全部展开）
@@ -154,30 +167,74 @@ export default function FrontLayout() {
   };
   const handleRenameCancel = () => setRenamingId(null);
   const isNonCreatorGroup = (s: any) => s?.session_type === 'group' && s?.creator_id !== 'u-1';
-  const handleDeleteClick = () => {
-    setDeleteTarget(itemMenuSession);
-    setDeleteConfirmOpen(true);
+  const handleGroupMenuOpen = (e: React.MouseEvent, g: any) => {
+    e.stopPropagation();
+    const el = e.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    setGroupMenuAnchor({ left: rect.right, top: rect.bottom });
+    setGroupMenuGroup(g);
+  };
+  const handleGroupCreateSession = async (g: any) => {
+    setGroupMenuAnchor(null);
+    try {
+      const res = await chatApi.groups.createSession(g.id);
+      const newSession = res.data?.data;
+      invalidateSessions();
+      qc.invalidateQueries({ queryKey: ['chat-groups'] });
+      if (newSession?.id) navigate(`/chat/${newSession.id}`);
+    } catch { enqueueSnackbar('创建失败', { variant: 'error' }); }
+  };
+  const handleGroupRenameStart = () => {
+    if (!groupMenuGroup) return;
+    setGroupRenamingId(groupMenuGroup.id);
+    setGroupRenameValue(groupMenuGroup.name || '');
+    setGroupMenuAnchor(null);
+  };
+  const handleGroupRenameConfirm = () => {
+    if (!groupRenamingId) return;
+    const v = groupRenameValue.trim();
+    if (!v) { setGroupRenamingId(null); return; }
+    chatApi.groups.update(groupRenamingId, { name: v }).then(() => {
+      qc.invalidateQueries({ queryKey: ['chat-groups'] });
+      invalidateSessions();
+      setGroupRenamingId(null);
+    });
+  };
+  const handleGroupDeleteClick = () => {
+    setGroupDeleteTarget(groupMenuGroup);
+    setGroupDeleteOpen(true);
+    setGroupMenuAnchor(null);
+  };
+  const handleGroupDeleteConfirm = () => {
+    if (!groupDeleteTarget) return;
+    const isCreator = groupDeleteTarget.creator_id === 'u-1';
+    const promise = isCreator
+      ? chatApi.groups.delete(groupDeleteTarget.id)
+      : chatApi.groups.removeMember(groupDeleteTarget.id, 'u-1');
+    promise.then(() => {
+      qc.invalidateQueries({ queryKey: ['chat-groups'] });
+      invalidateSessions();
+      setGroupDeleteOpen(false);
+      setGroupDeleteTarget(null);
+    });
+  };
+  const handleSessionDeleteClick = () => {
+    setSessionDeleteTarget(itemMenuSession);
+    setSessionDeleteOpen(true);
     setItemMenuAnchor(null);
   };
-  const handleDeleteConfirm = () => {
-    if (!deleteTarget) return;
-    const isNCG = isNonCreatorGroup(deleteTarget);
-    const promise = isNCG
-      ? chatApi.sessions.removeMember(deleteTarget.id, 'u-1')
-      : chatApi.sessions.delete(deleteTarget.id);
-    promise.then(() => {
+  const handleSessionDeleteConfirm = () => {
+    if (!sessionDeleteTarget) return;
+    chatApi.sessions.delete(sessionDeleteTarget.id).then(() => {
       invalidateSessions();
-      setDeleteConfirmOpen(false);
-      setDeleteTarget(null);
-      if (currentPathId === deleteTarget.id) navigate('/chat');
+      setSessionDeleteOpen(false);
+      setSessionDeleteTarget(null);
+      if (currentPathId === sessionDeleteTarget.id) navigate('/chat');
     });
   };
   const handleBatchDeleteConfirm = () => {
     const ids = Array.from(batchSelectedIds);
-    const sessions = allSessions.filter(s => ids.includes(s.id));
-    Promise.all(sessions.map(s =>
-      isNonCreatorGroup(s) ? chatApi.sessions.removeMember(s.id, 'u-1') : chatApi.sessions.delete(s.id)
-    )).then(() => {
+    Promise.all(ids.map(id => chatApi.sessions.delete(id))).then(() => {
       invalidateSessions();
       if (ids.includes(currentPathId)) navigate('/chat');
       setBatchMode(false);
@@ -249,7 +306,23 @@ export default function FrontLayout() {
     return s.title?.toLowerCase().includes(sidebarSearchText.toLowerCase());
   };
   const tasks = allSessions.filter((s) => !s.workspace_name && s.session_type !== 'group').filter(filterFn);
-  const groupSessions = allSessions.filter((s) => s.session_type === 'group').filter(filterFn);
+  const { data: groupsData } = useQuery({
+    queryKey: ['chat-groups'],
+    queryFn: () => chatApi.groups.list(),
+  });
+  const allGroups: any[] = groupsData?.data?.data || [];
+  const groupMap = new Map<string, { group: any; sessions: any[] }>();
+  allGroups.forEach((g: any) => groupMap.set(g.id, { group: g, sessions: [] }));
+  allSessions.forEach((s: any) => {
+    if (s.group_id && groupMap.has(s.group_id)) {
+      groupMap.get(s.group_id)!.sessions.push(s);
+    }
+  });
+  const filteredGroups = Array.from(groupMap.values()).filter(({ group: g, sessions: gSessions }) => {
+    if (!sidebarSearchText.trim()) return true;
+    const q = sidebarSearchText.toLowerCase();
+    return g.name?.toLowerCase().includes(q) || gSessions.some(s => s.title?.toLowerCase().includes(q));
+  });
   const spaceMap = new Map<string, any[]>();
   allSessions.filter(filterFn).forEach((s) => {
     if (s.workspace_name) {
@@ -578,7 +651,7 @@ export default function FrontLayout() {
                   群组
                 </Typography>
                 <Typography variant="caption" sx={{ fontSize: 10, color: c.text3 }}>
-                  ({groupSessions.length})
+                  ({allGroups.length})
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
@@ -595,23 +668,76 @@ export default function FrontLayout() {
               </Box>
             </Box>
             <Collapse in={groupsExpanded}>
-              <List dense disablePadding sx={{ pl: 1 }}>
-                {groupSessions.length === 0 ? (
-                  <Box
-                    onClick={() => setNewGroupOpen(true)}
-                    sx={{
-                      mx: 1, my: 0.5, py: 0.75, px: 1.5,
-                      border: '1px dashed', borderColor: c.border, borderRadius: '8px',
-                      cursor: 'pointer', textAlign: 'center',
-                      '&:hover': { borderColor: c.accent, '& .empty-group-text': { color: c.accent } },
-                    }}
-                  >
-                    <Typography className="empty-group-text" sx={{ fontSize: 12.5, color: c.text3, transition: 'color 0.2s' }}>+ 新建群组</Typography>
-                  </Box>
-                ) : (
-                  groupSessions.map((session) => renderSessionItem(session, '#10b981', true))
-                )}
-              </List>
+              {filteredGroups.length === 0 ? (
+                <Box
+                  onClick={() => setNewGroupOpen(true)}
+                  sx={{
+                    mx: 1, my: 0.5, py: 0.75, px: 1.5,
+                    border: '1px dashed', borderColor: c.border, borderRadius: '8px',
+                    cursor: 'pointer', textAlign: 'center',
+                    '&:hover': { borderColor: c.accent, '& .empty-group-text': { color: c.accent } },
+                  }}
+                >
+                  <Typography className="empty-group-text" sx={{ fontSize: 12.5, color: c.text3, transition: 'color 0.2s' }}>+ 新建群组</Typography>
+                </Box>
+              ) : (
+                filteredGroups.map(({ group: g, sessions: gSessions }) => {
+                  const isCreator = g.creator_id === 'u-1';
+                  const isRenaming = groupRenamingId === g.id;
+                  return (
+                    <Box key={g.id} sx={{ mb: 0.25 }}>
+                      {/* 群行 */}
+                      <Box
+                        sx={{
+                          display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 0.75,
+                          borderRadius: 1.5, cursor: 'pointer', '&:hover': { bgcolor: c.navHover },
+                        }}
+                        onClick={() => { /* toggle expand handled by arrow */ }}
+                      >
+                        {batchMode ? (
+                          <Checkbox
+                            checked={gSessions.length > 0 && gSessions.every(s => batchSelectedIds.has(s.id))}
+                            indeterminate={gSessions.some(s => batchSelectedIds.has(s.id)) && !gSessions.every(s => batchSelectedIds.has(s.id))}
+                            size="small" onClick={(e) => { e.stopPropagation(); handleSpaceBatchToggle(gSessions.map(s => s.id)); }}
+                            sx={{ p: 0, color: c.text3, '&.Mui-checked': { color: '#6366f1' }, '& .MuiSvgIcon-root': { fontSize: 16 } }}
+                          />
+                        ) : (
+                          <Groups sx={{ fontSize: 16, color: '#10b981', flexShrink: 0 }} />
+                        )}
+                        {isRenaming ? (
+                          <TextField
+                            value={groupRenameValue}
+                            onChange={(e) => setGroupRenameValue(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleGroupRenameConfirm(); if (e.key === 'Escape') setGroupRenamingId(null); }}
+                            onBlur={handleGroupRenameConfirm}
+                            autoFocus size="small"
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{ flex: 1, minWidth: 0, '& .MuiInputBase-root': { fontSize: 12.5, py: 0, height: 24 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: c.accent } }}
+                          />
+                        ) : (
+                          <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1, flex: 1 }} noWrap>{g.name}</Typography>
+                        )}
+                        <Typography sx={{ fontSize: 10, color: c.text3, flexShrink: 0 }}>· {g.member_ids?.length || 0}人</Typography>
+                        {!batchMode && !isRenaming && (
+                          <IconButton size="small" onClick={(e) => handleGroupMenuOpen(e, g)}
+                            sx={{ width: 20, height: 20, color: c.text3, '&:hover': { color: c.accent } }}>
+                            <MoreHoriz sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        )}
+                        <Box onClick={(e) => e.stopPropagation()} sx={{ display: 'flex', cursor: 'pointer' }}>
+                          {gSessions.length > 0 ? <ExpandMore sx={{ fontSize: 14, color: c.text3 }} /> : null}
+                        </Box>
+                      </Box>
+                      {/* 群下会话 */}
+                      {gSessions.length > 0 && (
+                        <List dense disablePadding sx={{ pl: 2 }}>
+                          {gSessions.map((session: any) => renderSessionItem(session, '#10b981', true))}
+                        </List>
+                      )}
+                    </Box>
+                  );
+                })
+              )}
             </Collapse>
           </Box>
 
@@ -735,29 +861,15 @@ export default function FrontLayout() {
           <MenuItem onClick={handleEnterBatch} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
             <ChecklistRounded sx={{ fontSize: 16, color: c.text2 }} /> 批量操作
           </MenuItem>
-          {itemMenuSession?.session_type !== 'group' && (
-            <MenuItem onClick={handleRenameStart} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
-              <Edit sx={{ fontSize: 16, color: c.text2 }} /> 重命名
-            </MenuItem>
-          )}
+          <MenuItem onClick={handleRenameStart} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+            <Edit sx={{ fontSize: 16, color: c.text2 }} /> 重命名
+          </MenuItem>
           <MenuItem onClick={handleShareClick} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
             <Share sx={{ fontSize: 16, color: c.text2 }} /> 分享
           </MenuItem>
-          {itemMenuSession?.session_type === 'group' ? (
-            itemMenuSession?.creator_id === 'u-1' ? (
-              <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
-                <Delete sx={{ fontSize: 16 }} /> 解散群组
-              </MenuItem>
-            ) : (
-              <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
-                <Delete sx={{ fontSize: 16 }} /> 退出群组
-              </MenuItem>
-            )
-          ) : (
-            <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
-              <Delete sx={{ fontSize: 16 }} /> 删除
-            </MenuItem>
-          )}
+          <MenuItem onClick={handleSessionDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
+            <Delete sx={{ fontSize: 16 }} /> {itemMenuSession?.group_id ? '删除会话' : '删除'}
+          </MenuItem>
         </Menu>
       </Box>
 
@@ -772,59 +884,90 @@ export default function FrontLayout() {
         onClose={() => setNewGroupOpen(false)}
       />
 
-      {/* 删除确认弹窗 */}
-      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} maxWidth="xs" fullWidth
+      {/* 群组解散/退出确认 */}
+      <Dialog open={groupDeleteOpen} onClose={() => setGroupDeleteOpen(false)} maxWidth="xs" fullWidth
         slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper' } } }}>
         <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>
-          {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id === 'u-1' ? '解散群组' :
-           deleteTarget?.session_type === 'group' ? '退出群组' : '删除对话'}
+          {groupDeleteTarget?.creator_id === 'u-1' ? '解散群组' : '退出群组'}
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
-            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id === 'u-1'
-              ? '解散后群组及全部消息记录将被删除，所有成员将失去访问，此操作不可恢复'
-              : deleteTarget?.session_type === 'group'
-              ? '退出后你将不再接收该群消息，历史消息不再可见'
-              : '此操作不可恢复'}
+            {groupDeleteTarget?.creator_id === 'u-1'
+              ? '解散后群组及群内全部会话与消息将被删除，所有成员失去访问，此操作不可恢复'
+              : '退出后你将不再看到该群及群内会话'}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button onClick={() => setDeleteConfirmOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
-          <Button variant="contained" onClick={handleDeleteConfirm}
+          <Button onClick={() => setGroupDeleteOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
+          <Button variant="contained" onClick={handleGroupDeleteConfirm}
             sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>
-            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id === 'u-1' ? '确认解散' :
-             deleteTarget?.session_type === 'group' ? '确认退出' : '确认删除'}
+            {groupDeleteTarget?.creator_id === 'u-1' ? '确认解散' : '确认退出'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 会话删除确认 */}
+      <Dialog open={sessionDeleteOpen} onClose={() => setSessionDeleteOpen(false)} maxWidth="xs" fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper' } } }}>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>删除对话</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>此操作不可恢复</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button onClick={() => setSessionDeleteOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
+          <Button variant="contained" onClick={handleSessionDeleteConfirm}
+            sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>确认删除</Button>
         </DialogActions>
       </Dialog>
 
       {/* 批量删除确认弹窗 */}
       <Dialog open={batchDeleteOpen} onClose={() => setBatchDeleteOpen(false)} maxWidth="xs" fullWidth
         slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper' } } }}>
-        <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>批量操作确认</DialogTitle>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>批量删除确认</DialogTitle>
         <DialogContent>
           <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
-            {(() => {
-              const sessions = allSessions.filter(s => batchSelectedIds.has(s.id));
-              const dismissCount = sessions.filter(s => s.session_type === 'group' && s.creator_id === 'u-1').length;
-              const leaveCount = sessions.filter(s => s.session_type === 'group' && s.creator_id !== 'u-1').length;
-              const deleteCount = sessions.filter(s => s.session_type !== 'group').length;
-              const parts: string[] = [];
-              if (dismissCount > 0) parts.push(`解散 ${dismissCount} 个群组(你是群主)`);
-              if (leaveCount > 0) parts.push(`退出 ${leaveCount} 个群组`);
-              if (deleteCount > 0) parts.push(`删除 ${deleteCount} 个对话`);
-              return parts.join('、') + (dismissCount > 0 ? '，此操作不可恢复' : '');
-            })()}
+            确认删除 {batchSelectedIds.size} 个对话？此操作不可恢复
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
           <Button onClick={() => setBatchDeleteOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
           <Button variant="contained" onClick={handleBatchDeleteConfirm}
-            sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>
-            确认执行
-          </Button>
+            sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>确认删除</Button>
         </DialogActions>
       </Dialog>
+
+      {/* 群组菜单 */}
+      <Menu
+        anchorReference="anchorPosition"
+        anchorPosition={groupMenuAnchor || undefined}
+        open={Boolean(groupMenuAnchor)} onClose={() => setGroupMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        sx={{ '& .MuiPaper-root': { minWidth: 140, bgcolor: c.sidebarBg, border: '1px solid', borderColor: c.border, borderRadius: 2 } }}
+      >
+        <MenuItem onClick={() => handleGroupCreateSession(groupMenuGroup)} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+          <Add sx={{ fontSize: 16, color: c.text2 }} /> 新建会话
+        </MenuItem>
+        <MenuItem onClick={() => { setAddMembersGroupId(groupMenuGroup?.id); setAddMembersGroupOpen(true); setGroupMenuAnchor(null); }} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+          <PersonAdd sx={{ fontSize: 16, color: c.text2 }} /> 添加成员
+        </MenuItem>
+        {groupMenuGroup?.creator_id === 'u-1' && (
+          <MenuItem onClick={handleGroupRenameStart} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+            <Edit sx={{ fontSize: 16, color: c.text2 }} /> 重命名群组
+          </MenuItem>
+        )}
+        <MenuItem onClick={handleGroupDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
+          <Delete sx={{ fontSize: 16 }} /> {groupMenuGroup?.creator_id === 'u-1' ? '解散群组' : '退出群组'}
+        </MenuItem>
+      </Menu>
+
+      {/* 群组添加成员弹窗 */}
+      <AddMembersDialog
+        open={addMembersGroupOpen}
+        onClose={() => setAddMembersGroupOpen(false)}
+        groupId={addMembersGroupId || undefined}
+        existingMemberIds={allGroups.find(g => g.id === addMembersGroupId)?.member_ids || []}
+      />
 
       {/* 分享对话框 */}
       {shareDialogState && (

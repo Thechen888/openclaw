@@ -44,13 +44,14 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
 
   // 创建群组
   const createMut = useMutation({
-    mutationFn: (data: any) => chatApi.sessions.create(data),
+    mutationFn: (data: any) => chatApi.groups.create({ name: groupName.trim(), member_ids: selectedMembers.map(m => m.id) }),
     onSuccess: (res) => {
-      const newId = res.data?.data?.id;
+      const newSessionId = res.data?.data?.session?.id;
       enqueueSnackbar('群组已创建', { variant: 'success' });
+      qc.invalidateQueries({ queryKey: ['chat-groups'] });
       qc.invalidateQueries({ queryKey: ['chat-sessions'] });
       handleClose();
-      if (newId) navigate(`/chat/${newId}`);
+      if (newSessionId) navigate(`/chat/${newSessionId}`);
     },
     onError: () => {
       enqueueSnackbar('创建失败', { variant: 'error' });
@@ -67,12 +68,7 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
 
   const handleCreate = () => {
     if (!groupName.trim()) return;
-    createMut.mutate({
-      title: groupName.trim(),
-      session_type: 'group',
-      creator_id: 'u-1',
-      member_ids: ['u-1', ...selectedMembers.map((m) => m.id)],
-    });
+    createMut.mutate({});
   };
 
   return (
@@ -185,7 +181,7 @@ export default function NewGroupDialog({ open, onClose }: NewGroupDialogProps) {
       <DialogActions sx={{ px: 3, pb: 2, flexDirection: 'column', alignItems: 'stretch', gap: 1.5 }}>
         {/* 权限说明 */}
         <Typography sx={{ fontSize: 11, color: 'info.main', lineHeight: 1.6 }}>
-          本群 AI 可使用你（创建人）有权限的全部 Agent、技能与连接器工具，群成员均可发起对话。
+          创建后将自动建立群内第一条会话。
         </Typography>
         <Button
           onClick={handleCreate}
