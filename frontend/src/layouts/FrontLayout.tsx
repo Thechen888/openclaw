@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, IconButton, Typography, Tooltip, Divider, Avatar,
   List, ListItemButton, ListItemIcon, ListItemText,
   Menu, MenuItem, useTheme, alpha, Collapse, Badge, Switch, TextField,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox,
 } from '@mui/material';
 import {
   Add, SmartToy, Folder,
@@ -10,15 +11,17 @@ import {
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
   AccountTree, Share, DarkMode, LightMode, Groups,
+  MoreHoriz, ChecklistRounded, Edit, Delete, Close,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useViewModeStore } from '../stores/viewModeStore';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
 import { chatApi } from '../api/client';
 import NotificationBell from '../components/NotificationBell';
 import NewGroupDialog from '../pages/chat/NewGroupDialog';
+import ShareDialog from '../pages/chat/ShareDialog';
 
 const SIDEBAR_WIDTH = 280;
 
@@ -102,6 +105,21 @@ export default function FrontLayout() {
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sidebarSearchOpen, setSidebarSearchOpen] = useState(false);
   const [sidebarSearchText, setSidebarSearchText] = useState('');
+  // ---- 侧栏菜单相关状态 ----
+  const [itemMenuAnchor, setItemMenuAnchor] = useState<null | HTMLElement>(null);
+  const [itemMenuSession, setItemMenuSession] = useState<any>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareDialogState, setShareDialogState] = useState<{ sessionId: string; sessionTitle: string; messages: any[]; sourceReadonly: boolean } | null>(null);
+  const qc = useQueryClient();
+  const invalidateSessions = useCallback(() => { qc.invalidateQueries({ queryKey: ['chat-sessions'] }); }, [qc]);
   // 各导航分区展开状态（默认全部展开）
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
     () => Object.fromEntries(NAV_SECTIONS.map((s) => [s.label, true]))
@@ -109,6 +127,85 @@ export default function FrontLayout() {
   const toggleSection = (label: string) =>
     setExpandedSections((prev) => ({ ...prev, [label]: !prev[label] }));
   const [activeId, setActiveId] = useState<string>('');
+  const currentPathId = location.pathname.split('/chat/')[1] || '';
+
+  // ---- 处理函数 ----
+  const handleItemMenuOpen = (e: React.MouseEvent, session: any) => {
+    e.stopPropagation();
+    setItemMenuAnchor(e.currentTarget as HTMLElement);
+    setItemMenuSession(session);
+  };
+  const handleRenameStart = () => {
+    if (!itemMenuSession) return;
+    setRenamingId(itemMenuSession.id);
+    setRenameValue(itemMenuSession.title || '');
+    setItemMenuAnchor(null);
+  };
+  const handleRenameConfirm = () => {
+    if (!renamingId) return;
+    const v = renameValue.trim();
+    if (!v) { setRenamingId(null); return; }
+    chatApi.sessions.update(renamingId, { title: v }).then(() => {
+      invalidateSessions();
+      setRenamingId(null);
+    });
+  };
+  const handleRenameCancel = () => setRenamingId(null);
+  const isNonCreatorGroup = (s: any) => s?.session_type === 'group' && s?.creator_id !== 'u-1';
+  const handleDeleteClick = () => {
+    setDeleteTarget(itemMenuSession);
+    setDeleteConfirmOpen(true);
+    setItemMenuAnchor(null);
+  };
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    const isNCG = isNonCreatorGroup(deleteTarget);
+    const promise = isNCG
+      ? chatApi.sessions.removeMember(deleteTarget.id, 'u-1')
+      : chatApi.sessions.delete(deleteTarget.id);
+    promise.then(() => {
+      invalidateSessions();
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+      if (currentPathId === deleteTarget.id) navigate('/chat');
+    });
+  };
+  const handleBatchDeleteConfirm = () => {
+    const ids = Array.from(batchSelectedIds);
+    const sessions = allSessions.filter(s => ids.includes(s.id));
+    Promise.all(sessions.map(s =>
+      isNonCreatorGroup(s) ? chatApi.sessions.removeMember(s.id, 'u-1') : chatApi.sessions.delete(s.id)
+    )).then(() => {
+      invalidateSessions();
+      if (ids.includes(currentPathId)) navigate('/chat');
+      setBatchMode(false);
+      setBatchSelectedIds(new Set());
+      setBatchDeleteOpen(false);
+    });
+  };
+  const handleShareClick = () => {
+    if (!itemMenuSession) return;
+    const sid = itemMenuSession.id;
+    chatApi.messages.list(sid).then(res => {
+      const msgs = (res.data?.data || []).map((m: any) => ({ id: m.id, role: m.role, content: m.content }));
+      setShareDialogState({ sessionId: sid, sessionTitle: itemMenuSession.title, messages: msgs, sourceReadonly: !!itemMenuSession.readonly });
+      setShareDialogOpen(true);
+    });
+    setItemMenuAnchor(null);
+  };
+  const handleEnterBatch = () => {
+    setBatchMode(true);
+    if (itemMenuSession) setBatchSelectedIds(new Set([itemMenuSession.id]));
+    setItemMenuAnchor(null);
+  };
+  const handleBatchToggle = (id: string) => {
+    setBatchSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+  const handleSelectAll = () => {
+    const allIds = allSessions.map(s => s.id);
+    const allSel = allIds.every(id => batchSelectedIds.has(id));
+    setBatchSelectedIds(allSel ? new Set() : new Set(allIds));
+  };
 
   const isDark = themeMode === 'dark';
 
@@ -151,6 +248,82 @@ export default function FrontLayout() {
     }
   });
   const spaces = Array.from(spaceMap.entries());
+  const batchSelectState: 'all' | 'partial' | 'none' = (() => {
+    const total = allSessions.length;
+    if (total === 0 || batchSelectedIds.size === 0) return 'none';
+    if (batchSelectedIds.size >= total) return 'all';
+    return 'partial';
+  })();
+
+  // ---- 通用会话条目渲染（含 hover 菜单 + 批量模式 + 重命名）----
+  const renderSessionItem = (session: any, dotColor: string, showMembers?: boolean) => {
+    const isRenaming = renamingId === session.id;
+    const isHovered = hoveredItemId === session.id;
+    const isChecked = batchSelectedIds.has(session.id);
+    const itemClick = (e: React.MouseEvent) => {
+      if (batchMode) { e.stopPropagation(); handleBatchToggle(session.id); return; }
+      if (isRenaming) return;
+      setActiveId(session.id);
+      navigate(`/chat/${session.id}`);
+    };
+    return (
+      <ListItemButton
+        key={session.id}
+        selected={!batchMode && activeId === session.id}
+        onClick={itemClick}
+        onMouseEnter={() => setHoveredItemId(session.id)}
+        onMouseLeave={() => setHoveredItemId(null)}
+        sx={{ borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25, '&.Mui-selected': { bgcolor: c.navActive }, '&:hover': { bgcolor: c.navHover } }}
+      >
+        {batchMode ? (
+          <Checkbox checked={isChecked} onChange={() => handleBatchToggle(session.id)} size="small" onClick={(e) => e.stopPropagation()}
+            sx={{ p: 0, mr: 1, color: c.text3, '&.Mui-checked': { color: '#6366f1' }, '& .MuiSvgIcon-root': { fontSize: 16 } }} />
+        ) : (
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: dotColor, mr: 1.5, flexShrink: 0 }} />
+        )}
+        {isRenaming ? (
+          <TextField
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleRenameConfirm(); if (e.key === 'Escape') handleRenameCancel(); }}
+            onBlur={handleRenameConfirm}
+            autoFocus size="small"
+            inputRef={(ref: HTMLInputElement | null) => { if (ref) setTimeout(() => { ref.focus(); ref.select(); }, 0); }}
+            onClick={(e) => e.stopPropagation()}
+            sx={{ flex: 1, minWidth: 0, '& .MuiInputBase-root': { fontSize: 12.5, py: 0, height: 24 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: c.accent } }}
+          />
+        ) : (
+          <ListItemText
+            primary={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {!showMembers && session.shared_from && (
+                  <Share sx={{ fontSize: 11, color: session.readonly ? '#9ca3af' : c.accent, flexShrink: 0 }} />
+                )}
+                <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
+                {showMembers && session.member_ids?.length > 0 && (
+                  <Typography sx={{ fontSize: 10, color: c.text3, flexShrink: 0 }}>· {session.member_ids.length}人</Typography>
+                )}
+              </Box>
+            }
+          />
+        )}
+        {!batchMode && !isRenaming && (
+          <>
+            {isHovered ? (
+              <IconButton size="small" onClick={(e) => handleItemMenuOpen(e, session)}
+                sx={{ width: 20, height: 20, ml: 0.5, color: c.text3, '&:hover': { color: c.accent } }}>
+                <MoreHoriz sx={{ fontSize: 16 }} />
+              </IconButton>
+            ) : (
+              <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
+                {session.last_message_at ? relativeTime(session.last_message_at) : ''}
+              </Typography>
+            )}
+          </>
+        )}
+      </ListItemButton>
+    );
+  };
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: c.bg }}>
@@ -291,7 +464,7 @@ export default function FrontLayout() {
         <Divider sx={{ mx: 2, borderColor: c.border }} />
 
         {/* ---- 中部：任务 + 空间 列表 ---- */}
-        <Box sx={{ flex: 1, overflow: 'auto', py: 1, px: 1.5 }}>
+        <Box sx={{ flex: 1, overflow: 'auto', py: 1, px: 1.5, position: 'relative' }}>
           {/* 任务（纯聊天，workspace_name 为空） */}
           <Box sx={{ mb: 1 }}>
             <Box
@@ -320,33 +493,7 @@ export default function FrontLayout() {
                     <Typography sx={{ fontSize: 12, color: c.text3 }}>暂无对话</Typography>
                   </Box>
                 ) : (
-                  tasks.map((session) => (
-                    <ListItemButton
-                      key={session.id}
-                      selected={activeId === session.id}
-                      onClick={() => { setActiveId(session.id); navigate(`/chat/${session.id}`); }}
-                      sx={{
-                        borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25,
-                        '&.Mui-selected': { bgcolor: c.navActive },
-                        '&:hover': { bgcolor: c.navHover },
-                      }}
-                    >
-                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: c.accent, mr: 1.5, flexShrink: 0 }} />
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            {session.shared_from && (
-                              <Share sx={{ fontSize: 11, color: session.readonly ? '#9ca3af' : c.accent, flexShrink: 0 }} />
-                            )}
-                            <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
-                          </Box>
-                        }
-                      />
-                      <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
-                        {session.last_message_at ? relativeTime(session.last_message_at) : ''}
-                      </Typography>
-                    </ListItemButton>
-                  ))
+                  tasks.map((session) => renderSessionItem(session, c.accent))
                 )}
               </List>
             </Collapse>
@@ -384,33 +531,7 @@ export default function FrontLayout() {
                   </Box>
                   {/* 空间下的对话 */}
                   <List dense disablePadding sx={{ pl: 2 }}>
-                    {spaceSessions.map((session: any) => (
-                      <ListItemButton
-                        key={session.id}
-                        selected={activeId === session.id}
-                        onClick={() => { setActiveId(session.id); navigate(`/chat/${session.id}`); }}
-                        sx={{
-                          borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25,
-                          '&.Mui-selected': { bgcolor: c.navActive },
-                          '&:hover': { bgcolor: c.navHover },
-                        }}
-                      >
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b', mr: 1.5, flexShrink: 0 }} />
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              {session.shared_from && (
-                                <Share sx={{ fontSize: 11, color: session.readonly ? '#9ca3af' : c.accent, flexShrink: 0 }} />
-                              )}
-                              <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
-                            </Box>
-                          }
-                        />
-                        <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
-                          {session.last_message_at ? relativeTime(session.last_message_at) : ''}
-                        </Typography>
-                      </ListItemButton>
-                    ))}
+                    {spaceSessions.map((session: any) => renderSessionItem(session, '#f59e0b'))}
                   </List>
                 </Box>
               ))}
@@ -464,37 +585,40 @@ export default function FrontLayout() {
                     <Typography className="empty-group-text" sx={{ fontSize: 12.5, color: c.text3, transition: 'color 0.2s' }}>+ 新建群组</Typography>
                   </Box>
                 ) : (
-                  groupSessions.map((session) => (
-                    <ListItemButton
-                      key={session.id}
-                      selected={activeId === session.id}
-                      onClick={() => { setActiveId(session.id); navigate(`/chat/${session.id}`); }}
-                      sx={{
-                        borderRadius: 1.5, py: 0.75, px: 1.5, mb: 0.25,
-                        '&.Mui-selected': { bgcolor: c.navActive },
-                        '&:hover': { bgcolor: c.navHover },
-                      }}
-                    >
-                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10b981', mr: 1.5, flexShrink: 0 }} />
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
-                            {session.member_ids?.length > 0 && (
-                              <Typography sx={{ fontSize: 10, color: c.text3, flexShrink: 0 }}>· {session.member_ids.length}人</Typography>
-                            )}
-                          </Box>
-                        }
-                      />
-                      <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
-                        {session.last_message_at ? relativeTime(session.last_message_at) : ''}
-                      </Typography>
-                    </ListItemButton>
-                  ))
+                  groupSessions.map((session) => renderSessionItem(session, '#10b981', true))
                 )}
               </List>
             </Collapse>
           </Box>
+
+          {/* 批量操作栏 */}
+          {batchMode && (
+            <Box sx={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              bgcolor: c.sidebarBg, borderTop: `1px solid ${c.border}`,
+              px: 2, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10,
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }} onClick={handleSelectAll}>
+                <Checkbox
+                  checked={batchSelectState === 'all'} indeterminate={batchSelectState === 'partial'}
+                  size="small" onClick={(e) => e.stopPropagation()}
+                  sx={{ p: 0, color: c.text3, '&.Mui-checked': { color: '#6366f1' }, '&.MuiCheckbox-indeterminate': { color: '#6366f1' } }}
+                />
+                <Typography sx={{ fontSize: 12, color: c.text2 }}>全选({batchSelectedIds.size})</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button size="small" variant="outlined" disabled={batchSelectedIds.size === 0}
+                  onClick={() => setBatchDeleteOpen(true)}
+                  sx={{ fontSize: 11, textTransform: 'none', color: '#ef4444', borderColor: '#ef4444', '&.Mui-disabled': { color: 'rgba(239,68,68,0.3)', borderColor: 'rgba(239,68,68,0.3)' }, px: 1.5, py: 0.25, minWidth: 'auto' }}>
+                  删除
+                </Button>
+                <IconButton size="small" onClick={() => { setBatchMode(false); setBatchSelectedIds(new Set()); }}
+                  sx={{ color: c.text3, width: 22, height: 22 }}>
+                  <Close sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Box>
+            </Box>
+          )}
         </Box>
 
         {/* ---- 底部：快捷入口 + 用户 ---- */}
@@ -574,6 +698,27 @@ export default function FrontLayout() {
             <Typography sx={{ fontSize: 12.5 }}>切换到后台</Typography>
           </MenuItem>
         </Menu>
+
+        {/* 会话条目菜单 */}
+        <Menu
+          anchorEl={itemMenuAnchor} open={Boolean(itemMenuAnchor)} onClose={() => setItemMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          sx={{ '& .MuiPaper-root': { minWidth: 140, bgcolor: c.sidebarBg, border: '1px solid', borderColor: c.border, borderRadius: 2 } }}
+        >
+          <MenuItem onClick={handleEnterBatch} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+            <ChecklistRounded sx={{ fontSize: 16, color: c.text2 }} /> 批量操作
+          </MenuItem>
+          <MenuItem onClick={handleRenameStart} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+            <Edit sx={{ fontSize: 16, color: c.text2 }} /> 重命名
+          </MenuItem>
+          <MenuItem onClick={handleShareClick} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+            <Share sx={{ fontSize: 16, color: c.text2 }} /> 分享
+          </MenuItem>
+          <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
+            <Delete sx={{ fontSize: 16 }} /> {itemMenuSession?.session_type === 'group' && itemMenuSession?.creator_id !== 'u-1' ? '退出群组' : '删除'}
+          </MenuItem>
+        </Menu>
       </Box>
 
       {/* ===== 右侧：主内容区 ===== */}
@@ -586,6 +731,58 @@ export default function FrontLayout() {
         open={newGroupOpen}
         onClose={() => setNewGroupOpen(false)}
       />
+
+      {/* 删除确认弹窗 */}
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} maxWidth="xs" fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper' } } }}>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>
+          {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id !== 'u-1' ? '退出群组' : '删除对话'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
+            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id !== 'u-1'
+              ? '退出后将不再接收该群组的消息'
+              : '此操作不可恢复'}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button onClick={() => setDeleteConfirmOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
+          <Button variant="contained" onClick={handleDeleteConfirm}
+            sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>
+            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id !== 'u-1' ? '确认退出' : '确认删除'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 批量删除确认弹窗 */}
+      <Dialog open={batchDeleteOpen} onClose={() => setBatchDeleteOpen(false)} maxWidth="xs" fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper' } } }}>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>批量删除</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
+            将删除 {batchSelectedIds.size} 个对话，不可恢复
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button onClick={() => setBatchDeleteOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
+          <Button variant="contained" onClick={handleBatchDeleteConfirm}
+            sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>
+            确认删除
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 分享对话框 */}
+      {shareDialogState && (
+        <ShareDialog
+          open={shareDialogOpen}
+          onClose={() => { setShareDialogOpen(false); setShareDialogState(null); }}
+          sessionId={shareDialogState.sessionId}
+          sessionTitle={shareDialogState.sessionTitle}
+          selectedMessages={shareDialogState.messages}
+          sourceReadonly={shareDialogState.sourceReadonly}
+        />
+      )}
     </Box>
   );
 }
