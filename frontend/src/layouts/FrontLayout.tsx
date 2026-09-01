@@ -106,7 +106,7 @@ export default function FrontLayout() {
   const [sidebarSearchOpen, setSidebarSearchOpen] = useState(false);
   const [sidebarSearchText, setSidebarSearchText] = useState('');
   // ---- 侧栏菜单相关状态 ----
-  const [itemMenuAnchor, setItemMenuAnchor] = useState<null | HTMLElement>(null);
+  const [itemMenuAnchor, setItemMenuAnchor] = useState<null | { left: number; top: number }>(null);
   const [itemMenuSession, setItemMenuSession] = useState<any>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -132,7 +132,9 @@ export default function FrontLayout() {
   // ---- 处理函数 ----
   const handleItemMenuOpen = (e: React.MouseEvent, session: any) => {
     e.stopPropagation();
-    setItemMenuAnchor(e.currentTarget as HTMLElement);
+    const el = e.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    setItemMenuAnchor({ left: rect.right, top: rect.bottom });
     setItemMenuSession(session);
   };
   const handleRenameStart = () => {
@@ -701,8 +703,10 @@ export default function FrontLayout() {
 
         {/* 会话条目菜单 */}
         <Menu
-          anchorEl={itemMenuAnchor} open={Boolean(itemMenuAnchor)} onClose={() => setItemMenuAnchor(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          anchorReference="anchorPosition"
+          anchorPosition={itemMenuAnchor || undefined}
+          open={Boolean(itemMenuAnchor)} onClose={() => setItemMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           sx={{ '& .MuiPaper-root': { minWidth: 140, bgcolor: c.sidebarBg, border: '1px solid', borderColor: c.border, borderRadius: 2 } }}
         >
