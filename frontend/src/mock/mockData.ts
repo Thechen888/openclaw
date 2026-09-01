@@ -5105,6 +5105,18 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         read: false, created_at: new Date().toISOString(),
       });
     });
+    // 向源会话写入协作记录系统消息
+    if (source) {
+      const names = (data.recipient_ids || []).map((rid: string) => users.find((u: any) => u.id === rid)?.name || rid).join('、');
+      const modeText = mode === 'view' ? '仅查看' : '可继续对话';
+      const actionText = mode === 'view' ? '分享给了' : '转交给了';
+      const srcMsgs = chatMessages[sid] || [];
+      const msgsCount = messageIds && messageIds.length > 0 ? messageIds.length : srcMsgs.length;
+      if (!chatMessages[sid]) chatMessages[sid] = [];
+      chatMessages[sid].push({ id: 'm-' + Date.now() + '-sys', role: 'system', content: `张伟 将 ${msgsCount} 条消息${actionText} ${names}(${modeText})`, created_at: new Date().toISOString() });
+      source.message_count = chatMessages[sid].length;
+      source.last_message_at = new Date().toISOString();
+    }
     return ok({ shared_count: (data.recipient_ids || []).length });
   }
   if (path.match(/\/chat\/sessions\/([^/]+)$/) && method === 'get') {
@@ -5129,7 +5141,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     chatMessages[ns.id] = [];
     return ok(ns);
   }
-  if (path.match(/\/chat\/sessions/) && method === 'get') { return paginate(chatSessions.filter(s => (!s.user_id || s.user_id === 'u-1') || (s.session_type === 'group' && s.member_ids?.includes('u-1'))), p); }
+  if (path.match(/\/chat\/sessions/) && method === 'get') { return paginate(chatSessions.filter(s => (!s.user_id || s.user_id === 'u-1') || (s.session_type === 'group' && s.member_ids?.includes('u-1'))), Number(p.page || 1), Number(p.page_size || 20), p.search || ''); }
 
   // ---- 通知 ----
   if (path.match(/\/notifications\/read-all$/) && method === 'post') {

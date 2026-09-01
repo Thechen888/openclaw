@@ -102,22 +102,24 @@ export default function AddMembersDialog({ open, onClose, sessionId, sessionTitl
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ px: 3, pb: 1 }}>
+      <DialogContent sx={{ px: 3, pb: 1, pt: 2.5 }}>
         {/* 群组名称（仅非群组时显示） */}
         {!isGroup && (
-          <TextField
-            fullWidth size="small" autoFocus
-            label="群组名称"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            sx={{
-              mb: 1.5,
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2, fontSize: 13,
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
-              },
-            }}
-          />
+          <Box sx={{ mb: 2 }}>
+            <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 0.5 }}>群组名称</Typography>
+            <TextField
+              fullWidth size="small" autoFocus
+              placeholder="请输入群组名称"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2, fontSize: 13,
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                },
+              }}
+            />
+          </Box>
         )}
         {/* 搜索用户 */}
         <TextField

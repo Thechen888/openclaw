@@ -480,6 +480,15 @@ export default function ConversationPage() {
         {isGroup && (
           <Chip label="群组" size="small" icon={<Person sx={{ fontSize: 12 }} />} sx={{ height: 22, fontSize: 11, bgcolor: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 500, '& .MuiChip-icon': { color: '#10b981' } }} />
         )}
+        {isGroup && !isReadonly && (
+          <Chip
+            label={`成员 ${session?.member_ids?.length || 0}`}
+            size="small"
+            variant="outlined"
+            onClick={() => setRightPanelOpen(true)}
+            sx={{ height: 22, fontSize: 11, fontWeight: 500, borderColor: 'divider', color: 'text.secondary', cursor: 'pointer', '&:hover': { borderColor: '#6366f1', color: '#6366f1' } }}
+          />
+        )}
         {isReadonly && (
           <Chip label="只读分享" size="small" sx={{ height: 22, fontSize: 11, bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 500 }} />
         )}
@@ -521,7 +530,7 @@ export default function ConversationPage() {
         )}
 
         {/* 工具栏：分享 */}
-        <Tooltip title="发送给同事">
+        <Tooltip title="分享">
           <IconButton size="small" onClick={() => openShareDialog()} sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#6366f1' } }}>
             <Share sx={{ fontSize: 18 }} />
           </IconButton>
@@ -601,7 +610,7 @@ export default function ConversationPage() {
 
             return (
             <Box key={msg.id} ref={(el: HTMLDivElement | null) => { msgRefs.current[msg.id] = el; }} sx={{
-              display: 'flex', flexDirection: msgOnRight ? 'row-reverse' : 'row',
+              display: 'flex', flexDirection: (msgOnRight && !selectMode) ? 'row-reverse' : 'row',
               mb: 3, gap: 1.5, maxWidth: msgOnRight ? '70%' : '85%',
               ml: msgOnRight ? 'auto' : 0,
               transition: 'all 0.3s',
@@ -753,7 +762,7 @@ export default function ConversationPage() {
                     boxShadow: '0 2px 8px rgba(99,102,241,0.25)',
                   }}
                 >
-                  发送给同事
+                  分享
                 </Button>
               </span>
             </Tooltip>
@@ -1287,6 +1296,27 @@ export default function ConversationPage() {
                 </Menu>
               </Box>
             )}
+
+            {/* 协作记录 */}
+            <Box sx={{ mb: 3 }}>
+              <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>协作记录</Typography>
+              {(() => {
+                const sysMsgs = messages.filter(m => m.role === 'system').sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                if (sysMsgs.length === 0) {
+                  return <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>暂无协作记录</Typography>;
+                }
+                return (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {sysMsgs.map((m: any) => (
+                      <Box key={m.id}>
+                        <Typography sx={{ fontSize: 12, color: 'text.primary', lineHeight: 1.5 }}>{m.content}</Typography>
+                        <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>{formatTime(m.created_at)}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                );
+              })()}
+            </Box>
 
             {/* 区块三：产物 */}
             <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>产物</Typography>
