@@ -208,6 +208,15 @@ export default function FrontLayout() {
     const allSel = allIds.every(id => batchSelectedIds.has(id));
     setBatchSelectedIds(allSel ? new Set() : new Set(allIds));
   };
+  const handleSpaceBatchToggle = (spaceSessionIds: string[]) => {
+    const allSelected = spaceSessionIds.every(id => batchSelectedIds.has(id));
+    setBatchSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allSelected) { spaceSessionIds.forEach(id => next.delete(id)); }
+      else { spaceSessionIds.forEach(id => next.add(id)); }
+      return next;
+    });
+  };
 
   const isDark = themeMode === 'dark';
 
@@ -526,10 +535,23 @@ export default function FrontLayout() {
               {spaces.map(([spaceName, spaceSessions]) => (
                 <Box key={spaceName} sx={{ pl: 1 }}>
                   {/* 空间标题 */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 0.75 }}>
+                  <Box
+                    onClick={(e) => { if (batchMode) { e.stopPropagation(); handleSpaceBatchToggle(spaceSessions.map(s => s.id)); } }}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 0.75, ...(batchMode ? { cursor: 'pointer', '&:hover': { bgcolor: c.navHover }, borderRadius: 1 } : {}) }}
+                  >
+                    {batchMode && (
+                      <Checkbox
+                        checked={spaceSessions.every(s => batchSelectedIds.has(s.id))}
+                        indeterminate={spaceSessions.some(s => batchSelectedIds.has(s.id)) && !spaceSessions.every(s => batchSelectedIds.has(s.id))}
+                        size="small" onClick={(e) => e.stopPropagation()}
+                        sx={{ p: 0, color: c.text3, '&.Mui-checked': { color: '#6366f1' }, '& .MuiSvgIcon-root': { fontSize: 16 } }}
+                      />
+                    )}
                     <Box sx={{ color: '#f59e0b' }}><Folder sx={{ fontSize: 16 }} /></Box>
-                    <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1 }}>{spaceName}</Typography>
-                    <ExpandMore sx={{ fontSize: 14, color: c.text3, ml: 'auto' }} />
+                    <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1, flex: 1 }}>{spaceName}</Typography>
+                    <Box onClick={(e) => { e.stopPropagation(); setSpacesExpanded(!spacesExpanded); }} sx={{ display: 'flex', cursor: 'pointer' }}>
+                      {spacesExpanded ? <ExpandLess sx={{ fontSize: 14, color: c.text3 }} /> : <ExpandMore sx={{ fontSize: 14, color: c.text3 }} />}
+                    </Box>
                   </Box>
                   {/* 空间下的对话 */}
                   <List dense disablePadding sx={{ pl: 2 }}>
@@ -713,15 +735,29 @@ export default function FrontLayout() {
           <MenuItem onClick={handleEnterBatch} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
             <ChecklistRounded sx={{ fontSize: 16, color: c.text2 }} /> 批量操作
           </MenuItem>
-          <MenuItem onClick={handleRenameStart} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
-            <Edit sx={{ fontSize: 16, color: c.text2 }} /> 重命名
-          </MenuItem>
+          {itemMenuSession?.session_type !== 'group' && (
+            <MenuItem onClick={handleRenameStart} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
+              <Edit sx={{ fontSize: 16, color: c.text2 }} /> 重命名
+            </MenuItem>
+          )}
           <MenuItem onClick={handleShareClick} sx={{ fontSize: 13, gap: 1, color: c.text1 }}>
             <Share sx={{ fontSize: 16, color: c.text2 }} /> 分享
           </MenuItem>
-          <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
-            <Delete sx={{ fontSize: 16 }} /> {itemMenuSession?.session_type === 'group' && itemMenuSession?.creator_id !== 'u-1' ? '退出群组' : '删除'}
-          </MenuItem>
+          {itemMenuSession?.session_type === 'group' ? (
+            itemMenuSession?.creator_id === 'u-1' ? (
+              <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
+                <Delete sx={{ fontSize: 16 }} /> 解散群组
+              </MenuItem>
+            ) : (
+              <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
+                <Delete sx={{ fontSize: 16 }} /> 退出群组
+              </MenuItem>
+            )
+          ) : (
+            <MenuItem onClick={handleDeleteClick} sx={{ fontSize: 13, gap: 1, color: '#ef4444' }}>
+              <Delete sx={{ fontSize: 16 }} /> 删除
+            </MenuItem>
+          )}
         </Menu>
       </Box>
 
@@ -740,12 +776,15 @@ export default function FrontLayout() {
       <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} maxWidth="xs" fullWidth
         slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper' } } }}>
         <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>
-          {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id !== 'u-1' ? '退出群组' : '删除对话'}
+          {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id === 'u-1' ? '解散群组' :
+           deleteTarget?.session_type === 'group' ? '退出群组' : '删除对话'}
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
-            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id !== 'u-1'
-              ? '退出后将不再接收该群组的消息'
+            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id === 'u-1'
+              ? '解散后群组及全部消息记录将被删除，所有成员将失去访问，此操作不可恢复'
+              : deleteTarget?.session_type === 'group'
+              ? '退出后你将不再接收该群消息，历史消息不再可见'
               : '此操作不可恢复'}
           </Typography>
         </DialogContent>
@@ -753,7 +792,8 @@ export default function FrontLayout() {
           <Button onClick={() => setDeleteConfirmOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
           <Button variant="contained" onClick={handleDeleteConfirm}
             sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>
-            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id !== 'u-1' ? '确认退出' : '确认删除'}
+            {deleteTarget?.session_type === 'group' && deleteTarget?.creator_id === 'u-1' ? '确认解散' :
+             deleteTarget?.session_type === 'group' ? '确认退出' : '确认删除'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -761,17 +801,27 @@ export default function FrontLayout() {
       {/* 批量删除确认弹窗 */}
       <Dialog open={batchDeleteOpen} onClose={() => setBatchDeleteOpen(false)} maxWidth="xs" fullWidth
         slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper' } } }}>
-        <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>批量删除</DialogTitle>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 700 }}>批量操作确认</DialogTitle>
         <DialogContent>
           <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>
-            将删除 {batchSelectedIds.size} 个对话，不可恢复
+            {(() => {
+              const sessions = allSessions.filter(s => batchSelectedIds.has(s.id));
+              const dismissCount = sessions.filter(s => s.session_type === 'group' && s.creator_id === 'u-1').length;
+              const leaveCount = sessions.filter(s => s.session_type === 'group' && s.creator_id !== 'u-1').length;
+              const deleteCount = sessions.filter(s => s.session_type !== 'group').length;
+              const parts: string[] = [];
+              if (dismissCount > 0) parts.push(`解散 ${dismissCount} 个群组(你是群主)`);
+              if (leaveCount > 0) parts.push(`退出 ${leaveCount} 个群组`);
+              if (deleteCount > 0) parts.push(`删除 ${deleteCount} 个对话`);
+              return parts.join('、') + (dismissCount > 0 ? '，此操作不可恢复' : '');
+            })()}
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
           <Button onClick={() => setBatchDeleteOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
           <Button variant="contained" onClick={handleBatchDeleteConfirm}
             sx={{ fontSize: 13, textTransform: 'none', bgcolor: '#ef4444', borderRadius: 2, '&:hover': { bgcolor: '#dc2626' }, boxShadow: 'none' }}>
-            确认删除
+            确认执行
           </Button>
         </DialogActions>
       </Dialog>
