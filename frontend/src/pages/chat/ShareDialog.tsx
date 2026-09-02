@@ -15,7 +15,7 @@ interface ShareDialogProps {
   onClose: () => void;
   sessionId: string;
   sessionTitle: string;
-  selectedMessages: { id: string; role: string; content: string }[];
+  selectedMessages: { id: string; role: string; content: string; to_ai?: boolean }[];
   sourceReadonly?: boolean;
 }
 
@@ -288,6 +288,12 @@ export default function ShareDialog({ open, onClose, sessionId, sessionTitle, se
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+        {selectedMessages.some(m => m.to_ai === false) && (
+          <Box sx={{ width: '100%', mb: 1, px: 1.5, py: 1, borderRadius: 2, bgcolor: 'rgba(245,158,11,0.1)', border: '1px solid', borderColor: 'rgba(245,158,11,0.3)' }}>
+            <Typography sx={{ fontSize: 12, color: '#f59e0b' }}>所选内容包含仅成员可见的消息，分享后对接收人可见</Typography>
+          </Box>
+        )}
+        <Box sx={{ flex: 1 }} />
         <Button
           onClick={handleClose}
           sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}

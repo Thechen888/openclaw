@@ -2826,22 +2826,22 @@ const chatGroups: any[] = [
 ];
 
 const chatSessions: any[] = [
-  { id: 'cs-1', title: '关于API设计规范', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: 'openclaw-main', message_count: 6, created_at: dayAgo(3), updated_at: ago(120), last_message_at: ago(120) },
-  { id: 'cs-2', title: '项目新手指引', user_id: 'u-1', mode: 'plan', model_policy_id: 'mp-2', model_policy: '性能', status: 'active', workspace_name: '项目新手指引', message_count: 4, created_at: dayAgo(2), updated_at: ago(60), last_message_at: ago(60) },
-  { id: 'cs-t1', title: '帮我写一段 Python 快排', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 2, created_at: dayAgo(1), updated_at: ago(30), last_message_at: ago(30) },
-  { id: 'cs-3', title: '数据库索引优化建议', user_id: 'u-1', mode: 'ask', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 4, created_at: dayAgo(5), updated_at: dayAgo(4), last_message_at: dayAgo(4) },
-  { id: 'cs-4', title: 'React性能优化方案', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-2', model_policy: '极致', status: 'active', workspace_name: 'openclaw-main', message_count: 8, created_at: dayAgo(7), updated_at: dayAgo(6), last_message_at: dayAgo(6) },
-  { id: 'cs-7', title: '周报自动生成', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-3', model_policy: '性能', status: 'active', workspace_name: 'openclaw-main', message_count: 6, created_at: dayAgo(14), updated_at: dayAgo(13), last_message_at: dayAgo(13) },
+  { id: 'cs-1', title: '关于API设计规范', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: 'openclaw-main', message_count: 6, created_at: dayAgo(3), updated_at: ago(120), last_message_at: ago(120), unread_count: 0 },
+  { id: 'cs-2', title: '项目新手指引', user_id: 'u-1', mode: 'plan', model_policy_id: 'mp-2', model_policy: '性能', status: 'active', workspace_name: '项目新手指引', message_count: 4, created_at: dayAgo(2), updated_at: ago(60), last_message_at: ago(60), unread_count: 0 },
+  { id: 'cs-t1', title: '帮我写一段 Python 快排', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 2, created_at: dayAgo(1), updated_at: ago(30), last_message_at: ago(30), unread_count: 0 },
+  { id: 'cs-3', title: '数据库索引优化建议', user_id: 'u-1', mode: 'ask', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 4, created_at: dayAgo(5), updated_at: dayAgo(4), last_message_at: dayAgo(4), unread_count: 0 },
+  { id: 'cs-4', title: 'React性能优化方案', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-2', model_policy: '极致', status: 'active', workspace_name: 'openclaw-main', message_count: 8, created_at: dayAgo(7), updated_at: dayAgo(6), last_message_at: dayAgo(6), unread_count: 0 },
+  { id: 'cs-7', title: '周报自动生成', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-3', model_policy: '性能', status: 'active', workspace_name: 'openclaw-main', message_count: 6, created_at: dayAgo(14), updated_at: dayAgo(13), last_message_at: dayAgo(13), unread_count: 0 },
   // 任务：采购申请审批跟进
-  { id: 'cs-9', title: '采购申请审批跟进', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 2, created_at: ago(180), updated_at: ago(170), last_message_at: ago(170) },
+  { id: 'cs-9', title: '采购申请审批跟进', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 2, created_at: ago(180), updated_at: ago(170), last_message_at: ago(170), unread_count: 0 },
   // 转交会话
-  { id: 'cs-handoff-1', title: '【转交】ERP审批失败排查', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: false, shared_from: { name: '王五', note: '这单 ERP 审批卡住了，客户催得紧，你帮我看看怎么推进' }, message_count: 4, created_at: ago(90), updated_at: ago(80), last_message_at: ago(80) },
+  { id: 'cs-handoff-1', title: '【转交】ERP审批失败排查', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: false, shared_from: { name: '王五', note: '这单 ERP 审批卡住了，客户催得紧，你帮我看看怎么推进' }, message_count: 4, created_at: ago(90), updated_at: ago(80), last_message_at: ago(80), unread_count: 0 },
   // 分享会话（只读）
-  { id: 'cs-shared-1', title: '【分享】CRM销售话术讨论', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: true, shared_from: { name: '李思', note: '这段分析你看看，下次评审用得上' }, message_count: 3, created_at: ago(60), updated_at: ago(50), last_message_at: ago(50) },
+  { id: 'cs-shared-1', title: '【分享】CRM销售话术讨论', user_id: 'u-1', mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto', status: 'active', workspace_name: '', readonly: true, shared_from: { name: '李思', note: '这段分析你看看，下次评审用得上' }, message_count: 3, created_at: ago(60), updated_at: ago(50), last_message_at: ago(50), unread_count: 0 },
   // 群组会话
-  { id: 'grp-1', title: '预测模型 v2 回归跟进', user_id: 'u-1', session_type: 'group', group_id: 'g-1', group_name: '销售预测平台攻坚群', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40) },
-  { id: 'grp-2', title: '新品定价方案评审', user_id: 'u-2', session_type: 'group', group_id: 'g-2', group_name: '新产品评审群', creator_id: 'u-2', member_ids: ['u-1', 'u-2', 'u-3'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(25) },
-  { id: 'grp-3', title: '数据口径对齐', user_id: 'u-1', session_type: 'group', group_id: 'g-1', group_name: '销售预测平台攻坚群', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(90) },
+  { id: 'grp-1', title: '预测模型 v2 回归跟进', user_id: 'u-1', session_type: 'group', group_id: 'g-1', group_name: '销售预测平台攻坚群', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 5, created_at: dayAgo(2), last_message_at: ago(40), unread_count: 0 },
+  { id: 'grp-2', title: '新品定价方案评审', user_id: 'u-2', session_type: 'group', group_id: 'g-2', group_name: '新产品评审群', creator_id: 'u-2', member_ids: ['u-1', 'u-2', 'u-3'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(25), unread_count: 2 },
+  { id: 'grp-3', title: '数据口径对齐', user_id: 'u-1', session_type: 'group', group_id: 'g-1', group_name: '销售预测平台攻坚群', creator_id: 'u-1', member_ids: ['u-1', 'u-2', 'u-3', 'u-4'], mode: 'chat', model_policy: 'Auto', status: 'active', workspace_name: '', message_count: 3, created_at: dayAgo(1), last_message_at: ago(90), unread_count: 0 },
 ];
 
 const chatMessages: Record<string, any[]> = {
@@ -5127,6 +5127,20 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       chatMessages[sid].push(aiMsg);
     }
     if (session) { session.message_count = chatMessages[sid].length; session.last_message_at = new Date().toISOString(); }
+    // 群会话仅成员消息：3.5s 后模拟其他成员回复
+    if (isGroup && !toAi && session) {
+      setTimeout(() => {
+        const otherMembers = (session.member_ids || []).filter((id: string) => id !== 'u-1');
+        if (otherMembers.length === 0) return;
+        const responderId = otherMembers[Math.floor(Math.random() * otherMembers.length)];
+        const responderName = users.find((u: any) => u.id === responderId)?.name || responderId;
+        if (!chatMessages[sid]) chatMessages[sid] = [];
+        chatMessages[sid].push({ id: 'm-' + Date.now(), role: 'user', user_id: responderId, user_name: responderName, to_ai: false, content: '收到,我这边看一下再同步你', tokens: 0, model: '', created_at: new Date().toISOString() });
+        session.unread_count = (session.unread_count || 0) + 1;
+        session.last_message_at = new Date().toISOString();
+        session.message_count = chatMessages[sid].length;
+      }, 3500);
+    }
     return ok(userMsg);
   }
   // ---- 群组成员管理 ----
@@ -5210,9 +5224,9 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         id: newId, title: newTitle, user_id: rid, mode: 'chat', model_policy_id: 'mp-1', model_policy: 'Auto',
         status: 'active', workspace_name: '', readonly: mode === 'view',
         shared_from: { name: '张伟', note: data.note || '' },
-        session_type: source?.session_type, creator_id: source?.creator_id,
-        member_ids: source?.member_ids ? [...source.member_ids] : undefined,
+        session_type: 'single',
         message_count: msgs.length, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString(),
+        unread_count: 0,
       });
       chatMessages[newId] = msgs.map(msg => ({ ...msg, id: msg.id + '-copy-' + idx }));
       sharedSessions.push(newId);
@@ -5258,7 +5272,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok({ deleted: true });
   }
   if (path.match(/\/chat\/sessions$/) && method === 'post') {
-    const ns = { id: 'cs-' + Date.now(), ...data, user_id: 'u-1', status: 'active', workspace_name: data.workspace_name || '', message_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString() };
+    const ns = { id: 'cs-' + Date.now(), ...data, user_id: 'u-1', status: 'active', workspace_name: data.workspace_name || '', message_count: 0, unread_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString() };
     chatSessions.unshift(ns);
     chatMessages[ns.id] = [];
     return ok(ns);

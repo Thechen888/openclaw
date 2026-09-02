@@ -4,7 +4,7 @@ import {
   Box, Typography, Paper, Avatar, TextField, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem, Switch, Button,
   List, ListItemButton, ListItemText, Checkbox, Badge,
-  Collapse, CircularProgress, Drawer,
+  Collapse, CircularProgress, Drawer, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import {
   Send, SmartToy, Person, Add, Mic, KeyboardArrowDown,
@@ -15,6 +15,7 @@ import {
   AttachFile, Extension, MenuBook, Code,
   AccessTime, LastPage, KeyboardArrowUp,
   Download, PersonAdd, Groups, Info, Shield, Build, Psychology,
+  Edit, Delete,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -145,7 +146,16 @@ export default function ConversationPage() {
 
   // 分享弹窗
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareSelected, setShareSelected] = useState<{ id: string; role: string; content: string }[]>([]);
+  const [shareSelected, setShareSelected] = useState<{ id: string; role: string; content: string; to_ai?: boolean }[]>([]);
+
+  // 消息队列
+  const [msgQueue, setMsgQueue] = useState<{ id: number; content: string; to_ai: boolean }[]>([]);
+  const [editingQueueId, setEditingQueueId] = useState<number | null>(null);
+  const [editQueueValue, setEditQueueValue] = useState('');
+
+  // 解散/退出群组对话框
+  const [groupActionOpen, setGroupActionOpen] = useState(false);
+  const [groupActionType, setGroupActionType] = useState<'dissolve' | 'exit'>('exit');
 
   // + 菜单
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
@@ -258,11 +268,20 @@ export default function ConversationPage() {
   });
   const session: any = sessionData?.data?.data;
 
+  // 进入会话清零未读数
+  useEffect(() => {
+    if (sessionId && session && session.unread_count > 0) {
+      chatApi.sessions.update(sessionId, { unread_count: 0 });
+      qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+    }
+  }, [sessionId]);
+
   // API 查询：消息列表
   const { data: messagesData, isLoading: messagesLoading } = useQuery({
     queryKey: ['chat-messages', sessionId],
     queryFn: () => chatApi.messages.list(sessionId!),
     enabled: !!sessionId,
+    refetchInterval: 5000,
   });
   const messages: any[] = messagesData?.data?.data || [];
 
@@ -344,13 +363,45 @@ export default function ConversationPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
-  const handleSend = () => {
-    if (!input.trim() || sending || isReadonly) return;
+  const handleSend = (forcedContent?: string, forcedToAi?: boolean) => {
+    // 队列插队直发：带参数时跳过队列检查直接发送
+    if (forcedContent !== undefined) {
+      if (sending || isReadonly) return;
+      setSending(true);
+      const extra = isGroup ? { to_ai: forcedToAi, user_name: '张伟' } : undefined;
+      sendMut.mutate({ content: forcedContent, extra });
+      return;
+    }
+    // 正常发送：sending 中则入队
+    if (!input.trim() || isReadonly) return;
+    if (sending) {
+      setMsgQueue(prev => [...prev, { id: Date.now(), content: input.trim(), to_ai: targetAI }]);
+      setInput('');
+      return;
+    }
     setSending(true);
     const extra = isGroup ? { to_ai: targetAI, user_name: '张伟' } : undefined;
     sendMut.mutate({ content: input.trim(), extra });
     setInput('');
   };
+
+  // 消息队列自动发送：sending 由 true 变 false 时取出队首发出
+  const prevSendingRef = useRef(sending);
+  useEffect(() => {
+    if (prevSendingRef.current && !sending) {
+      setMsgQueue(prev => {
+        if (prev.length === 0) return prev;
+        const [first, ...rest] = prev;
+        Promise.resolve().then(() => {
+          const extra = isGroup ? { to_ai: first.to_ai, user_name: '张伟' } : undefined;
+          setSending(true);
+          sendMut.mutate({ content: first.content, extra });
+        });
+        return rest;
+      });
+    }
+    prevSendingRef.current = sending;
+  }, [sending]);
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkills(prev => prev.includes(skillId) ? prev.filter(id => id !== skillId) : [...prev, skillId]);
@@ -772,7 +823,7 @@ export default function ConversationPage() {
                   onClick={() => {
                     const selectedMsgs = messages
                       .filter(m => selectedIds.has(m.id))
-                      .map(m => ({ id: m.id, role: m.role, content: m.content }));
+                      .map(m => ({ id: m.id, role: m.role, content: m.content, to_ai: m.to_ai }));
                     setShareOpen(true);
                     setShareSelected(selectedMsgs);
                   }}
@@ -871,6 +922,64 @@ export default function ConversationPage() {
             <Info sx={{ fontSize: 16, color: '#6366f1', flexShrink: 0 }} />
             <Typography sx={{ fontSize: 12, color: 'text.secondary', flex: 1 }}>群内消息默认发给 AI 助手；切换为「群成员」后仅成员可见，不触发 AI</Typography>
             <Box onClick={() => setGuideDismissed(true)} sx={{ cursor: 'pointer', color: 'text.secondary', display: 'flex', '&:hover': { color: 'text.primary' } }}><Close sx={{ fontSize: 14 }} /></Box>
+          </Box>
+        )}
+
+        {/* 消息队列 */}
+        {msgQueue.length > 0 && (
+          <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {msgQueue.map((item, idx) => (
+              <Box key={item.id} sx={{
+                display: 'flex', alignItems: 'center', gap: 1,
+                px: 1.5, py: 0.75, borderRadius: 2,
+                bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider',
+              }}>
+                <Box sx={{
+                  width: 20, height: 20, borderRadius: '50%',
+                  bgcolor: 'text.disabled', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Typography sx={{ fontSize: 10, fontWeight: 600, color: 'white', lineHeight: 1 }}>{idx + 1}</Typography>
+                </Box>
+                {editingQueueId === item.id ? (
+                  <TextField
+                    value={editQueueValue}
+                    onChange={(e) => setEditQueueValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setMsgQueue(prev => prev.map(q => q.id === item.id ? { ...q, content: editQueueValue } : q));
+                        setEditingQueueId(null);
+                      }
+                      if (e.key === 'Escape') setEditingQueueId(null);
+                    }}
+                    autoFocus size="small"
+                    sx={{ flex: 1, minWidth: 0, '& .MuiInputBase-root': { fontSize: 13, py: 0, height: 28 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: '#6366f1' } }}
+                  />
+                ) : (
+                  <Typography sx={{ fontSize: 13, color: 'text.primary', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.content}
+                  </Typography>
+                )}
+                <Tooltip title="立即发送">
+                  <IconButton size="small" onClick={() => {
+                    setMsgQueue(prev => prev.filter(q => q.id !== item.id));
+                    handleSend(item.content, item.to_ai);
+                  }} sx={{ width: 24, height: 24, color: '#6366f1' }}>
+                    <Send sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="编辑">
+                  <IconButton size="small" onClick={() => { setEditingQueueId(item.id); setEditQueueValue(item.content); }} sx={{ width: 24, height: 24, color: 'text.secondary' }}>
+                    <Edit sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="删除">
+                  <IconButton size="small" onClick={() => setMsgQueue(prev => prev.filter(q => q.id !== item.id))} sx={{ width: 24, height: 24, color: 'text.secondary' }}>
+                    <Delete sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ))}
           </Box>
         )}
 
@@ -1004,7 +1113,7 @@ export default function ConversationPage() {
 
             {/* 发送 */}
             <Box
-              onClick={handleSend}
+              onClick={() => handleSend()}
               sx={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 2.5,
                 cursor: input.trim() && !sending ? 'pointer' : 'default',
@@ -1193,6 +1302,42 @@ export default function ConversationPage() {
         existingMemberIds={session?.member_ids || []}
       />
 
+      {/* ===== 解散/退出群组确认 ===== */}
+      <Dialog open={groupActionOpen} onClose={() => setGroupActionOpen(false)} maxWidth="xs" fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } }}>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography sx={{ fontSize: 16, fontWeight: 700 }}>{groupActionType === 'dissolve' ? '解散群组' : '退出群组'}</Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 1 }}>
+          <Typography sx={{ fontSize: 13, color: 'text.secondary', lineHeight: 1.6 }}>
+            {groupActionType === 'dissolve'
+              ? '解散后群组及群内全部会话与消息将被删除，所有成员将失去访问，此操作不可恢复。'
+              : '退出后你将不再看到该群及群内会话。'}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button onClick={() => setGroupActionOpen(false)} sx={{ fontSize: 13, textTransform: 'none', color: 'text.secondary' }}>取消</Button>
+          <Button variant="contained" onClick={() => {
+            if (groupActionType === 'dissolve') {
+              chatApi.groups.delete(session.group_id).then(() => {
+                qc.invalidateQueries({ queryKey: ['chat-groups'] });
+                qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+                navigate('/chat');
+              });
+            } else {
+              chatApi.groups.removeMember(session.group_id, 'u-1').then(() => {
+                qc.invalidateQueries({ queryKey: ['chat-groups'] });
+                qc.invalidateQueries({ queryKey: ['chat-sessions'] });
+                navigate('/chat');
+              });
+            }
+            setGroupActionOpen(false);
+          }} sx={{ fontSize: 13, textTransform: 'none', borderRadius: 2, bgcolor: '#ef4444', '&:hover': { bgcolor: '#dc2626' } }}>
+            确认{groupActionType === 'dissolve' ? '解散' : '退出'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* ===== 历史提问菜单 ===== */}
       <Menu
         anchorEl={historyAnchor} open={Boolean(historyAnchor)} onClose={() => setHistoryAnchor(null)}
@@ -1361,6 +1506,21 @@ export default function ConversationPage() {
                     return null;
                   })()}
                 </Menu>
+              </Box>
+            )}
+
+            {/* 群组操作：解散/退出 */}
+            {isGroup && session?.group_id && (
+              <Box sx={{ mb: 3 }}>
+                <Button
+                  onClick={() => {
+                    setGroupActionType(session.creator_id === 'u-1' ? 'dissolve' : 'exit');
+                    setGroupActionOpen(true);
+                  }}
+                  sx={{ fontSize: 12, textTransform: 'none', color: '#ef4444', px: 0, '&:hover': { textDecoration: 'underline' } }}
+                >
+                  {session.creator_id === 'u-1' ? '解散群组' : '退出群组'}
+                </Button>
               </Box>
             )}
 

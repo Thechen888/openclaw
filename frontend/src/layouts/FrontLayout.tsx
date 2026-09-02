@@ -246,7 +246,7 @@ export default function FrontLayout() {
     if (!itemMenuSession) return;
     const sid = itemMenuSession.id;
     chatApi.messages.list(sid).then(res => {
-      const msgs = (res.data?.data || []).map((m: any) => ({ id: m.id, role: m.role, content: m.content }));
+      const msgs = (res.data?.data || []).map((m: any) => ({ id: m.id, role: m.role, content: m.content, to_ai: m.to_ai }));
       setShareDialogState({ sessionId: sid, sessionTitle: itemMenuSession.title, messages: msgs, sourceReadonly: !!itemMenuSession.readonly });
       setShareDialogOpen(true);
     });
@@ -297,6 +297,7 @@ export default function FrontLayout() {
   const { data: sessionsData } = useQuery({
     queryKey: ['chat-sessions'],
     queryFn: () => chatApi.sessions.list({ page: 1, page_size: 100 }),
+    refetchInterval: 10000,
   });
   const allSessions: any[] = sessionsData?.data?.data || [];
 
@@ -398,6 +399,12 @@ export default function FrontLayout() {
                 sx={{ width: 20, height: 20, ml: 0.5, color: c.text3, '&:hover': { color: c.accent } }}>
                 <MoreHoriz sx={{ fontSize: 16 }} />
               </IconButton>
+            ) : session.unread_count > 0 && activeId !== session.id ? (
+              <Box sx={{ ml: 1, minWidth: 16, height: 16, borderRadius: 8, bgcolor: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Typography sx={{ fontSize: 10, fontWeight: 600, color: 'white', lineHeight: 1 }}>
+                  {session.unread_count > 99 ? '99+' : session.unread_count}
+                </Typography>
+              </Box>
             ) : (
               <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
                 {session.last_message_at ? relativeTime(session.last_message_at) : ''}
@@ -718,6 +725,16 @@ export default function FrontLayout() {
                           <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: c.text1, flex: 1 }} noWrap>{g.name}</Typography>
                         )}
                         <Typography sx={{ fontSize: 10, color: c.text3, flexShrink: 0 }}>· {g.member_ids?.length || 0}人</Typography>
+                        {(() => {
+                          const totalUnread = gSessions.reduce((sum: number, s: any) => sum + (s.unread_count || 0), 0);
+                          return totalUnread > 0 ? (
+                            <Box sx={{ minWidth: 16, height: 16, borderRadius: 8, bgcolor: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ml: 0.5 }}>
+                              <Typography sx={{ fontSize: 10, fontWeight: 600, color: 'white', lineHeight: 1 }}>
+                                {totalUnread > 99 ? '99+' : totalUnread}
+                              </Typography>
+                            </Box>
+                          ) : null;
+                        })()}
                         {!batchMode && !isRenaming && (
                           <IconButton size="small" onClick={(e) => handleGroupMenuOpen(e, g)}
                             sx={{ width: 20, height: 20, color: c.text3, '&:hover': { color: c.accent } }}>
