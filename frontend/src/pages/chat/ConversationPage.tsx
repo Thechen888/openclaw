@@ -15,7 +15,7 @@ import {
   AttachFile, Extension, MenuBook, Code,
   AccessTime, LastPage, KeyboardArrowUp,
   Download, PersonAdd, Groups, Info, Shield, Build, Psychology,
-  Edit, Delete,
+  Edit, Delete, Logout,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
@@ -1509,21 +1509,6 @@ export default function ConversationPage() {
               </Box>
             )}
 
-            {/* 群组操作：解散/退出 */}
-            {isGroup && session?.group_id && (
-              <Box sx={{ mb: 3 }}>
-                <Button
-                  onClick={() => {
-                    setGroupActionType(session.creator_id === 'u-1' ? 'dissolve' : 'exit');
-                    setGroupActionOpen(true);
-                  }}
-                  sx={{ fontSize: 12, textTransform: 'none', color: '#ef4444', px: 0, '&:hover': { textDecoration: 'underline' } }}
-                >
-                  {session.creator_id === 'u-1' ? '解散群组' : '退出群组'}
-                </Button>
-              </Box>
-            )}
-
             {/* 协作记录 */}
             <Box sx={{ mb: 3 }}>
               <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>协作记录</Typography>
@@ -1565,6 +1550,29 @@ export default function ConversationPage() {
                     </Box>
                   );
                 })}
+              </Box>
+            )}
+
+            {isGroup && session?.group_id && (
+              <Box
+                onClick={() => {
+                  setGroupActionType(session.creator_id === 'u-1' ? 'dissolve' : 'exit');
+                  setGroupActionOpen(true);
+                }}
+                sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                  mt: 3, px: 1.5, py: 1,
+                  border: '1px solid', borderColor: 'rgba(239,68,68,0.4)', borderRadius: 2,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                  '&:hover': { borderColor: '#ef4444', bgcolor: 'rgba(239,68,68,0.08)' },
+                }}
+              >
+                {session.creator_id === 'u-1'
+                  ? <Delete sx={{ fontSize: 16, color: '#ef4444' }} />
+                  : <Logout sx={{ fontSize: 16, color: '#ef4444' }} />}
+                <Typography sx={{ fontSize: 12, color: '#ef4444' }}>
+                  {session.creator_id === 'u-1' ? '解散群组' : '退出群组'}
+                </Typography>
               </Box>
             )}
           </Box>

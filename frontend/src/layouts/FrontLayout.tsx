@@ -341,7 +341,7 @@ export default function FrontLayout() {
   })();
 
   // ---- 通用会话条目渲染（含 hover 菜单 + 批量模式 + 重命名）----
-  const renderSessionItem = (session: any, dotColor: string, showMembers?: boolean) => {
+  const renderSessionItem = (session: any) => {
     const isRenaming = renamingId === session.id;
     const isHovered = hoveredItemId === session.id;
     const isChecked = batchSelectedIds.has(session.id);
@@ -363,9 +363,7 @@ export default function FrontLayout() {
         {batchMode ? (
           <Checkbox checked={isChecked} onChange={() => handleBatchToggle(session.id)} size="small" onClick={(e) => e.stopPropagation()}
             sx={{ p: 0, mr: 1, color: c.text3, '&.Mui-checked': { color: '#6366f1' }, '& .MuiSvgIcon-root': { fontSize: 16 } }} />
-        ) : (
-          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: dotColor, mr: 1.5, flexShrink: 0 }} />
-        )}
+        ) : null}
         {isRenaming ? (
           <TextField
             value={renameValue}
@@ -381,13 +379,10 @@ export default function FrontLayout() {
           <ListItemText
             primary={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {!showMembers && session.shared_from && (
+                {session.shared_from && (
                   <Share sx={{ fontSize: 11, color: session.readonly ? '#9ca3af' : c.accent, flexShrink: 0 }} />
                 )}
                 <Typography sx={{ fontSize: 12.5, color: c.text1 }} noWrap>{session.title}</Typography>
-                {showMembers && session.member_ids?.length > 0 && (
-                  <Typography sx={{ fontSize: 10, color: c.text3, flexShrink: 0 }}>· {session.member_ids.length}人</Typography>
-                )}
               </Box>
             }
           />
@@ -400,11 +395,7 @@ export default function FrontLayout() {
                 <MoreHoriz sx={{ fontSize: 16 }} />
               </IconButton>
             ) : session.unread_count > 0 && activeId !== session.id ? (
-              <Box sx={{ ml: 1, minWidth: 16, height: 16, borderRadius: 8, bgcolor: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Typography sx={{ fontSize: 10, fontWeight: 600, color: 'white', lineHeight: 1 }}>
-                  {session.unread_count > 99 ? '99+' : session.unread_count}
-                </Typography>
-              </Box>
+              <Box sx={{ ml: 1, width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366f1', flexShrink: 0 }} />
             ) : (
               <Typography variant="caption" sx={{ fontSize: 10, color: c.text3, ml: 1, flexShrink: 0 }}>
                 {session.last_message_at ? relativeTime(session.last_message_at) : ''}
@@ -584,7 +575,7 @@ export default function FrontLayout() {
                     <Typography sx={{ fontSize: 12, color: c.text3 }}>暂无对话</Typography>
                   </Box>
                 ) : (
-                  tasks.map((session) => renderSessionItem(session, c.accent))
+                  tasks.map((session) => renderSessionItem(session))
                 )}
               </List>
             </Collapse>
@@ -635,7 +626,7 @@ export default function FrontLayout() {
                   </Box>
                   {/* 空间下的对话 */}
                   <List dense disablePadding sx={{ pl: 2 }}>
-                    {spaceSessions.map((session: any) => renderSessionItem(session, '#f59e0b'))}
+                    {spaceSessions.map((session: any) => renderSessionItem(session))}
                   </List>
                 </Box>
               ))}
@@ -728,11 +719,7 @@ export default function FrontLayout() {
                         {(() => {
                           const totalUnread = gSessions.reduce((sum: number, s: any) => sum + (s.unread_count || 0), 0);
                           return totalUnread > 0 ? (
-                            <Box sx={{ minWidth: 16, height: 16, borderRadius: 8, bgcolor: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ml: 0.5 }}>
-                              <Typography sx={{ fontSize: 10, fontWeight: 600, color: 'white', lineHeight: 1 }}>
-                                {totalUnread > 99 ? '99+' : totalUnread}
-                              </Typography>
-                            </Box>
+                            <Box sx={{ ml: 0.5, width: 8, height: 8, borderRadius: '50%', bgcolor: '#10b981', flexShrink: 0 }} />
                           ) : null;
                         })()}
                         {!batchMode && !isRenaming && (
@@ -748,7 +735,7 @@ export default function FrontLayout() {
                       {/* 群下会话 */}
                       {gSessions.length > 0 && (
                         <List dense disablePadding sx={{ pl: 2 }}>
-                          {gSessions.map((session: any) => renderSessionItem(session, '#10b981', true))}
+                          {gSessions.map((session: any) => renderSessionItem(session))}
                         </List>
                       )}
                     </Box>
