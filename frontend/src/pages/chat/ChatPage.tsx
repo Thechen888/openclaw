@@ -831,6 +831,7 @@ export default function ChatPage() {
                     key={model.id}
                     selected={selectedModel === model.id}
                     onMouseEnter={() => setHoverModel(model)}
+                    onMouseLeave={() => setHoverModel(null)}
                     onClick={() => { setSelectedModel(model.id); setModelMenuOpen(false); }}
                     sx={{ py: 1, px: 2.5, gap: 1.5 }}
                   >
@@ -857,8 +858,8 @@ export default function ChatPage() {
                 border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                 pointerEvents: 'none',
               }}>
-                {(() => {
-                  const m = hoverModel || currentModel;
+                {hoverModel && (() => {
+                  const m = hoverModel;
                   return (<>
                     <Typography sx={{ fontSize: 15, fontWeight: 700 }}>{m.name}</Typography>
                     <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{m.desc}</Typography>
