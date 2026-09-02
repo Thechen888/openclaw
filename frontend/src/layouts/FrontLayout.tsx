@@ -102,9 +102,9 @@ export default function FrontLayout() {
   const { enqueueSnackbar } = useSnackbar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [settingsAnchor, setSettingsAnchor] = useState<null | HTMLElement>(null);
-  const [spacesExpanded, setSpacesExpanded] = useState(true);
-  const [tasksExpanded, setTasksExpanded] = useState(true);
-  const [groupsExpanded, setGroupsExpanded] = useState(true);
+  const [spacesExpanded, setSpacesExpanded] = useState(false);
+  const [tasksExpanded, setTasksExpanded] = useState(false);
+  const [groupsExpanded, setGroupsExpanded] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [sidebarSearchOpen, setSidebarSearchOpen] = useState(false);
   const [sidebarSearchText, setSidebarSearchText] = useState('');
@@ -133,9 +133,9 @@ export default function FrontLayout() {
   const [sessionDeleteTarget, setSessionDeleteTarget] = useState<any>(null);
   const qc = useQueryClient();
   const invalidateSessions = useCallback(() => { qc.invalidateQueries({ queryKey: ['chat-sessions'] }); }, [qc]);
-  // 各导航分区展开状态（默认全部展开）
+  // 各导航分区展开状态（默认全部折叠）
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(NAV_SECTIONS.map((s) => [s.label, true]))
+    () => Object.fromEntries(NAV_SECTIONS.map((s) => [s.label, false]))
   );
   const toggleSection = (label: string) =>
     setExpandedSections((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -488,7 +488,7 @@ export default function FrontLayout() {
           {/* 导航分区：三模块九页 + 知识库/技能/Token转售（均可折叠） */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
             {NAV_SECTIONS.map((section) => {
-              const expanded = expandedSections[section.label] ?? true;
+              const expanded = expandedSections[section.label] ?? false;
               // 分区下任一子项激活时，分区标题高亮
               const sectionActive = section.items.some((it) => isNavActive(it.path));
               return (
