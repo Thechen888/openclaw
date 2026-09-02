@@ -102,17 +102,17 @@ function SourcesPanel({ sources }: { sources: any[] }) {
 
 // =================== 模型数据 ===================
 const MODELS = [
-  { id: 'auto', name: 'Auto', tag: '', multiplier: '1.0x', desc: '自动选择最优模型' },
-  { id: 'max', name: '极致', tag: '', multiplier: '1.6x', desc: '最强推理能力' },
-  { id: 'performance', name: '性能', tag: '', multiplier: '1.1x', desc: '平衡速度与质量' },
-  { id: 'economy', name: '经济', tag: '', multiplier: '0.3x', desc: '低成本快速响应' },
-  { id: 'lightweight', name: '轻量', tag: '', multiplier: '0.0x', desc: '最快速度' },
-  { id: 'qwen3.7-max', name: 'Qwen3.7-Max', tag: '🔥', multiplier: '0.25x', desc: '通义千问旗舰模型' },
-  { id: 'qwen3.7-plus', name: 'Qwen3.7-Plus', tag: '🔥', multiplier: '0.1x', desc: '通义千问增强版' },
-  { id: 'glm-5.2', name: 'GLM-5.2', tag: '🟢', multiplier: '0.6x', desc: '智谱最新模型' },
-  { id: 'kimi-k2.7-code', name: 'Kimi-K2.7-Code', tag: '', multiplier: '0.5x', desc: '专注长上下文编程' },
-  { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro', tag: '', multiplier: '0.5x', desc: '深度求索专业版' },
-  { id: 'minimax-m3', name: 'MiniMax-M3', tag: '', multiplier: '0.2x', desc: 'MiniMax最新模型' },
+  { id: 'auto', name: 'Auto', color: '#6366f1', multiplier: '1.0x', desc: '自动选择最优模型', features: ['智能路由', '最优性价比', '全场景适用'] },
+  { id: 'max', name: '极致', color: '#8b5cf6', multiplier: '1.6x', desc: '最强推理能力', features: ['深度推理', '复杂任务', '长链路执行'] },
+  { id: 'performance', name: '性能', color: '#06b6d4', multiplier: '1.1x', desc: '平衡速度与质量', features: ['均衡表现', '日常任务推荐'] },
+  { id: 'economy', name: '经济', color: '#10b981', multiplier: '0.3x', desc: '低成本快速响应', features: ['低倍率计费', '高频调用'] },
+  { id: 'lightweight', name: '轻量', color: '#f59e0b', multiplier: '0.0x', desc: '最快速度', features: ['极速响应', '零倍率'] },
+  { id: 'qwen3.7-max', name: 'Qwen3.7-Max', color: '#7c3aed', multiplier: '0.25x', desc: '通义千问旗舰模型', features: ['超长上下文', '复杂推理', '代码生成'] },
+  { id: 'qwen3.7-plus', name: 'Qwen3.7-Plus', color: '#7c3aed', multiplier: '0.1x', desc: '通义千问增强版', features: ['通用对话', '文本写作'] },
+  { id: 'glm-5.2', name: 'GLM-5.2', color: '#0ea5e9', multiplier: '0.6x', desc: '智谱最新模型', features: ['多模态理解', '工具调用'] },
+  { id: 'kimi-k2.7-code', name: 'Kimi-K2.7-Code', color: '#111827', multiplier: '0.5x', desc: '专注长上下文编程', features: ['代码理解', '仓库级分析'] },
+  { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro', color: '#4f46e5', multiplier: '0.5x', desc: '深度求索专业版', features: ['推理增强', '数学能力'] },
+  { id: 'minimax-m3', name: 'MiniMax-M3', color: '#ef4444', multiplier: '0.2x', desc: 'MiniMax最新模型', features: ['语音理解', '多轮对话'] },
 ];
 
 const MODES = [
@@ -475,30 +475,7 @@ export default function ChatPage() {
                     '&:hover': { color: '#6366f1', bgcolor: 'rgba(99,102,241,0.06)' },
                   }}><Add sx={{ fontSize: 20 }} /></Box>
                 </Tooltip>
-                {/* 权限胶囊 */}
-                <Tooltip title="切换权限">
-                  <Box onClick={(e) => { setPermAnchor(e.currentTarget); setPermMenuOpen(!permMenuOpen); }} sx={{
-                    display: 'flex', alignItems: 'center', gap: 0.4, px: 1.5, py: 0.75, borderRadius: 2,
-                    cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'text.secondary',
-                    border: '1px solid', borderColor: 'divider', transition: 'all 0.15s',
-                    '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
-                  }}>
-                    <Shield sx={{ fontSize: 15 }} />{PERMISSIONS.find(p => p.id === selectedPerm)?.label || '默认权限'}
-                    <KeyboardArrowDown sx={{ fontSize: 16, ml: 0.15 }} />
-                  </Box>
-                </Tooltip>
-                {/* 空间胶囊 */}
-                <Tooltip title="选择工作空间">
-                  <Box onClick={(e) => { setWorkspaceAnchor(e.currentTarget); setWorkspaceMenuOpen(!workspaceMenuOpen); }} sx={{
-                    display: 'flex', alignItems: 'center', gap: 0.4, px: 1.5, py: 0.75, borderRadius: 2,
-                    cursor: 'pointer', fontSize: 12.5, fontWeight: 500, color: 'text.secondary',
-                    border: '1px solid', borderColor: 'divider', transition: 'all 0.15s',
-                    '&:hover': { borderColor: '#6366f1', color: '#6366f1' },
-                  }}>
-                    <Folder sx={{ fontSize: 15 }} />{selectedWorkspace || '选择空间'}
-                    <KeyboardArrowDown sx={{ fontSize: 16, ml: 0.15 }} />
-                  </Box>
-                </Tooltip>
+
                 {/* 智能体按钮 */}
                 <Tooltip title="选择智能体">
                   <Box onClick={(e) => { setAgentAnchor(e.currentTarget); setAgentMenuOpen(true); }} sx={{
@@ -593,6 +570,32 @@ export default function ChatPage() {
                 </Box>
               </Box>
             </Paper>
+
+            {/* 空间/权限选择行 */}
+            <Box sx={{ mt: 1, display: 'flex', gap: 0.75, px: 0.5 }}>
+              <Box onClick={(e) => { setWorkspaceAnchor(e.currentTarget); setWorkspaceMenuOpen(!workspaceMenuOpen); }} sx={{
+                display: 'flex', alignItems: 'center', gap: 0.5,
+                px: 1.25, py: 0.5, borderRadius: 1.5,
+                cursor: 'pointer', fontSize: 12, color: 'text.secondary',
+                transition: 'all 0.15s',
+                '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
+              }}>
+                <Folder sx={{ fontSize: 14 }} />
+                {selectedWorkspace || '选择空间'}
+                <KeyboardArrowDown sx={{ fontSize: 14 }} />
+              </Box>
+              <Box onClick={(e) => { setPermAnchor(e.currentTarget); setPermMenuOpen(!permMenuOpen); }} sx={{
+                display: 'flex', alignItems: 'center', gap: 0.5,
+                px: 1.25, py: 0.5, borderRadius: 1.5,
+                cursor: 'pointer', fontSize: 12, color: 'text.secondary',
+                transition: 'all 0.15s',
+                '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
+              }}>
+                <Shield sx={{ fontSize: 14 }} />
+                {PERMISSIONS.find(p => p.id === selectedPerm)?.label || '默认权限'}
+                <KeyboardArrowDown sx={{ fontSize: 14 }} />
+              </Box>
+            </Box>
 
             {/* 工作空间选择菜单 */}
             <Menu
@@ -854,7 +857,7 @@ export default function ChatPage() {
                     onClick={() => { setSelectedModel(model.id); setMaxMode(false); setModelMenuOpen(false); }}
                     sx={{ py: 1, px: 2.5, gap: 1.5 }}
                   >
-                    <SmartToy sx={{ fontSize: 16, color: model.id === 'auto' ? '#6366f1' : 'text.secondary' }} />
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: model.color, flexShrink: 0 }} />
                     <Typography sx={{ fontSize: 13, fontWeight: selectedModel === model.id ? 600 : 400, flex: 1 }}>{model.name}</Typography>
                     <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{model.multiplier}</Typography>
                     {selectedModel === model.id && !maxMode && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
@@ -872,17 +875,22 @@ export default function ChatPage() {
                     key={model.id}
                     selected={selectedModel === model.id && !maxMode}
                     onClick={() => { setSelectedModel(model.id); setMaxMode(false); setModelMenuOpen(false); }}
-                    sx={{ py: 1, px: 2.5, gap: 1.5 }}
+                    sx={{ py: 1, px: 2.5, gap: 1.5, alignItems: 'flex-start' }}
                   >
-                    <Box sx={{ width: 20, display: 'flex', justifyContent: 'center', fontSize: 12 }}>
-                      {model.tag || <SmartToy sx={{ fontSize: 14, color: 'text.secondary' }} />}
-                    </Box>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: model.color, flexShrink: 0, mt: 0.5 }} />
                     <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: selectedModel === model.id ? 600 : 400 }}>{model.name}</Typography>
-                      <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>{model.desc}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: selectedModel === model.id ? 600 : 400 }}>{model.name}</Typography>
+                        <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>{model.multiplier}</Typography>
+                      </Box>
+                      <Typography sx={{ fontSize: 10, color: 'text.secondary', lineHeight: 1.4, mt: 0.25 }}>{model.desc}</Typography>
+                      <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                        {model.features.map((f: string) => (
+                          <Box key={f} sx={{ px: 0.75, py: 0.125, borderRadius: 1, fontSize: 9, fontWeight: 500, bgcolor: `${model.color}12`, color: model.color }}>{f}</Box>
+                        ))}
+                      </Box>
                     </Box>
-                    <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{model.multiplier}</Typography>
-                    {selectedModel === model.id && !maxMode && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
+                    {selectedModel === model.id && !maxMode && <CheckCircle sx={{ fontSize: 16, color: '#6366f1', mt: 0.25 }} />}
                   </MenuItem>
                 ))}
               </Box>
