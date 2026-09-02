@@ -591,7 +591,7 @@ const matchingResults: any[] = [
   },
   {
     id: 'mr-7', source_type: 'email', account_id: 'sunba@gmail.com', external_id: 'sunba@gmail.com',
-    user_name: '', user_id: '', score: 0.30, status: 'matched', hit_strategy: '邮箱匹配',
+    user_name: '孙八', user_id: 'u-6', score: 0.30, status: 'matched', hit_strategy: '邮箱匹配',
     external_profile: { name: 'Sun Ba', department: '', email: 'sunba@gmail.com', phone: '' },
     platform_user: { name: '孙八', department: '市场部', email: 'sunba@company.com', phone: '', role: '成员' },
     match_reasons: [{ strategy: '邮箱匹配', detail: '邮箱地址匹配', confidence: 0.80 }],
@@ -626,6 +626,13 @@ const matchingResults: any[] = [
     external_profile: { name: 'Wei Zhang', department: 'Tech R&D', email: 'weizhang@feishu-corp.com', phone: '' },
     platform_user: { name: '张伟', department: '技术研发部', email: 'zhangwei@company.com', phone: '138****1234', role: '管理员' },
     match_reasons: [{ strategy: '邮箱匹配', detail: '邮箱地址匹配', confidence: 0.80 }],
+  },
+  {
+    id: 'mr-12', source_type: 'email', account_id: 'headhunter_li@163.com', external_id: 'headhunter_li@163.com',
+    user_name: '', user_id: '', score: 0.15, status: 'ignored', hit_strategy: '',
+    external_profile: { name: '李某（猎头）', department: '', email: 'headhunter_li@163.com', phone: '' },
+    platform_user: null,
+    match_reasons: [],
   },
 ];
 

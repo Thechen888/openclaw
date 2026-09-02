@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import {
   Refresh, PlayArrow, CheckCircle,
-  LinkOff, PersonAdd,
+  LinkOff, PersonAdd, HowToReg,
   ExpandMore, ExpandLess, Info, DoNotDisturb, AccountTree,
   KeyboardArrowUp, KeyboardArrowDown,
 } from '@mui/icons-material';
@@ -170,7 +170,7 @@ function DetailPanel({ item, allItems }: { item: any; allItems: any[] }) {
 export default function MatchingPage() {
   const queryClient = useQueryClient();
   const { page, pageSize, search, setPage, setPageSize, setSearch, params } = useTableState();
-  const [statusTab, setStatusTab] = useState('');
+  const [statusTab, setStatusTab] = useState('pending_review');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // 行操作弹窗
@@ -185,18 +185,19 @@ export default function MatchingPage() {
   });
   const usersList: any[] = usersData?.data?.data || [];
 
-  const queryParams = { ...params, status: statusTab || undefined };
+  const queryParams = { page: 1, page_size: 500, search: search || undefined };
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['matching-results', queryParams],
     queryFn: () => matchingApi.results(queryParams),
   });
   const rawItems: any[] = data?.data?.data || [];
-  const total = data?.data?.pagination?.total || 0;
 
-  const items = statusTab === 'pending_review'
-    ? rawItems.filter((i: any) => isPendingReview(i.status))
-    : rawItems;
+  const items = statusTab === '' ? rawItems
+    : statusTab === 'pending_review' ? rawItems.filter((i: any) => isPendingReview(i.status))
+    : rawItems.filter((i: any) => i.status === statusTab);
+
+  const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   // 计算每个用户关联的账号数量（只统计 matched + pending/conflict 的）
   const userAccountsMap: Record<string, any[]> = {};
@@ -272,6 +273,11 @@ export default function MatchingPage() {
     setConfirmDialog({ open: true, title: '确认关联', desc: `确认将「${item.account_id}」关联到用户「${item.user_name || '系统推荐'}」？\n\n关联后该账号的所有操作（AI 对话、Token 消耗）将归属到此用户名下。${multiAccountNotice}`, item, nextStatus: 'matched' });
   };
   const handleIgnore = (item: any) => setConfirmDialog({ open: true, title: '标记忽略', desc: `将「${item.account_id}」标记为忽略？\n\n标记后不再出现在待处理列表中。如确认该账号属于外部人员或无需关联，请标记忽略。`, item, nextStatus: 'ignored' });
+  const handleCreateUser = (item: any) => setConfirmDialog({
+    open: true, title: '确认新建用户',
+    desc: `确认为「${item.external_profile?.name || item.account_id}」新建平台用户并关联该账号？\n\n将以该外部账号的姓名/部门/邮箱/手机创建用户并立即完成关联。适用于确认该账号属于本单位员工、但权威源中尚无记录的场景。`,
+    item, nextStatus: 'create_user',
+  });
   const handleUnlink = (item: any) => setConfirmDialog({ open: true, title: '解除关联', desc: `确认解除「${item.account_id}」与「${item.user_name}」的关联？\n\n解除后该账号的操作将不再归属到此用户。`, item, nextStatus: 'unmatched' });
   const handleOpenManualLink = (item: any) => { setManualLinkItem(item); setSelectedUserId(''); };
 
@@ -283,8 +289,21 @@ export default function MatchingPage() {
     });
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!confirmDialog) return;
+    if (confirmDialog.nextStatus === 'create_user') {
+      const ext = confirmDialog.item.external_profile || {};
+      const res: any = await api.post('/users', {
+        name: ext.name || confirmDialog.item.account_id,
+        department: ext.department || '', email: ext.email || '', phone: ext.phone || '',
+        role: '成员', status: 'active',
+      });
+      const newUser = res?.data?.data;
+      queryClient.invalidateQueries({ queryKey: ['users-list'] });
+      updateResultMutation.mutate({ id: confirmDialog.item.id,
+        data: { status: 'matched', user_id: newUser?.id || '', user_name: newUser?.name || '' } });
+      return;
+    }
     const payload: any = { status: confirmDialog.nextStatus };
     if (confirmDialog.nextStatus === 'unmatched') { payload.user_id = ''; payload.user_name = ''; }
     updateResultMutation.mutate({ id: confirmDialog.item.id, data: payload });
@@ -310,13 +329,14 @@ export default function MatchingPage() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
         <Tooltip title="手动关联"><IconButton size="small" color="primary" onClick={() => handleOpenManualLink(item)}><PersonAdd fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="确认新建用户"><IconButton size="small" sx={{ color: '#00FF88' }} onClick={() => handleCreateUser(item)}><HowToReg fontSize="small" /></IconButton></Tooltip>
         <Tooltip title="标记忽略"><IconButton size="small" sx={{ color: 'rgba(200,210,220,0.4)' }} onClick={() => handleIgnore(item)}><DoNotDisturb fontSize="small" /></IconButton></Tooltip>
       </Box>
     );
   };
 
   const tabCounts: Record<string, number> = {
-    '': total,
+    '': rawItems.length,
     matched: rawItems.filter((i: any) => i.status === 'matched').length,
     pending_review: rawItems.filter((i: any) => isPendingReview(i.status)).length,
     unmatched: rawItems.filter((i: any) => i.status === 'unmatched').length,
@@ -446,7 +466,7 @@ export default function MatchingPage() {
             <TableBody>
               {items.length === 0 ? (
                 <TableRow><TableCell colSpan={7}><EmptyState title="暂无匹配结果" description="执行一次匹配任务后将在此展示结果" /></TableCell></TableRow>
-              ) : items.map((item: any) => (
+              ) : pagedItems.map((item: any) => (
                 <Fragment key={item.id}>
                   <TableRow hover onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)} sx={{ cursor: 'pointer', '& td': { borderBottom: expandedRow === item.id ? 'none' : undefined } }}>
                     <TableCell sx={{ px: 1 }}>
