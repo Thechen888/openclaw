@@ -102,17 +102,12 @@ function SourcesPanel({ sources }: { sources: any[] }) {
 
 // =================== 模型数据 ===================
 const MODELS = [
-  { id: 'auto', name: 'Auto', color: '#6366f1', multiplier: '1.0x', desc: '自动选择最优模型', features: ['智能路由', '最优性价比', '全场景适用'] },
-  { id: 'max', name: '极致', color: '#8b5cf6', multiplier: '1.6x', desc: '最强推理能力', features: ['深度推理', '复杂任务', '长链路执行'] },
-  { id: 'performance', name: '性能', color: '#06b6d4', multiplier: '1.1x', desc: '平衡速度与质量', features: ['均衡表现', '日常任务推荐'] },
-  { id: 'economy', name: '经济', color: '#10b981', multiplier: '0.3x', desc: '低成本快速响应', features: ['低倍率计费', '高频调用'] },
-  { id: 'lightweight', name: '轻量', color: '#f59e0b', multiplier: '0.0x', desc: '最快速度', features: ['极速响应', '零倍率'] },
-  { id: 'qwen3.7-max', name: 'Qwen3.7-Max', color: '#7c3aed', multiplier: '0.25x', desc: '通义千问旗舰模型', features: ['超长上下文', '复杂推理', '代码生成'] },
-  { id: 'qwen3.7-plus', name: 'Qwen3.7-Plus', color: '#7c3aed', multiplier: '0.1x', desc: '通义千问增强版', features: ['通用对话', '文本写作'] },
-  { id: 'glm-5.2', name: 'GLM-5.2', color: '#0ea5e9', multiplier: '0.6x', desc: '智谱最新模型', features: ['多模态理解', '工具调用'] },
-  { id: 'kimi-k2.7-code', name: 'Kimi-K2.7-Code', color: '#111827', multiplier: '0.5x', desc: '专注长上下文编程', features: ['代码理解', '仓库级分析'] },
-  { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro', color: '#4f46e5', multiplier: '0.5x', desc: '深度求索专业版', features: ['推理增强', '数学能力'] },
-  { id: 'minimax-m3', name: 'MiniMax-M3', color: '#ef4444', multiplier: '0.2x', desc: 'MiniMax最新模型', features: ['语音理解', '多轮对话'] },
+  { id: 'qwen3.7-max', name: 'Qwen3.7-Max', letter: 'Q', color: '#7c3aed', desc: '通义千问旗舰模型，适合复杂任务', features: ['超长上下文', '复杂推理', '代码生成'] },
+  { id: 'qwen3.7-plus', name: 'Qwen3.7-Plus', letter: 'Q', color: '#7c3aed', desc: '通义千问增强版，均衡通用', features: ['通用对话', '文本写作'] },
+  { id: 'glm-5.2', name: 'GLM-5.2', letter: 'G', color: '#0ea5e9', desc: '智谱最新模型，多模态能力强', features: ['多模态理解', '工具调用'] },
+  { id: 'kimi-k2.7-code', name: 'Kimi-K2.7-Code', letter: 'K', color: '#374151', desc: '专注长上下文编程', features: ['代码理解', '仓库级分析'] },
+  { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro', letter: 'D', color: '#4f46e5', desc: '深度求索专业版', features: ['推理增强', '数学能力'] },
+  { id: 'minimax-m3', name: 'MiniMax-M3', letter: 'M', color: '#ef4444', desc: 'MiniMax 最新模型', features: ['语音理解', '多轮对话'] },
 ];
 
 const MODES = [
@@ -156,8 +151,8 @@ export default function ChatPage() {
   // 模型菜单
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [modelAnchor, setModelAnchor] = useState<null | HTMLElement>(null);
-  const [selectedModel, setSelectedModel] = useState('auto');
-  const [maxMode, setMaxMode] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('qwen3.7-max');
+  const [hoverModel, setHoverModel] = useState<any>(null);
 
   // 语音输入
   const [isRecording, setIsRecording] = useState(false);
@@ -551,7 +546,6 @@ export default function ChatPage() {
                 }}>
                   <SmartToy sx={{ fontSize: 16 }} />
                   {currentModel.name}
-                  {maxMode && <Chip label="Max" size="small" sx={{ height: 16, fontSize: 9, ml: 0.5, bgcolor: '#6366f1', color: 'white' }} />}
                   <KeyboardArrowDown sx={{ fontSize: 16 }} />
                 </Box>
 
@@ -816,91 +810,69 @@ export default function ChatPage() {
               ))}
             </Menu>
 
-            {/* ===== 模型选择弹出菜单 ===== */}
+            {/* ===== 模型选择菜单(纯列表 + 悬停详情) ===== */}
             <Menu
-              anchorEl={modelAnchor} open={modelMenuOpen} onClose={() => setModelMenuOpen(false)}
+              anchorEl={modelAnchor} open={modelMenuOpen}
+              onClose={() => { setModelMenuOpen(false); setHoverModel(null); }}
               transformOrigin={{ horizontal: 'right', vertical: 'bottom' }}
               anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
               sx={{
                 '& .MuiPaper-root': {
-                  mt: 0.5, width: 320, borderRadius: 2.5,
+                  mt: 0.5, width: 260, borderRadius: 2.5,
                   bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                  overflow: 'hidden',
+                  overflow: 'visible',
                 },
               }}
             >
-              {/* Max 模式开关 */}
-              <Box sx={{ px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <SmartToy sx={{ fontSize: 18, color: '#6366f1' }} />
-                  <Typography sx={{ fontSize: 13, fontWeight: 600 }}>Max 模式</Typography>
-                </Box>
-                <Switch
-                  checked={maxMode}
-                  onChange={(e) => setMaxMode(e.target.checked)}
-                  size="small"
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#6366f1' },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#6366f1' },
-                  }}
-                />
-              </Box>
-
-              {/* 模型列表 */}
               <Box sx={{ maxHeight: 360, overflow: 'auto', py: 0.5 }}>
-                {/* 预设档位 */}
-                {MODELS.slice(0, 5).map((model) => (
+                {MODELS.map((model) => (
                   <MenuItem
                     key={model.id}
-                    selected={selectedModel === model.id && !maxMode}
-                    onClick={() => { setSelectedModel(model.id); setMaxMode(false); setModelMenuOpen(false); }}
+                    selected={selectedModel === model.id}
+                    onMouseEnter={() => setHoverModel(model)}
+                    onClick={() => { setSelectedModel(model.id); setModelMenuOpen(false); }}
                     sx={{ py: 1, px: 2.5, gap: 1.5 }}
                   >
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: model.color, flexShrink: 0 }} />
+                    <Box sx={{
+                      width: 20, height: 20, borderRadius: '50%', bgcolor: model.color, flexShrink: 0,
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 700, color: '#fff',
+                    }}>{model.letter}</Box>
                     <Typography sx={{ fontSize: 13, fontWeight: selectedModel === model.id ? 600 : 400, flex: 1 }}>{model.name}</Typography>
-                    <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{model.multiplier}</Typography>
-                    {selectedModel === model.id && !maxMode && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
-                  </MenuItem>
-                ))}
-
-                <Divider sx={{ my: 0.5 }} />
-                <Typography sx={{ px: 2.5, py: 0.5, fontSize: 11, color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  新模型
-                </Typography>
-
-                {/* 具体模型 */}
-                {MODELS.slice(5).map((model) => (
-                  <MenuItem
-                    key={model.id}
-                    selected={selectedModel === model.id && !maxMode}
-                    onClick={() => { setSelectedModel(model.id); setMaxMode(false); setModelMenuOpen(false); }}
-                    sx={{ py: 1, px: 2.5, gap: 1.5, alignItems: 'flex-start' }}
-                  >
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: model.color, flexShrink: 0, mt: 0.5 }} />
-                    <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: selectedModel === model.id ? 600 : 400 }}>{model.name}</Typography>
-                        <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>{model.multiplier}</Typography>
-                      </Box>
-                      <Typography sx={{ fontSize: 10, color: 'text.secondary', lineHeight: 1.4, mt: 0.25 }}>{model.desc}</Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                        {model.features.map((f: string) => (
-                          <Box key={f} sx={{ px: 0.75, py: 0.125, borderRadius: 1, fontSize: 9, fontWeight: 500, bgcolor: `${model.color}12`, color: model.color }}>{f}</Box>
-                        ))}
-                      </Box>
-                    </Box>
-                    {selectedModel === model.id && !maxMode && <CheckCircle sx={{ fontSize: 16, color: '#6366f1', mt: 0.25 }} />}
+                    {selectedModel === model.id && <CheckCircle sx={{ fontSize: 16, color: '#6366f1' }} />}
                   </MenuItem>
                 ))}
               </Box>
-
-              {/* 底部 */}
               <Divider />
-              <MenuItem sx={{ py: 1.25, px: 2.5, gap: 1, color: '#6366f1' }}>
-                <SmartToy sx={{ fontSize: 16 }} />
+              <MenuItem onClick={() => { setModelMenuOpen(false); navigate('/models/sources'); }} sx={{ py: 1.25, px: 2.5, gap: 1, color: '#6366f1' }}>
+                <Add sx={{ fontSize: 16 }} />
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }}>配置自定义模型</Typography>
               </MenuItem>
+              {/* 悬停详情浮窗 */}
+              <Box sx={{
+                position: 'absolute', left: '100%', top: 0, ml: 1, width: 240, p: 2.5,
+                borderRadius: 2.5, bgcolor: 'background.paper',
+                border: '1px solid', borderColor: 'divider', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                pointerEvents: 'none',
+              }}>
+                {(() => {
+                  const m = hoverModel || currentModel;
+                  return (<>
+                    <Typography sx={{ fontSize: 15, fontWeight: 700 }}>{m.name}</Typography>
+                    <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{m.desc}</Typography>
+                    <Divider sx={{ my: 1.5 }} />
+                    <Typography sx={{ fontSize: 11, fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>可用功能</Typography>
+                    {m.features.map((f: string) => (
+                      <Box key={f} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.25 }}>
+                        <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'text.secondary' }} />
+                        <Typography sx={{ fontSize: 12.5 }}>{f}</Typography>
+                      </Box>
+                    ))}
+                  </>);
+                })()}
+              </Box>
             </Menu>
 
             {/* ===== 智能体选择菜单 ===== */}
