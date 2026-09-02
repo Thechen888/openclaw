@@ -580,7 +580,8 @@ export default function ConversationPage() {
       </Box>
 
       {/* 消息区域 */}
-      <Box sx={{ flex: 1, overflow: 'auto', px: 4, py: 3 }}>
+      <Box sx={{ flex: 1, overflow: 'auto', py: 3 }}>
+        <Box sx={{ maxWidth: 1080, mx: 'auto', width: '100%', px: 4 }}>
         {/* 转交/分享横幅 */}
         {sharedFrom && (
           <Box sx={{
@@ -736,12 +737,13 @@ export default function ConversationPage() {
           </Box>
         )}
         <div ref={messagesEndRef} />
+        </Box>
       </Box>
 
       {/* ===== 选择模式底部操作条 ===== */}
       {selectMode && (
         <Box sx={{
-          position: 'relative', mx: 2, mb: 1,
+          position: 'relative', maxWidth: 1032, mx: 'auto', mb: 1,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           px: 2.5, py: 1.5, borderRadius: 2.5,
           bgcolor: 'background.paper',
@@ -794,7 +796,8 @@ export default function ConversationPage() {
 
       {/* ===== 只读模式提示 ===== */}
       {isReadonly ? (
-        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+        <Box sx={{ px: 2, pt: 1, pb: 2.5, bgcolor: 'background.paper' }}>
+          <Box sx={{ maxWidth: 1080, mx: 'auto', width: '100%' }}>
           <Box sx={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
             py: 1.5, px: 2, borderRadius: 2,
@@ -803,10 +806,12 @@ export default function ConversationPage() {
             <ChatBubbleOutlined sx={{ fontSize: 16, color: '#6366f1' }} />
             <Typography sx={{ fontSize: 13, color: '#6366f1' }}>该对话为只读分享，仅可查看</Typography>
           </Box>
+          </Box>
         </Box>
       ) : (
       /* ===== 输入区域（与 ChatPage 完全一致） ===== */
-      <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+      <Box sx={{ px: 2, pt: 1, pb: 2.5, bgcolor: 'background.paper' }}>
+        <Box sx={{ maxWidth: 1080, mx: 'auto', width: '100%' }}>
         {/* 已选内容标签 */}
         {(attachedFiles.length > 0 || selectedAgent || selectedSkills.length > 0 || selectedKBs.length > 0) && (
           <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap', px: 0.5, alignItems: 'center' }}>
@@ -871,7 +876,7 @@ export default function ConversationPage() {
 
         <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'visible' }}>
           <TextField
-            fullWidth multiline maxRows={6} value={input}
+            fullWidth multiline minRows={2} maxRows={6} value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             disabled={sending}
@@ -1011,6 +1016,7 @@ export default function ConversationPage() {
             ><Send sx={{ fontSize: 18 }} /></Box>
           </Box>
         </Paper>
+        </Box>
       </Box>
       )}
 
