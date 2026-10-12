@@ -278,6 +278,16 @@ export const statsApi = {
   usageStats: () => api.get('/stats/usage'),
 };
 
+export const usageCostApi = {
+  overview: (params: any) => api.get('/stats/cost/overview', { params }),
+};
+
+export const usageAnalysisApi = {
+  list: (params: any) => api.get('/stats/usage/analysis', { params }),
+  detail: (userId: string, params: any) => api.get(`/stats/usage/analysis/${userId}/detail`, { params }),
+  exportCsv: (params: any) => api.get('/stats/usage/export', { params }),
+};
+
 export const callLogsApi = {
   list: (params?: ListParams) => api.get('/models/call-logs', { params }),
 };

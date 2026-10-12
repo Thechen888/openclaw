@@ -494,13 +494,16 @@ const roles: any[] = [
 
 // =================== 用户 ===================
 const users: any[] = [
-  { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active' },
-  { id: 'u-2', username: 'lisi',     name: '李思', email: 'lisi@company.com',     role: 'manager', org_id: 'org-3', status: 'active' },
-  { id: 'u-3', username: 'wangwu',   name: '王五', email: 'wangwu@company.com',   role: 'member',  org_id: 'org-2', status: 'active' },
-  { id: 'u-4', username: 'zhaoliu',  name: '赵六', email: 'zhaoliu@company.com',  role: 'member',  org_id: 'org-2', status: 'active' },
-  { id: 'u-5', username: 'chenqi',   name: '陈七', email: 'chenqi@company.com',   role: 'viewer',  org_id: 'org-4', status: 'disabled' },
-  { id: 'u-6', username: 'sunba',    name: '孙八', email: 'sunba@company.com',    role: 'member',  org_id: 'org-4', status: 'active' },
-  { id: 'u-7', username: 'zhoujiu', name: '周九', email: 'zhoujiu@company.com',  role: 'manager', org_id: 'org-3', status: 'active' },
+  { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active',   usage_scope: 'all' },
+  { id: 'u-2', username: 'lisi',     name: '李思', email: 'lisi@company.com',     role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'dept' },
+  { id: 'u-3', username: 'wangwu',   name: '王五', email: 'wangwu@company.com',   role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self' },
+  { id: 'u-4', username: 'zhaoliu',  name: '赵六', email: 'zhaoliu@company.com',  role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self' },
+  { id: 'u-5', username: 'chenqi',   name: '陈七', email: 'chenqi@company.com',   role: 'viewer',  org_id: 'org-4', status: 'disabled', usage_scope: 'self' },
+  { id: 'u-6', username: 'sunba',    name: '孙八', email: 'sunba@company.com',    role: 'member',  org_id: 'org-4', status: 'active',   usage_scope: 'self' },
+  { id: 'u-7', username: 'zhoujiu',  name: '周九', email: 'zhoujiu@company.com',  role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'dept' },
+  { id: 'u-8', username: 'chenzhiyuan', name: '陈志远', email: 'chenzy@company.com', role: 'gm',   org_id: 'org-1', status: 'active',   usage_scope: 'all' },
+  { id: 'u-9', username: 'hejiu',    name: '何九', email: 'hejiu@company.com',    role: 'member',  org_id: 'org-7', status: 'active',   usage_scope: 'self' },
+  { id: 'u-10', username: 'xushi',   name: '许十', email: 'xushi@company.com',    role: 'member',  org_id: 'org-8', status: 'active',   usage_scope: 'self' },
 ];
 
 // =================== 组织 ===================
@@ -511,16 +514,20 @@ const organizations: any[] = [
   { id: 'org-4', name: 'AI平台组',    type: 'team',       parent_id: 'org-2', status: 'active',   description: 'AI平台研发小组',   member_count: 12 },
   { id: 'org-5', name: '智慧客服项目',type: 'project',    parent_id: 'org-2', status: 'active',   description: '智能客服系统项目', member_count: 8 },
   { id: 'org-6', name: '华东大区',    type: 'team',       parent_id: 'org-3', status: 'active',   description: '华东区域销售团队', member_count: 18 },
+  { id: 'org-7', name: '运营部',      type: 'department', parent_id: 'org-1', status: 'active',   description: '平台运营部门',     member_count: 1 },
+  { id: 'org-8', name: '市场部',      type: 'department', parent_id: 'org-1', status: 'active',   description: '市场营销部门',     member_count: 1 },
 ];
 
 // 组织成员关联（org_id -> userId[]）
 const orgMembers: Record<string, string[]> = {
-  'org-1': ['u-1'],
+  'org-1': ['u-1', 'u-8'],
   'org-2': ['u-3', 'u-4'],
   'org-3': ['u-2', 'u-7'],
   'org-4': ['u-5', 'u-6'],
   'org-5': [],
   'org-6': [],
+  'org-7': ['u-9'],
+  'org-8': ['u-10'],
 };
 
 // =================== 聊天账号 ===================
@@ -2500,6 +2507,190 @@ const mockUser = {
   is_admin: true,
 };
 
+// =================== 演示登录用户跟踪 & 用量数据（费用统计/用量分析） ===================
+let currentMockUserId = 'u-1';
+
+// 当前 mock 登录用户：优先 localStorage 桥接（authStore 写入），回退模块变量，再回退 u-1
+function getCurrentMockUser(): any {
+  let uid = currentMockUserId;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('mock-current-user-id');
+      if (stored) uid = stored;
+    }
+  } catch { /* ignore */ }
+  return users.find(u => u.id === uid) || users.find(u => u.id === 'u-1') || mockUser;
+}
+
+// 含自身的全部下级组织 id（基于 parent_id 递归）
+function getOrgDescendantIds(orgId: string): string[] {
+  const result = [orgId];
+  const children = organizations.filter(o => o.parent_id === orgId);
+  for (const c of children) result.push(...getOrgDescendantIds(c.id));
+  return result;
+}
+
+function orgNameById(orgId: string): string {
+  return organizations.find(o => o.id === orgId)?.name || orgId;
+}
+
+// 确定性伪随机：FNV-1a hash 做种子 + mulberry32
+function hashSeed(str: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const MODEL_NAME_POOL = ['deepseek-flash', 'deepseek-v4-flash', 'deepseek-v4-pro', 'qwen3-32b'];
+
+interface DailyUsage {
+  user_id: string; date: string; requests: number;
+  input_tokens: number; output_tokens: number; cache_tokens: number;
+  cost: number; avg_latency_ms: number; source_id: string; model: string;
+}
+
+// 对每个 active 用户 × 当前月前 30 天，生成确定性日用量记录
+function genDailyUsage(): DailyUsage[] {
+  const records: DailyUsage[] = [];
+  const y = now.getFullYear();
+  const mo = now.getMonth();
+  const activeUsers = users.filter(u => u.status === 'active');
+  const sourceIds = modelSources.map(s => s.id);
+  for (const u of activeUsers) {
+    for (let day = 1; day <= 30; day++) {
+      const dateStr = `${y}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const rnd = mulberry32(hashSeed(u.id + dateStr));
+      const requests = Math.floor(800 + rnd() * 5200);
+      const input_tokens = Math.floor(requests * (500 + rnd() * 900));
+      const output_tokens = Math.floor(input_tokens / 60);
+      const cache_pct = 0.75 + rnd() * 0.2;
+      const cache_tokens = Math.floor(input_tokens * cache_pct);
+      const cost = input_tokens * 1e-6 * 0.5 + output_tokens * 1e-6 * 2;
+      const avg_latency_ms = Math.floor(1500 + rnd() * 2500);
+      const source_id = sourceIds[Math.floor(rnd() * sourceIds.length)];
+      const model = MODEL_NAME_POOL[Math.floor(rnd() * MODEL_NAME_POOL.length)];
+      records.push({ user_id: u.id, date: dateStr, requests, input_tokens, output_tokens, cache_tokens, cost, avg_latency_ms, source_id, model });
+    }
+  }
+  return records;
+}
+
+const usageDailyRecords: DailyUsage[] = genDailyUsage();
+
+// 数据范围收敛（核心，越权在 mock 路由层生效）
+function resolveUsageScope(params: any): { scope: string; dept_ids: string[] | null; user_id?: string } {
+  const cur = getCurrentMockUser();
+  const scope = cur.usage_scope || 'self';
+  if (scope === 'all') {
+    return { scope: 'all', dept_ids: params?.dept_id ? getOrgDescendantIds(params.dept_id) : null };
+  }
+  if (scope === 'dept') {
+    return { scope: 'dept', dept_ids: getOrgDescendantIds(cur.org_id) };
+  }
+  return { scope: 'self', dept_ids: null, user_id: cur.id };
+}
+
+function userInDeptIds(userId: string, deptIds: string[]): boolean {
+  const u = users.find(x => x.id === userId);
+  return !!u && deptIds.includes(u.org_id);
+}
+
+function filterUsageByScope(records: DailyUsage[], scopeInfo: any): DailyUsage[] {
+  if (scopeInfo.scope === 'self') return records.filter(r => r.user_id === scopeInfo.user_id);
+  if (scopeInfo.dept_ids) return records.filter(r => userInDeptIds(r.user_id, scopeInfo.dept_ids));
+  return records;
+}
+
+// 按时间/模型源/模型过滤
+function filterUsageRecords(records: DailyUsage[], p: any): DailyUsage[] {
+  let out = records;
+  if (p.start) out = out.filter(r => r.date >= p.start);
+  if (p.end) out = out.filter(r => r.date <= p.end);
+  if (p.source_id) out = out.filter(r => r.source_id === p.source_id);
+  if (p.model) out = out.filter(r => r.model === p.model);
+  return out;
+}
+
+const round4 = (n: number) => Math.round(n * 1e4) / 1e4;
+const round2 = (n: number) => Math.round(n * 1e2) / 1e2;
+
+// 时间范围（今天/本周/本月）-> 起止日期字符串
+function rangeBounds(range?: string): { start?: string; end?: string } {
+  if (!range) return {};
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  const fmt = (yy: number, mm: number, dd: number) => `${yy}-${String(mm + 1).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+  if (range === 'today' || range === '今天') { const t = fmt(y, m, d); return { start: t, end: t }; }
+  if (range === 'week' || range === '本周') { const wi = getWeekInfo(); return { start: wi.week_start.slice(0, 10), end: wi.week_end.slice(0, 10) }; }
+  if (range === 'month' || range === '本月') { const lastDay = new Date(y, m + 1, 0).getDate(); return { start: fmt(y, m, 1), end: fmt(y, m, lastDay) }; }
+  return {};
+}
+
+// 用量分析：按范围/维度/聚合计算行、卡片（供 analysis 与 export 共用）
+function computeUsageRows(p: any): { scope: string; dept_label?: string; cards: any; rows: any[] } {
+  const scopeInfo = resolveUsageScope(p);
+  let records = filterUsageByScope(usageDailyRecords, scopeInfo);
+  const bounds = rangeBounds(p.range);
+  if (bounds.start) records = records.filter(r => r.date >= bounds.start!);
+  if (bounds.end) records = records.filter(r => r.date <= bounds.end!);
+  if (p.source_id) records = records.filter(r => r.source_id === p.source_id);
+  const dimension = p.dimension || 'user';
+  const aggOrg = p.agg_org === true || p.agg_org === 'true';
+  const totalCostAll = records.reduce((s, r) => s + r.cost, 0);
+
+  const groups: Record<string, any> = {};
+  const keyOf = (r: any) => {
+    if (dimension === 'resource') return 'res:' + r.source_id;
+    if (aggOrg) { const u = users.find(x => x.id === r.user_id); return 'org:' + (u?.org_id || ''); }
+    return 'user:' + r.user_id;
+  };
+  for (const r of records) {
+    const k = keyOf(r);
+    let g = groups[k];
+    if (!g) {
+      const u = users.find(x => x.id === r.user_id);
+      g = groups[k] = {
+        user_id: dimension === 'user' && !aggOrg ? r.user_id : undefined,
+        user_name: dimension === 'user' && !aggOrg ? (u?.name || r.user_id) : undefined,
+        dept_id: dimension === 'resource' ? undefined : (u?.org_id || ''),
+        dept_name: dimension === 'resource' ? undefined : orgNameById(u?.org_id || ''),
+        resource_name: dimension === 'resource' ? (modelSources.find(s => s.id === r.source_id)?.display_name || r.source_id) : undefined,
+        requests: 0, input_tokens: 0, output_tokens: 0, cache_tokens: 0, cost: 0,
+      };
+    }
+    g.requests += r.requests; g.input_tokens += r.input_tokens; g.output_tokens += r.output_tokens; g.cache_tokens += r.cache_tokens; g.cost += r.cost;
+  }
+  const rows = Object.values(groups).map((g: any) => {
+    const tokens = g.input_tokens + g.output_tokens;
+    return {
+      user_id: g.user_id, user_name: g.user_name, dept_id: g.dept_id, dept_name: g.dept_name, resource_name: g.resource_name,
+      requests: g.requests, input_tokens: g.input_tokens, output_tokens: g.output_tokens, tokens,
+      cache_tokens: g.cache_tokens, cache_pct: g.input_tokens ? round2(g.cache_tokens / g.input_tokens * 100) : 0,
+      cost: round4(g.cost), pct: totalCostAll ? round2(g.cost / totalCostAll * 100) : 0,
+    };
+  }).sort((a: any, b: any) => b.cost - a.cost);
+  const subjects = dimension === 'resource' ? rows.length : new Set(records.map(r => r.user_id)).size;
+  const cards = {
+    tokens: rows.reduce((s, r) => s + r.tokens, 0),
+    cost: round4(totalCostAll),
+    requests: rows.reduce((s, r) => s + r.requests, 0),
+    subjects,
+  };
+  return { scope: scopeInfo.scope, dept_label: scopeInfo.scope === 'dept' ? orgNameById(getCurrentMockUser().org_id) : undefined, cards, rows };
+}
+
 // =================== AGENTS.md 模板文件 ===================
 export interface AgentsMdFile {
   name: string;
@@ -2940,10 +3131,17 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
   // Auth
   if (path === '/auth/admin/login' && method === 'post') {
-    return ok({ access_token: 'mock-jwt-token-admin', user: mockUser });
+    const uname = data?.username;
+    const found = users.find(u => u.username === uname);
+    const uid = found ? found.id : 'u-1';
+    currentMockUserId = uid;
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem('mock-current-user-id', uid); } catch { /* ignore */ }
+    const user = getCurrentMockUser();
+    return ok({ access_token: `mock-jwt-token-${uid}`, user: { ...user, is_admin: user.role === 'admin' } });
   }
   if (path === '/auth/me') {
-    return ok(mockUser);
+    const user = getCurrentMockUser();
+    return ok({ ...user, is_admin: user.role === 'admin' });
   }
 
   // Dashboard
@@ -5536,6 +5734,120 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const idx = agentPublicQuotas.findIndex(q => q.resource_id === resId);
     if (idx >= 0) agentPublicQuotas.splice(idx, 1);
     return ok({ success: true });
+  }
+
+  // =================== 费用统计 & 用量分析（数据范围收敛在 mock 层） ===================
+  if (path === '/stats/cost/overview' && method === 'get') {
+    const scopeInfo = resolveUsageScope(p);
+    let records = filterUsageByScope(usageDailyRecords, scopeInfo);
+    records = filterUsageRecords(records, p);
+    const dept_options = organizations.filter(o => o.type === 'department').map(o => ({ id: o.id, name: o.name }));
+    const dept_label = scopeInfo.scope === 'dept' ? orgNameById(getCurrentMockUser().org_id) : undefined;
+
+    let total_cost = 0, total_requests = 0, total_input = 0, total_output = 0, latencySum = 0, latencyCount = 0;
+    const sourceSet = new Set<string>();
+    for (const r of records) {
+      total_cost += r.cost; total_requests += r.requests;
+      total_input += r.input_tokens; total_output += r.output_tokens;
+      latencySum += r.avg_latency_ms; latencyCount++;
+      sourceSet.add(r.source_id);
+    }
+    const total_tokens = total_input + total_output;
+    const avg_latency_ms = latencyCount ? Math.round(latencySum / latencyCount) : 0;
+
+    const trendMap: Record<string, any> = {};
+    for (const r of records) {
+      const t = trendMap[r.date] || (trendMap[r.date] = { date: r.date, input_tokens: 0, output_tokens: 0, requests: 0, cost: 0 });
+      t.input_tokens += r.input_tokens; t.output_tokens += r.output_tokens; t.requests += r.requests; t.cost += r.cost;
+    }
+    const trend = Object.values(trendMap).sort((a: any, b: any) => (a.date < b.date ? -1 : 1)).map((t: any) => ({ ...t, cost: round4(t.cost) }));
+
+    const modelMap: Record<string, number> = {};
+    for (const r of records) modelMap[r.model] = (modelMap[r.model] || 0) + r.cost;
+    const model_top = Object.entries(modelMap).map(([model, cost]) => ({ model, cost: round4(cost), pct: total_cost ? round2(cost / total_cost * 100) : 0 })).sort((a, b) => b.cost - a.cost);
+
+    const srcMap: Record<string, number> = {};
+    for (const r of records) srcMap[r.source_id] = (srcMap[r.source_id] || 0) + r.cost;
+    const source_share = Object.entries(srcMap).map(([source_id, cost]) => ({ source_id, source_name: modelSources.find(s => s.id === source_id)?.display_name || source_id, cost: round4(cost), pct: total_cost ? round2(cost / total_cost * 100) : 0 })).sort((a, b) => b.cost - a.cost);
+
+    const bmMap: Record<string, any> = {};
+    for (const r of records) {
+      const m = bmMap[r.model] || (bmMap[r.model] = { model: r.model, requests: 0, input_tokens: 0, output_tokens: 0, cost: 0 });
+      m.requests += r.requests; m.input_tokens += r.input_tokens; m.output_tokens += r.output_tokens; m.cost += r.cost;
+    }
+    const by_model = Object.values(bmMap).map((m: any) => ({ ...m, cost: round4(m.cost), pct: total_cost ? round2(m.cost / total_cost * 100) : 0 })).sort((a: any, b: any) => b.cost - a.cost);
+
+    const bsMap: Record<string, any> = {};
+    for (const r of records) {
+      const s = bsMap[r.source_id] || (bsMap[r.source_id] = { source_id: r.source_id, source_name: modelSources.find(x => x.id === r.source_id)?.display_name || r.source_id, requests: 0, input_tokens: 0, output_tokens: 0, cost: 0 });
+      s.requests += r.requests; s.input_tokens += r.input_tokens; s.output_tokens += r.output_tokens; s.cost += r.cost;
+    }
+    const by_source = Object.values(bsMap).map((m: any) => ({ ...m, cost: round4(m.cost), pct: total_cost ? round2(m.cost / total_cost * 100) : 0 })).sort((a: any, b: any) => b.cost - a.cost);
+
+    const bsmMap: Record<string, any> = {};
+    for (const r of records) {
+      const key = `${r.source_id}||${r.model}`;
+      const s = bsmMap[key] || (bsmMap[key] = { source_id: r.source_id, source_name: modelSources.find(x => x.id === r.source_id)?.display_name || r.source_id, model: r.model, requests: 0, input_tokens: 0, output_tokens: 0, cost: 0 });
+      s.requests += r.requests; s.input_tokens += r.input_tokens; s.output_tokens += r.output_tokens; s.cost += r.cost;
+    }
+    const by_source_model = Object.values(bsmMap).map((m: any) => ({ ...m, cost: round4(m.cost), pct: total_cost ? round2(m.cost / total_cost * 100) : 0 })).sort((a: any, b: any) => b.cost - a.cost);
+
+    return ok({
+      scope: scopeInfo.scope,
+      dept_options,
+      dept_label,
+      cards: { total_cost: round4(total_cost), total_requests, total_tokens, input_tokens: total_input, output_tokens: total_output, avg_latency_ms, active_sources: sourceSet.size },
+      trend, model_top, source_share,
+      detail: { by_model, by_source, by_source_model },
+    });
+  }
+
+  if (path === '/stats/usage/analysis' && method === 'get') {
+    const { scope, dept_label, cards, rows } = computeUsageRows(p);
+    const page = Number(p.page) || 1;
+    const page_size = Number(p.page_size) || 20;
+    const total = rows.length;
+    const startIdx = (page - 1) * page_size;
+    return ok({ scope, dept_label, dept_options: organizations.filter(o => o.type === 'department').map(o => ({ id: o.id, name: o.name })), cards, rows: rows.slice(startIdx, startIdx + page_size), total, page, page_size });
+  }
+
+  if (/^\/stats\/usage\/analysis\/[^/]+\/detail$/.test(path) && method === 'get') {
+    const userId = path.split('/')[4];
+    const bounds = rangeBounds(p.range);
+    let records = usageDailyRecords.filter(r => r.user_id === userId);
+    if (bounds.start) records = records.filter(r => r.date >= bounds.start!);
+    if (bounds.end) records = records.filter(r => r.date <= bounds.end!);
+    let requests = 0, cost = 0, input_tokens = 0, output_tokens = 0, cache_tokens = 0;
+    const dailyMap: Record<string, any> = {};
+    const modelMap2: Record<string, any> = {};
+    for (const r of records) {
+      requests += r.requests; input_tokens += r.input_tokens; output_tokens += r.output_tokens; cost += r.cost; cache_tokens += r.cache_tokens;
+      const dd = dailyMap[r.date] || (dailyMap[r.date] = { date: r.date, tokens: 0, cost: 0 });
+      dd.tokens += r.input_tokens + r.output_tokens; dd.cost += r.cost;
+      const mm = modelMap2[r.model] || (modelMap2[r.model] = { model: r.model, requests: 0, tokens: 0, cost: 0 });
+      mm.requests += r.requests; mm.tokens += r.input_tokens + r.output_tokens; mm.cost += r.cost;
+    }
+    const tokens = input_tokens + output_tokens;
+    const cache_pct = input_tokens ? round2(cache_tokens / input_tokens * 100) : 0;
+    const daily = Object.values(dailyMap).sort((a: any, b: any) => (a.date < b.date ? -1 : 1)).map((d: any) => ({ ...d, cost: round4(d.cost) }));
+    const totalModelCost = cost || 1;
+    const model_split = Object.values(modelMap2).map((m: any) => ({ ...m, cost: round4(m.cost), pct: round2(m.cost / totalModelCost * 100) })).sort((a: any, b: any) => b.cost - a.cost);
+    return ok({
+      quota: { monthly: 200, used_cost: round4(cost), used_tokens: tokens, used_pct: round2(cost / 200 * 100), cache_pct },
+      overview: { requests, tokens, cost: round4(cost), input_tokens },
+      daily, model_split,
+    });
+  }
+
+  if (path === '/stats/usage/export' && method === 'get') {
+    const { rows } = computeUsageRows({ ...p, page: 1, page_size: 1000000 });
+    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const headers = ['用户', '部门', '资源', '请求数', '输入Tokens', '输出Tokens', '总Tokens', '缓存Tokens', '缓存%', '费用', '占比%'];
+    const lines = [headers.map(esc).join(',')];
+    for (const r of rows as any[]) {
+      lines.push([r.user_name || '', r.dept_name || '', r.resource_name || '', r.requests, r.input_tokens, r.output_tokens, r.tokens, r.cache_tokens, r.cache_pct, r.cost, r.pct].map(esc).join(','));
+    }
+    return ok('\uFEFF' + lines.join('\r\n'));
   }
 
   // Default

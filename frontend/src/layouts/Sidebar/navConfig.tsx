@@ -110,7 +110,8 @@ export const adminNavConfig: NavSection[] = [
       { title: '模型源', path: '/models/sources', icon: <PsychologyIcon fontSize="small" /> },
       { title: '模型策略', path: '/models/policies', icon: <Policy fontSize="small" /> },
       { title: '调用日志', path: '/models/logs', icon: <Dns fontSize="small" /> },
-      { title: '成本统计', path: '/models/costs', icon: <Speed fontSize="small" /> },
+      { title: '费用统计', path: '/models/costs', icon: <Speed fontSize="small" /> },
+      { title: '用量分析', path: '/models/usage-analysis', icon: <BarChartIcon fontSize="small" /> },
     ],
   },
   {

@@ -6,6 +6,7 @@ import ModelSourcesPage from '../pages/models/ModelSourcesPage';
 import ModelPoliciesPage from '../pages/models/ModelPoliciesPage';
 import CallLogsPage from '../pages/models/CallLogsPage';
 import CostStatsPage from '../pages/models/CostStatsPage';
+import UsageAnalysisPage from '../pages/models/UsageAnalysisPage';
 import ChatAdaptersPage from '../pages/connectors/ChatAdaptersPage';
 import ThirdPartySystemsPage from '../pages/connectors/ThirdPartySystemsPage';
 import StarlarkAdaptersPage from '../pages/connectors/StarlarkAdaptersPage';
@@ -91,6 +92,7 @@ export const router = createBrowserRouter([
       { path: 'models/policies', element: <ModelPoliciesPage /> },
       { path: 'models/logs', element: <CallLogsPage /> },
       { path: 'models/costs', element: <CostStatsPage /> },
+      { path: 'models/usage-analysis', element: <UsageAnalysisPage /> },
       // Connectors
       { path: 'connectors/starlark', element: <StarlarkAdaptersPage /> },
       { path: 'connectors/templates', element: <IntegrationTemplatesPage /> },

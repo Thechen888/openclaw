@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, Typography, TextField, Button, useTheme } from '@mui/material';
+import { Box, Card, CardContent, Typography, TextField, Button, Chip, useTheme } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -13,18 +13,35 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const DEMO_ACCOUNTS = [
+    { username: 'admin',       label: '张伟 · 超管' },
+    { username: 'chenzhiyuan', label: '陈志远 · 总经理' },
+    { username: 'lisi',        label: '李思 · 销售部负责人' },
+    { username: 'wangwu',      label: '王五 · 普通成员' },
+  ];
+
+  const doLogin = async (u: string, pwd: string) => {
     setError('');
     setLoading(true);
     try {
-      await login(username, password);
+      await login(u, pwd);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.message || '登录失败');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await doLogin(username, password);
+  };
+
+  const handleDemoLogin = (u: string) => {
+    setUsername(u);
+    setPassword('demo123');
+    void doLogin(u, 'demo123');
   };
 
   return (
@@ -177,6 +194,28 @@ export default function LoginPage() {
             }}>
             默认账号：admin / admin123
           </Typography>
+
+          {/* 演示账号快速登录 */}
+          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+            <Typography variant="caption" sx={{ width: '100%', textAlign: 'center', color: 'rgba(232,236,240,0.5)', mb: 0.5 }}>
+              演示账号（点击直接登录）
+            </Typography>
+            {DEMO_ACCOUNTS.map((acc) => (
+              <Chip
+                key={acc.username}
+                label={acc.label}
+                size="small"
+                disabled={loading}
+                onClick={() => handleDemoLogin(acc.username)}
+                sx={{
+                  borderColor: 'rgba(0,212,255,0.35)',
+                  color: 'rgba(0,212,255,0.85)',
+                  fontSize: 12,
+                  '&:hover': { borderColor: '#00D4FF', bgcolor: 'rgba(0,212,255,0.08)' },
+                }}
+              />
+            ))}
+          </Box>
         </CardContent>
       </Card>
 

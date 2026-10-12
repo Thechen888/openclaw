@@ -60,9 +60,9 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
 }
 
 // Stat Card — 带迷你柱状图装饰
-export function StatCard({ title, value, change, icon, color = 'primary' }: {
+export function StatCard({ title, value, change, icon, color = 'primary', sub }: {
   title: string; value: string | number; change?: { value: string; trend: 'up' | 'down'; label?: string };
-  icon: React.ReactNode; color?: string;
+  icon: React.ReactNode; color?: string; sub?: string;
 }) {
   // 随机但固定的迷你柱状图数据（7列）
   const bars = [35, 55, 40, 70, 50, 80, 60];
