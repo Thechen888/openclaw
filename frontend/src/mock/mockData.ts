@@ -494,28 +494,37 @@ const roles: any[] = [
 
 // =================== 用户 ===================
 const users: any[] = [
-  { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active',   usage_scope: 'all' },
-  { id: 'u-2', username: 'lisi',     name: '李思', email: 'lisi@company.com',     role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'dept' },
-  { id: 'u-3', username: 'wangwu',   name: '王五', email: 'wangwu@company.com',   role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self' },
-  { id: 'u-4', username: 'zhaoliu',  name: '赵六', email: 'zhaoliu@company.com',  role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self' },
-  { id: 'u-5', username: 'chenqi',   name: '陈七', email: 'chenqi@company.com',   role: 'viewer',  org_id: 'org-4', status: 'disabled', usage_scope: 'self' },
-  { id: 'u-6', username: 'sunba',    name: '孙八', email: 'sunba@company.com',    role: 'member',  org_id: 'org-4', status: 'active',   usage_scope: 'self' },
-  { id: 'u-7', username: 'zhoujiu',  name: '周九', email: 'zhoujiu@company.com',  role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'dept' },
-  { id: 'u-8', username: 'chenzhiyuan', name: '陈志远', email: 'chenzy@company.com', role: 'gm',   org_id: 'org-1', status: 'active',   usage_scope: 'all' },
-  { id: 'u-9', username: 'hejiu',    name: '何九', email: 'hejiu@company.com',    role: 'member',  org_id: 'org-7', status: 'active',   usage_scope: 'self' },
-  { id: 'u-10', username: 'xushi',   name: '许十', email: 'xushi@company.com',    role: 'member',  org_id: 'org-8', status: 'active',   usage_scope: 'self' },
+  { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active',   usage_scope: 'all',  usage_scope_org_id: 'org-1' },
+  { id: 'u-2', username: 'lisi',     name: '李思', email: 'lisi@company.com',     role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'org',  usage_scope_org_id: 'org-10' },
+  { id: 'u-3', username: 'wangwu',   name: '王五', email: 'wangwu@company.com',   role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-4', username: 'zhaoliu',  name: '赵六', email: 'zhaoliu@company.com',  role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-5', username: 'chenqi',   name: '陈七', email: 'chenqi@company.com',   role: 'viewer',  org_id: 'org-4', status: 'disabled', usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-6', username: 'sunba',    name: '孙八', email: 'sunba@company.com',    role: 'member',  org_id: 'org-4', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-7', username: 'zhoujiu',  name: '周九', email: 'zhoujiu@company.com',  role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'org',  usage_scope_org_id: 'org-3' },
+  { id: 'u-8', username: 'chenzhiyuan', name: '陈志远', email: 'chenzy@company.com', role: 'gm',   org_id: 'org-1', status: 'active',   usage_scope: 'all',  usage_scope_org_id: 'org-1' },
+  { id: 'u-9', username: 'hejiu',    name: '何九', email: 'hejiu@company.com',    role: 'member',  org_id: 'org-7', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-10', username: 'xushi',   name: '许十', email: 'xushi@company.com',    role: 'member',  org_id: 'org-8', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-11', username: 'qianshiyi', name: '钱十一', email: 'qianshiyi@company.com', role: 'member', org_id: 'org-11', status: 'active', usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-12', username: 'sunshier', name: '孙十二', email: 'sunshier@company.com', role: 'member', org_id: 'org-12', status: 'active', usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-13', username: 'zhaoshisan', name: '赵十三', email: 'zhaoshisan@company.com', role: 'member', org_id: 'org-14', status: 'active', usage_scope: 'self', usage_scope_org_id: null },
 ];
 
 // =================== 组织 ===================
 const organizations: any[] = [
-  { id: 'org-1', name: '总公司',      type: 'company',    parent_id: null,    status: 'active',   description: '集团总公司',       member_count: 156 },
-  { id: 'org-2', name: '技术研发部',  type: 'department', parent_id: 'org-1', status: 'active',   description: '技术研发部门',     member_count: 45 },
-  { id: 'org-3', name: '销售部',      type: 'department', parent_id: 'org-1', status: 'active',   description: '销售与商务部门',   member_count: 32 },
-  { id: 'org-4', name: 'AI平台组',    type: 'team',       parent_id: 'org-2', status: 'active',   description: 'AI平台研发小组',   member_count: 12 },
-  { id: 'org-5', name: '智慧客服项目',type: 'project',    parent_id: 'org-2', status: 'active',   description: '智能客服系统项目', member_count: 8 },
-  { id: 'org-6', name: '华东大区',    type: 'team',       parent_id: 'org-3', status: 'active',   description: '华东区域销售团队', member_count: 18 },
-  { id: 'org-7', name: '运营部',      type: 'department', parent_id: 'org-1', status: 'active',   description: '平台运营部门',     member_count: 1 },
-  { id: 'org-8', name: '市场部',      type: 'department', parent_id: 'org-1', status: 'active',   description: '市场营销部门',     member_count: 1 },
+  { id: 'org-1',  name: '总公司',      type: 'company',    parent_id: null,     status: 'active',   description: '集团总公司',       member_count: 156 },
+  { id: 'org-9',  name: '数字化中心',  type: 'department', parent_id: 'org-1',  status: 'active',   description: '数字化中心',       member_count: 53 },
+  { id: 'org-2',  name: '技术研发部',  type: 'department', parent_id: 'org-9',  status: 'active',   description: '技术研发部门',     member_count: 45 },
+  { id: 'org-13', name: '数据智能部',  type: 'department', parent_id: 'org-9',  status: 'active',   description: '数据智能部门',     member_count: 8 },
+  { id: 'org-14', name: '算法组',      type: 'team',       parent_id: 'org-13', status: 'active',   description: '算法小组',         member_count: 5 },
+  { id: 'org-10', name: '营销中心',    type: 'department', parent_id: 'org-1',  status: 'active',   description: '营销中心',         member_count: 42 },
+  { id: 'org-3',  name: '销售部',      type: 'department', parent_id: 'org-10', status: 'active',   description: '销售与商务部门',   member_count: 32 },
+  { id: 'org-11', name: '大客户部',    type: 'department', parent_id: 'org-10', status: 'active',   description: '大客户部门',       member_count: 10 },
+  { id: 'org-12', name: '行业客户组',  type: 'team',       parent_id: 'org-11', status: 'active',   description: '行业客户组',       member_count: 6 },
+  { id: 'org-4',  name: 'AI平台组',    type: 'team',       parent_id: 'org-2',  status: 'active',   description: 'AI平台研发小组',   member_count: 12 },
+  { id: 'org-5',  name: '智慧客服项目',type: 'project',    parent_id: 'org-2',  status: 'active',   description: '智能客服系统项目', member_count: 8 },
+  { id: 'org-6',  name: '华东大区',    type: 'team',       parent_id: 'org-3',  status: 'active',   description: '华东区域销售团队', member_count: 18 },
+  { id: 'org-7',  name: '运营部',      type: 'department', parent_id: 'org-1',  status: 'active',   description: '平台运营部门',     member_count: 1 },
+  { id: 'org-8',  name: '市场部',      type: 'department', parent_id: 'org-1',  status: 'active',   description: '市场营销部门',     member_count: 1 },
 ];
 
 // 组织成员关联（org_id -> userId[]）
@@ -528,6 +537,10 @@ const orgMembers: Record<string, string[]> = {
   'org-6': [],
   'org-7': ['u-9'],
   'org-8': ['u-10'],
+  'org-11': ['u-11'],
+  'org-12': ['u-12'],
+  'org-13': [],
+  'org-14': ['u-13'],
 };
 
 // =================== 聊天账号 ===================
@@ -2590,17 +2603,43 @@ function genDailyUsage(): DailyUsage[] {
 
 const usageDailyRecords: DailyUsage[] = genDailyUsage();
 
-// 数据范围收敛（核心，越权在 mock 路由层生效）
-function resolveUsageScope(params: any): { scope: string; dept_ids: string[] | null; user_id?: string } {
+// 数据范围收敛（核心，越权在 mock 路由层生效）—— 锚点制：all / org(锚点子树) / self
+function resolveUsageScope(params: any): { scope: string; anchor_org_id: string | null; dept_ids: string[] | null; user_id?: string } {
   const cur = getCurrentMockUser();
   const scope = cur.usage_scope || 'self';
   if (scope === 'all') {
-    return { scope: 'all', dept_ids: params?.dept_id ? getOrgDescendantIds(params.dept_id) : null };
+    const treeIds = organizations.map(o => o.id);
+    const reqOrg = params?.org_id || params?.dept_id; // 兼容旧参数名
+    return { scope, anchor_org_id: 'org-1', dept_ids: reqOrg && treeIds.includes(reqOrg) ? getOrgDescendantIds(reqOrg) : null };
   }
-  if (scope === 'dept') {
-    return { scope: 'dept', dept_ids: getOrgDescendantIds(cur.org_id) };
+  if (scope === 'org') {
+    const anchor = cur.usage_scope_org_id || cur.org_id;
+    const allowed = getOrgDescendantIds(anchor);
+    const reqOrg = params?.org_id || params?.dept_id;
+    return { scope, anchor_org_id: anchor, dept_ids: allowed.includes(reqOrg) ? getOrgDescendantIds(reqOrg) : allowed };
   }
-  return { scope: 'self', dept_ids: null, user_id: cur.id };
+  return { scope, anchor_org_id: null, dept_ids: null, user_id: cur.id };
+}
+
+// 全量组织扁平树 + allowed 标记（供前端树形锚点选择器渲染）
+function buildOrgTreeWithAllowed(anchor_org_id: string | null): { id: string; name: string; parent_id: string | null; allowed: boolean }[] {
+  const allowed = anchor_org_id === null ? null : getOrgDescendantIds(anchor_org_id);
+  return organizations.map(o => ({
+    id: o.id,
+    name: o.name,
+    parent_id: o.parent_id ?? null,
+    allowed: allowed === null ? true : allowed.includes(o.id),
+  }));
+}
+
+// 组织全路径（去掉顶层公司节点）：'营销中心 / 销售部'
+function orgPathName(orgId: string): string {
+  const names: string[] = [];
+  let cur: any = organizations.find(o => o.id === orgId);
+  let guard = 0;
+  while (cur && guard++ < 32) { names.unshift(cur.name); cur = organizations.find(o => o.id === cur.parent_id); }
+  if (names.length <= 1) return names[0] || orgId;
+  return names.slice(1).join(' / ');
 }
 
 function userInDeptIds(userId: string, deptIds: string[]): boolean {
@@ -2639,7 +2678,7 @@ function rangeBounds(range?: string): { start?: string; end?: string } {
 }
 
 // 用量分析：按范围/维度/聚合计算行、卡片（供 analysis 与 export 共用）
-function computeUsageRows(p: any): { scope: string; dept_label?: string; cards: any; rows: any[] } {
+function computeUsageRows(p: any): { scope: string; anchor_org_id: string | null; scope_label?: string; cards: any; rows: any[] } {
   const scopeInfo = resolveUsageScope(p);
   let records = filterUsageByScope(usageDailyRecords, scopeInfo);
   const bounds = rangeBounds(p.range);
@@ -2688,7 +2727,13 @@ function computeUsageRows(p: any): { scope: string; dept_label?: string; cards: 
     requests: rows.reduce((s, r) => s + r.requests, 0),
     subjects,
   };
-  return { scope: scopeInfo.scope, dept_label: scopeInfo.scope === 'dept' ? orgNameById(getCurrentMockUser().org_id) : undefined, cards, rows };
+  return {
+    scope: scopeInfo.scope,
+    anchor_org_id: scopeInfo.anchor_org_id ?? null,
+    scope_label: scopeInfo.scope === 'org' ? `${orgNameById(scopeInfo.anchor_org_id!)}及下级` : undefined,
+    cards,
+    rows,
+  };
 }
 
 // =================== AGENTS.md 模板文件 ===================
@@ -5741,8 +5786,6 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const scopeInfo = resolveUsageScope(p);
     let records = filterUsageByScope(usageDailyRecords, scopeInfo);
     records = filterUsageRecords(records, p);
-    const dept_options = organizations.filter(o => o.type === 'department').map(o => ({ id: o.id, name: o.name }));
-    const dept_label = scopeInfo.scope === 'dept' ? orgNameById(getCurrentMockUser().org_id) : undefined;
 
     let total_cost = 0, total_requests = 0, total_input = 0, total_output = 0, latencySum = 0, latencyCount = 0;
     const sourceSet = new Set<string>();
@@ -5794,8 +5837,9 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
 
     return ok({
       scope: scopeInfo.scope,
-      dept_options,
-      dept_label,
+      anchor_org_id: scopeInfo.anchor_org_id ?? null,
+      scope_label: scopeInfo.scope === 'org' ? `${orgNameById(scopeInfo.anchor_org_id!)}及下级` : undefined,
+      org_tree: buildOrgTreeWithAllowed(scopeInfo.scope === 'org' ? scopeInfo.anchor_org_id : (scopeInfo.scope === 'all' ? 'org-1' : null)),
       cards: { total_cost: round4(total_cost), total_requests, total_tokens, input_tokens: total_input, output_tokens: total_output, avg_latency_ms, active_sources: sourceSet.size },
       trend, model_top, source_share,
       detail: { by_model, by_source, by_source_model },
@@ -5803,16 +5847,24 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   }
 
   if (path === '/stats/usage/analysis' && method === 'get') {
-    const { scope, dept_label, cards, rows } = computeUsageRows(p);
+    const { scope, scope_label, anchor_org_id, cards, rows } = computeUsageRows(p);
     const page = Number(p.page) || 1;
     const page_size = Number(p.page_size) || 20;
     const total = rows.length;
     const startIdx = (page - 1) * page_size;
-    return ok({ scope, dept_label, dept_options: organizations.filter(o => o.type === 'department').map(o => ({ id: o.id, name: o.name })), cards, rows: rows.slice(startIdx, startIdx + page_size), total, page, page_size });
+    return ok({ scope, scope_label, anchor_org_id, org_tree: buildOrgTreeWithAllowed(scope === 'org' ? anchor_org_id : (scope === 'all' ? 'org-1' : null)), cards, rows: rows.slice(startIdx, startIdx + page_size), total, page, page_size });
   }
 
   if (/^\/stats\/usage\/analysis\/[^/]+\/detail$/.test(path) && method === 'get') {
     const userId = path.split('/')[4];
+    // 越权查看校验：目标用户必须在当前可见范围内
+    const scopeInfo = resolveUsageScope(p);
+    const target = users.find(u => u.id === userId);
+    let visible: boolean;
+    if (scopeInfo.scope === 'self') visible = userId === scopeInfo.user_id;
+    else if (scopeInfo.dept_ids === null) visible = true;
+    else visible = !!target && scopeInfo.dept_ids.includes(target.org_id);
+    if (!visible) return { code: 403, message: '无权查看该成员明细', data: null };
     const bounds = rangeBounds(p.range);
     let records = usageDailyRecords.filter(r => r.user_id === userId);
     if (bounds.start) records = records.filter(r => r.date >= bounds.start!);

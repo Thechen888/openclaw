@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { PageHeader, StatCard, DataTable, LoadingState } from '../../components/shared';
 import { usageAnalysisApi } from '../../api/client';
+import OrgScopeSelect from '../../components/OrgScopeSelect';
 import UsageDetailDialog from './components/UsageDetailDialog';
 
 const fmtMoney = (v: number) => `¥${(v ?? 0).toFixed(4)}`;
@@ -24,7 +25,7 @@ export default function UsageAnalysisPage() {
   const { enqueueSnackbar } = useSnackbar();
   const [dimension, setDimension] = useState<'user' | 'resource'>('user');
   const [range, setRange] = useState('month');
-  const [deptId, setDeptId] = useState('');
+  const [orgFilter, setOrgFilter] = useState<string | null | undefined>(undefined);
   const [aggOrg, setAggOrg] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -32,7 +33,7 @@ export default function UsageAnalysisPage() {
 
   const params = {
     dimension, range,
-    dept_id: deptId || undefined,
+    org_id: orgFilter || undefined,
     agg_org: aggOrg || undefined,
     page, page_size: pageSize,
   };
@@ -44,6 +45,16 @@ export default function UsageAnalysisPage() {
 
   const payload = data?.data?.data || {};
   const scope: string = payload.scope || 'self';
+  const anchorOrgId: string | null = payload.anchor_org_id ?? null;
+  const orgTree: any[] = payload.org_tree || [];
+  const orgPathName = (id: string): string => {
+    const byId = new Map<string, any>(orgTree.map((n: any) => [n.id, n]));
+    const names: string[] = [];
+    let cur: any = byId.get(id);
+    let guard = 0;
+    while (cur && guard++ < 32) { names.unshift(cur.name); cur = cur.parent_id ? byId.get(cur.parent_id) : undefined; }
+    return names.length <= 1 ? (names[0] || id) : names.slice(1).join(' / ');
+  };
   const cards = payload.cards || {};
   const rows: any[] = payload.rows || [];
   const total: number = payload.total || 0;
@@ -55,7 +66,7 @@ export default function UsageAnalysisPage() {
 
   const handleExport = async () => {
     try {
-      const res = await usageAnalysisApi.exportCsv({ dimension, range, dept_id: deptId || undefined, agg_org: aggOrg || undefined });
+      const res = await usageAnalysisApi.exportCsv({ dimension, range, org_id: orgFilter || undefined, agg_org: aggOrg || undefined });
       const csv: string = res.data?.data ?? '';
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -104,22 +115,22 @@ export default function UsageAnalysisPage() {
               </Select>
             </FormControl>
 
-            {scope === 'all' && (
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <InputLabel>部门范围</InputLabel>
-                <Select label="部门范围" value={deptId}
-                  onChange={(e) => { setDeptId(e.target.value); setPage(1); }}>
-                  <MenuItem value="">全部部门</MenuItem>
-                  {(payload.dept_options || []).map((d: any) => (
-                    <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-            {scope === 'dept' && (
-              <Tooltip title="如需查看其他部门，请联系管理员开通权限">
-                <Chip color="primary" variant="outlined" label={`${payload.dept_label || '本部门'} · 仅本部门`} />
-              </Tooltip>
+            {(scope === 'all' || scope === 'org') && (
+              <>
+                <OrgScopeSelect
+                  tree={orgTree}
+                  scope={scope}
+                  anchorOrgId={anchorOrgId}
+                  value={orgFilter}
+                  onChange={(v) => { setOrgFilter(v); setPage(1); }}
+                  orgPathName={orgPathName}
+                />
+                {payload.scope_label && (
+                  <Typography variant="caption" color="text.secondary">
+                    可见范围：{payload.scope_label}
+                  </Typography>
+                )}
+              </>
             )}
 
             {!isSelf && (

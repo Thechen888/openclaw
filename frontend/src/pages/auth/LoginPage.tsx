@@ -16,7 +16,8 @@ export default function LoginPage() {
   const DEMO_ACCOUNTS = [
     { username: 'admin',       label: '张伟 · 超管' },
     { username: 'chenzhiyuan', label: '陈志远 · 总经理' },
-    { username: 'lisi',        label: '李思 · 销售部负责人' },
+    { username: 'lisi',        label: '李思 · 营销中心负责人' },
+    { username: 'zhoujiu',     label: '周九 · 销售部负责人' },
     { username: 'wangwu',      label: '王五 · 普通成员' },
   ];
 

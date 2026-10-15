@@ -16,6 +16,7 @@ import {
 import {
   PageHeader, StatCard, DataTable, LoadingState, EmptyState,
 } from '../../components/shared';
+import OrgScopeSelect from '../../components/OrgScopeSelect';
 import { usageCostApi } from '../../api/client';
 
 const fmtMoney = (v: number) => `¥${(v ?? 0).toFixed(4)}`;
@@ -32,7 +33,7 @@ type DetailTab = 'by_model' | 'by_source' | 'by_source_model';
 export default function CostStatsPage() {
   const [start, setStart] = useState<Dayjs>(dayjs().startOf('month'));
   const [end, setEnd] = useState<Dayjs>(dayjs());
-  const [deptId, setDeptId] = useState('');
+  const [orgFilter, setOrgFilter] = useState<string | null | undefined>(undefined);
   const [sourceId, setSourceId] = useState('');
   const [model, setModel] = useState('');
   const [tab, setTab] = useState<DetailTab>('by_model');
@@ -40,7 +41,7 @@ export default function CostStatsPage() {
   const filters = {
     start: start.format('YYYY-MM-DD'),
     end: end.format('YYYY-MM-DD'),
-    dept_id: deptId || undefined,
+    org_id: orgFilter || undefined,
     source_id: sourceId || undefined,
     model: model || undefined,
   };
@@ -52,6 +53,16 @@ export default function CostStatsPage() {
 
   const ov = data?.data?.data || {};
   const scope: string = ov.scope || 'self';
+  const anchorOrgId: string | null = ov.anchor_org_id ?? null;
+  const orgTree: any[] = ov.org_tree || [];
+  const orgPathName = (id: string): string => {
+    const byId = new Map<string, any>(orgTree.map((n: any) => [n.id, n]));
+    const names: string[] = [];
+    let cur: any = byId.get(id);
+    let guard = 0;
+    while (cur && guard++ < 32) { names.unshift(cur.name); cur = cur.parent_id ? byId.get(cur.parent_id) : undefined; }
+    return names.length <= 1 ? (names[0] || id) : names.slice(1).join(' / ');
+  };
   const cards = ov.cards || {};
   const trend: any[] = ov.trend || [];
   const modelTop: any[] = ov.model_top || [];
@@ -93,23 +104,22 @@ export default function CostStatsPage() {
               />
             </LocalizationProvider>
 
-            {scope === 'all' && (
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <InputLabel>部门范围</InputLabel>
-                <Select label="部门范围" value={deptId}
-                  onChange={(e) => setDeptId(e.target.value)}>
-                  <MenuItem value="">全部部门</MenuItem>
-                  {(ov.dept_options || []).map((d: any) => (
-                    <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-            {scope === 'dept' && (
-              <Tooltip title="如需查看其他部门，请联系管理员开通权限">
-                <Chip color="primary" variant="outlined"
-                  label={`${ov.dept_label || '本部门'} · 仅本部门`} />
-              </Tooltip>
+            {(scope === 'all' || scope === 'org') && (
+              <>
+                <OrgScopeSelect
+                  tree={orgTree}
+                  scope={scope}
+                  anchorOrgId={anchorOrgId}
+                  value={orgFilter}
+                  onChange={(v) => setOrgFilter(v)}
+                  orgPathName={orgPathName}
+                />
+                {ov.scope_label && (
+                  <Typography variant="caption" color="text.secondary">
+                    可见范围：{ov.scope_label}
+                  </Typography>
+                )}
+              </>
             )}
 
             <FormControl size="small" sx={{ minWidth: 160 }}>

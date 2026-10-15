@@ -18,9 +18,9 @@ globalCyberStyles.textContent = `
     100% { border-color: rgba(0,212,255,0.15); }
   }
 
-  /* 内容进入动画 */
+  /* 内容进入动画（起始不透明度保持为 1，避免在不推进动画帧的受限 webview 中内容永久停在 opacity:0 而全黑） */
   @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 1; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
@@ -100,6 +100,15 @@ globalCyberStyles.textContent = `
   ::selection {
     background: rgba(0,212,255,0.25);
     color: #fff;
+  }
+
+  /* 无障碍/受限渲染环境兼容：降低动效，让合成器能产出稳定首帧（不涉及任何颜色） */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 `;
 document.head.appendChild(globalCyberStyles);
