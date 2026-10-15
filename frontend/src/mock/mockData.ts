@@ -3167,7 +3167,68 @@ const notifications: any[] = [
   { id: 'n-4', user_id: 'u-1', type: 'permission', title: '知识库编辑请求已转交', content: '你申请编辑「售后标准问答库」的请求已通知负责人王五，处理结果会再通知你。', from_name: '系统', action_kind: 'none', session_id: '', read: true, created_at: dayAgo(1) },
   { id: 'n-5', user_id: 'u-1', type: 'approval', title: '你发布的「2026年第19周运营周报」审核未通过', content: '驳回原因:数据口径说明缺失,请补充后重新提交', action_kind: 'report', target_id: 'rpt-1', read: false, created_at: ago(300) },
   { id: 'n-6', user_id: 'u-1', type: 'collab', title: '群组「旧版客服对接群」已被群主解散', content: '群内会话与消息记录已删除', action_kind: 'none', read: true, created_at: dayAgo(2) },
+  { id: 'n-tool-1', user_id: 'u-2', type: 'share', title: '张伟 向你分享了一个小工具', content: 'Token 用量换算器：输入模型单价与 Token 数快速换算成本', from_name: '张伟', action_kind: 'tool', target_id: 'tool-4', read: false, created_at: dayAgo(0.2) },
 ];
+
+// =================== 小工具 ===================
+const SAMPLE_CURVE_TOOL_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>折线绘图</title>
+<style>body{font-family:sans-serif;padding:12px;background:#fafafa}
+input,button{margin:4px;padding:6px;border:1px solid #ccc;border-radius:4px}
+canvas{border:1px solid #ddd;background:#fff;margin-top:8px}
+label{font-size:13px}</style></head><body>
+<h3 style="margin:0 0 8px">折线绘图与取值小工具</h3>
+<label>X坐标(逗号分隔): <input id="xs" value="1,2,3,4,5" size="20"></label><br>
+<label>Y坐标(逗号分隔): <input id="ys" value="10,25,18,32,28" size="20"></label><br>
+<label>模式: <select id="mode"><option value="type1">type1-端点取值</option><option value="type2">type2-平移微调</option></select></label>
+<button onclick="draw()">绘制</button>
+<canvas id="cv" width="500" height="260"></canvas>
+<script>function draw(){var xs=document.getElementById('xs').value.split(',').map(Number);var ys=document.getElementById('ys').value.split(',').map(Number);var cv=document.getElementById('cv');var ctx=cv.getContext('2d');ctx.clearRect(0,0,500,260);ctx.strokeStyle='#1976d2';ctx.lineWidth=2;ctx.beginPath();var n=Math.min(xs.length,ys.length);for(var i=0;i<n;i++){var x=40+i*(440/(n-1));var y=240-ys[i]*7;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);ctx.fillStyle='#d32f2f';ctx.fillRect(x-3,y-3,6,6);}ctx.stroke();}</script></body></html>`;
+
+const SAMPLE_NOTES_TOOL_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>会议纪要格式化</title>
+<style>body{font-family:sans-serif;padding:12px;background:#fafafa}
+textarea{width:100%;height:100px;margin:4px 0;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box}
+button{padding:8px 16px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer}
+.out{margin-top:8px;padding:10px;background:#fff;border:1px solid #ddd;border-radius:4px;white-space:pre-wrap;font-size:13px}</style></head><body>
+<h3 style="margin:0 0 8px">会议纪要格式化</h3>
+<textarea id="inp" placeholder="粘贴杂乱纪要..."></textarea><br>
+<button onclick="fmt()">格式化输出</button>
+<div class="out" id="out"></div>
+<script>function fmt(){var t=document.getElementById('inp').value;var lines=t.split('\\n').filter(function(l){return l.trim();});var conclusion=[],todo=[],risk=[];lines.forEach(function(l){if(l.indexOf('结论')>=0||l.indexOf('决定')>=0)conclusion.push(l);else if(l.indexOf('待办')>=0||l.indexOf('TODO')>=0||l.indexOf('需要')>=0)todo.push(l);else if(l.indexOf('风险')>=0||l.indexOf('问题')>=0)risk.push(l);});var out='【结论】\\n'+(conclusion.length?conclusion.join('\\n'):'(无)')+'\\n\\n【待办】\\n'+(todo.length?todo.join('\\n'):'(无)')+'\\n\\n【风险】\\n'+(risk.length?risk.join('\\n'):'(无)');document.getElementById('out').textContent=out;}</script></body></html>`;
+
+const SAMPLE_CALC_TOOL_HTML = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>计算器</title>
+<style>body{font-family:sans-serif;padding:12px;background:#fafafa}
+label{display:block;margin:6px 0;font-size:13px}
+input{padding:6px;border:1px solid #ccc;border-radius:4px;width:180px}
+button{padding:8px 16px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-top:6px}
+.res{margin-top:10px;padding:10px;background:#e8f5e9;border-radius:4px;font-size:15px;font-weight:bold}</style></head><body>
+<h3 style="margin:0 0 8px">通用计算器</h3>
+<label>数值A: <input id="a" type="number" value="100"></label>
+<label>数值B: <input id="b" type="number" value="200"></label>
+<label>运算: <select id="op"><option value="+">加</option><option value="-">减</option><option value="*">乘</option><option value="/">除</option></select></label>
+<button onclick="calc()">计算</button>
+<div class="res" id="res">结果: -</div>
+<script>function calc(){var a=parseFloat(document.getElementById('a').value);var b=parseFloat(document.getElementById('b').value);var op=document.getElementById('op').value;var r=0;if(op==='+')r=a+b;else if(op==='-')r=a-b;else if(op==='*')r=a*b;else if(op==='/')r=b!==0?a/b:'除数不能为0';document.getElementById('res').textContent='结果: '+r;}</script></body></html>`;
+
+const tools: any[] = [
+  { id: 'tool-1', name: '折线绘图与取值小工具', description: '根据坐标数据绘制折线，支持 type1/type2 两种端点取值模式，可平移微调', category: '绘图', html_content: SAMPLE_CURVE_TOOL_HTML, creator_id: 'u-3', creator_name: '王五', creator_dept: '技术研发部', use_count: 47, created_at: dayAgo(12), updated_at: dayAgo(2), forked_from: null },
+  { id: 'tool-2', name: '会议纪要格式化', description: '粘贴杂乱纪要，一键输出标准三段式（结论/待办/风险）', category: '文本处理', html_content: SAMPLE_NOTES_TOOL_HTML, creator_id: 'u-2', creator_name: '李思', creator_dept: '销售部', use_count: 12, created_at: dayAgo(6), updated_at: dayAgo(6), forked_from: null },
+  { id: 'tool-3', name: '销售提成速算器', description: '按 2026 年提成政策输入合同额与回款比例，快速估算提成', category: '计算器', html_content: SAMPLE_CALC_TOOL_HTML, creator_id: 'u-7', creator_name: '周九', creator_dept: '销售部', use_count: 89, created_at: dayAgo(20), updated_at: dayAgo(1), forked_from: null },
+  { id: 'tool-4', name: 'Token 用量换算器', description: '输入模型单价与 Token 数，换算人民币成本，支持输入输出分开计价', category: '计算器', html_content: SAMPLE_CALC_TOOL_HTML, creator_id: 'u-1', creator_name: '张伟', creator_dept: '总公司', use_count: 5, created_at: dayAgo(1), updated_at: dayAgo(1), forked_from: null },
+];
+
+const toolShares: any[] = [
+  { id: 'ts-1', tool_id: 'tool-1', target_type: 'dept', target_id: 'org-2', target_name: '技术研发部', granted_by: 'u-3', granted_by_name: '王五', created_at: dayAgo(10) },
+  { id: 'ts-2', tool_id: 'tool-3', target_type: 'dept', target_id: 'org-3', target_name: '销售部', granted_by: 'u-7', granted_by_name: '周九', created_at: dayAgo(8) },
+  { id: 'ts-3', tool_id: 'tool-4', target_type: 'user', target_id: 'u-2', target_name: '李思', granted_by: 'u-1', granted_by_name: '张伟', created_at: dayAgo(0.2) },
+];
+
+function canSeeTool(u: any, t: any): boolean {
+  if (t.creator_id === u.id) return true;
+  return toolShares.some(s => s.tool_id === t.id && (
+    (s.target_type === 'user' && s.target_id === u.id) ||
+    (s.target_type === 'dept' && getOrgDescendantIds(s.target_id).includes(u.org_id))
+  ));
+}
 
 // =================== 路由匹配 & 响应 ===================
 export function handleMockRequest(method: string, url: string, params?: any, data?: any) {
@@ -5900,6 +5961,120 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
       lines.push([r.user_name || '', r.dept_name || '', r.resource_name || '', r.requests, r.input_tokens, r.output_tokens, r.tokens, r.cache_tokens, r.cache_pct, r.cost, r.pct].map(esc).join(','));
     }
     return ok('\uFEFF' + lines.join('\r\n'));
+  }
+
+  // =================== 小工具路由 ===================
+  if (path === '/tools' && method === 'get') {
+    const cu = getCurrentMockUser();
+    const tab = p.tab || 'discover';
+    let pool = tools.filter(t => canSeeTool(cu, t));
+    if (tab === 'mine') pool = pool.filter(t => t.creator_id === cu.id);
+    else if (tab === 'shared') pool = pool.filter(t => t.creator_id !== cu.id && toolShares.some(s => s.tool_id === t.id && ((s.target_type === 'user' && s.target_id === cu.id) || (s.target_type === 'dept' && getOrgDescendantIds(s.target_id).includes(cu.org_id)))));
+    if (tab === 'discover') pool.sort((a: any, b: any) => b.use_count - a.use_count);
+    const list = pool.map((t: any) => { const { html_content, ...rest } = t; return rest; });
+    return ok(list);
+  }
+  if (path === '/tools' && method === 'post') {
+    const cu = getCurrentMockUser();
+    const newTool = { id: 'tool-' + (tools.length + 1 + '-' + Date.now()), name: data.name, description: data.description || '', category: data.category || '其他', html_content: data.html_content || '', creator_id: cu.id, creator_name: cu.name, creator_dept: organizations.find(o => o.id === cu.org_id)?.name || '', use_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), forked_from: null };
+    tools.push(newTool);
+    return ok(newTool);
+  }
+  const toolForkMatch = path.match(/^\/tools\/([^/]+)\/fork$/);
+  if (toolForkMatch && method === 'post') {
+    const tid = toolForkMatch[1];
+    const cu = getCurrentMockUser();
+    const orig = tools.find(t => t.id === tid);
+    if (!orig || !canSeeTool(cu, orig)) return { code: 403, message: '无权访问该工具', data: null };
+    const forked = { id: 'tool-' + (tools.length + 1 + '-' + Date.now()), name: data.name || orig.name + '（副本）', description: orig.description, category: orig.category, html_content: orig.html_content, creator_id: cu.id, creator_name: cu.name, creator_dept: organizations.find(o => o.id === cu.org_id)?.name || '', use_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), forked_from: { tool_id: orig.id, name: orig.name, creator_id: orig.creator_id, creator_name: orig.creator_name } };
+    tools.push(forked);
+    notifications.unshift({ id: 'n-fork-' + Date.now(), user_id: orig.creator_id, type: 'share', title: cu.name + ' 改编了你的小工具', content: forked.name, from_name: cu.name, action_kind: 'tool', target_id: forked.id, read: false, created_at: new Date().toISOString() });
+    return ok(forked);
+  }
+  const toolOpenMatch = path.match(/^\/tools\/([^/]+)\/open$/);
+  if (toolOpenMatch && method === 'post') {
+    const tid = toolOpenMatch[1];
+    const t = tools.find(x => x.id === tid);
+    if (t) t.use_count++;
+    return ok(t || null);
+  }
+  const toolSharesMatch = path.match(/^\/tools\/([^/]+)\/shares$/);
+  if (toolSharesMatch && method === 'post') {
+    const tid = toolSharesMatch[1];
+    const cu = getCurrentMockUser();
+    const targets: any[] = data?.targets || [];
+    const added: any[] = [];
+    targets.forEach(tg => {
+      const shareId = 'ts-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+      const tname = tg.target_type === 'user' ? (users.find(u => u.id === tg.target_id)?.name || tg.target_id) : (organizations.find(o => o.id === tg.target_id)?.name || tg.target_id);
+      toolShares.push({ id: shareId, tool_id: tid, target_type: tg.target_type, target_id: tg.target_id, target_name: tname, granted_by: cu.id, granted_by_name: cu.name, created_at: new Date().toISOString() });
+      added.push({ shareId, target_type: tg.target_type, target_id: tg.target_id, target_name: tname });
+      const tool = tools.find(t => t.id === tid);
+      const toolName = tool?.name || '';
+      if (tg.target_type === 'user') {
+        notifications.unshift({ id: 'n-share-' + Date.now() + '-' + tg.target_id, user_id: tg.target_id, type: 'share', title: cu.name + ' 向你分享了一个小工具', content: toolName, from_name: cu.name, action_kind: 'tool', target_id: tid, read: false, created_at: new Date().toISOString() });
+      } else {
+        const deptUserIds = users.filter(u => getOrgDescendantIds(tg.target_id).includes(u.org_id) && u.status === 'active').map(u => u.id);
+        deptUserIds.forEach(uid => {
+          notifications.unshift({ id: 'n-share-' + Date.now() + '-' + uid, user_id: uid, type: 'share', title: cu.name + ' 向你分享了一个小工具', content: toolName, from_name: cu.name, action_kind: 'tool', target_id: tid, read: false, created_at: new Date().toISOString() });
+        });
+      }
+    });
+    return ok(added);
+  }
+  if (toolSharesMatch && method === 'get') {
+    const tid = toolSharesMatch[1];
+    return ok(toolShares.filter(s => s.tool_id === tid));
+  }
+  const toolShareDelMatch = path.match(/^\/tools\/([^/]+)\/shares\/([^/]+)$/);
+  if (toolShareDelMatch && method === 'delete') {
+    const tid = toolShareDelMatch[1];
+    const sid = toolShareDelMatch[2];
+    const idx = toolShares.findIndex(s => s.id === sid && s.tool_id === tid);
+    if (idx >= 0) toolShares.splice(idx, 1);
+    return ok(null);
+  }
+  const toolContentMatch = path.match(/^\/tools\/([^/]+)\/content$/);
+  if (toolContentMatch && method === 'put') {
+    const tid = toolContentMatch[1];
+    const cu = getCurrentMockUser();
+    const t = tools.find(x => x.id === tid);
+    if (!t) return ok(null);
+    if (t.creator_id !== cu.id) return { code: 403, message: '仅创建者可修改', data: null };
+    t.html_content = data.html_content;
+    t.updated_at = new Date().toISOString();
+    return ok(t);
+  }
+  const toolIdMatch = path.match(/^\/tools\/([^/]+)$/);
+  if (toolIdMatch && method === 'get') {
+    const tid = toolIdMatch[1];
+    const cu = getCurrentMockUser();
+    const t = tools.find(x => x.id === tid);
+    if (!t || !canSeeTool(cu, t)) return { code: 403, message: '无权访问该工具', data: null };
+    return ok(t);
+  }
+  if (toolIdMatch && method === 'put') {
+    const tid = toolIdMatch[1];
+    const cu = getCurrentMockUser();
+    const t = tools.find(x => x.id === tid);
+    if (!t) return ok(null);
+    if (t.creator_id !== cu.id) return { code: 403, message: '仅创建者可修改', data: null };
+    if (data.name !== undefined) t.name = data.name;
+    if (data.description !== undefined) t.description = data.description;
+    if (data.category !== undefined) t.category = data.category;
+    t.updated_at = new Date().toISOString();
+    return ok(t);
+  }
+  if (toolIdMatch && method === 'delete') {
+    const tid = toolIdMatch[1];
+    const cu = getCurrentMockUser();
+    const idx = tools.findIndex(x => x.id === tid);
+    if (idx < 0) return ok(null);
+    if (tools[idx].creator_id !== cu.id) return { code: 403, message: '仅创建者可删除', data: null };
+    tools.splice(idx, 1);
+    let si: number;
+    while ((si = toolShares.findIndex(s => s.tool_id === tid)) >= 0) toolShares.splice(si, 1);
+    return ok(null);
   }
 
   // Default

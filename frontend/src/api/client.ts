@@ -491,3 +491,18 @@ export const tokenResaleApi = {
   // 执行结算：将当前周期 pending 用量归集并关闭
   settle: () => api.post('/token-resale/settle'),
 };
+
+// =================== 小工具 ===================
+export const toolsApi = {
+  list: (params: any) => api.get('/tools', { params }),
+  detail: (id: string) => api.get(`/tools/${id}`),
+  create: (data: any) => api.post('/tools', data),
+  update: (id: string, data: any) => api.put(`/tools/${id}`, data),
+  updateContent: (id: string, html: string) => api.put(`/tools/${id}/content`, { html_content: html }),
+  remove: (id: string) => api.delete(`/tools/${id}`),
+  open: (id: string) => api.post(`/tools/${id}/open`),
+  share: (id: string, targets: any[]) => api.post(`/tools/${id}/shares`, { targets }),
+  shares: (id: string) => api.get(`/tools/${id}/shares`),
+  unshare: (id: string, shareId: string) => api.delete(`/tools/${id}/shares/${shareId}`),
+  fork: (id: string, name: string) => api.post(`/tools/${id}/fork`, { name }),
+};

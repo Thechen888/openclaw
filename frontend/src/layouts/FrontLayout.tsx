@@ -10,7 +10,7 @@ import {
   AutoStories, Search, Settings, Logout,
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
-  AccountTree, Share, DarkMode, LightMode, Groups,
+  AccountTree, Share, DarkMode, LightMode, Groups, Handyman, Widgets,
   MoreHoriz, ChecklistRounded, Edit, Delete, Close, PersonAdd,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -88,6 +88,13 @@ const NAV_SECTIONS: NavSectionDef[] = [
       { icon: <Storefront sx={{ fontSize: 14 }} />, label: '技能市场', path: '/skills/market' },
       { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/skills/my-installed' },
       { icon: <Extension sx={{ fontSize: 14 }} />, label: '我创建的', path: '/skills/my' },
+    ],
+  },
+  {
+    label: '小工具',
+    icon: <Handyman fontSize="small" />,
+    items: [
+      { icon: <Widgets sx={{ fontSize: 14 }} />, label: '工具箱', path: '/tools' },
     ],
   },
 ];

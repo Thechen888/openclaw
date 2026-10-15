@@ -79,6 +79,7 @@ import WikiPage from '../pages/rag/WikiPage';
 import WorkspacePage from '../pages/workspace/WorkspacePage';
 import ChatPage from '../pages/chat/ChatPage';
 import ConversationPage from '../pages/chat/ConversationPage';
+import ToolsPage from '../pages/tools/ToolsPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -177,6 +178,8 @@ export const router = createBrowserRouter([
       { path: 'rag/knowledge-bases/:kbId/wiki', element: <WikiPage /> },
       // Workspace
       { path: 'workspace', element: <WorkspacePage /> },
+      // Tools
+      { path: 'tools', element: <ToolsPage /> },
       // Chat
       { path: 'chat', element: <ChatPage /> },
       { path: 'chat/:sessionId', element: <ConversationPage /> },

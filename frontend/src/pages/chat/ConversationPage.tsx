@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box, Typography, Paper, Avatar, TextField, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem, Switch, Button,
@@ -143,6 +143,17 @@ export default function ConversationPage() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [searchParams] = useSearchParams();
+
+  // ?prompt= 预填（从 AI 修改工具跳转过来）
+  useEffect(() => {
+    const prompt = searchParams.get('prompt');
+    if (prompt) {
+      setInput(prompt);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 分享弹窗
   const [shareOpen, setShareOpen] = useState(false);
@@ -989,6 +1000,7 @@ export default function ConversationPage() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             disabled={sending}
+            inputRef={inputRef}
             placeholder="今天帮你做些什么？@引用对话文件，/调用技能与指令"
             sx={{
               '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
