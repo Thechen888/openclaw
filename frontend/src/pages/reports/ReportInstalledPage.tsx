@@ -2,14 +2,15 @@ import { useState } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Chip, Button, TextField,
   InputAdornment, IconButton, Tooltip, Skeleton, Avatar, Dialog, DialogTitle,
-  DialogContent, DialogActions,
+  DialogContent, DialogActions, Menu, MenuItem, ListItemIcon, ListItemText,
 } from '@mui/material';
-import { Search, Refresh, AutoStories, Visibility, Delete, SystemUpdateAlt } from '@mui/icons-material';
+import { Search, Refresh, AutoStories, Visibility, Delete, SystemUpdateAlt, Share, Info } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/shared';
 import api from '../../api/client';
+import ShareResultDialog from './components/ShareResultDialog';
 
 const verNum = (v: string) => {
   const m = String(v).replace(/^v/, '').match(/^(\d+)\.(\d+)\.?(\d+)?/);
@@ -24,6 +25,9 @@ export default function ReportInstalledPage() {
   const { enqueueSnackbar } = useSnackbar();
   const [search, setSearch] = useState('');
   const [confirmUninstall, setConfirmUninstall] = useState<any>(null);
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [menuReport, setMenuReport] = useState<any>(null);
+  const [shareReport, setShareReport] = useState<any>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['reports-installed', { search }],
@@ -49,11 +53,18 @@ export default function ReportInstalledPage() {
     },
   });
 
+  const handleMenuOpen = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    setMenuAnchor(e.currentTarget as HTMLElement);
+    setMenuReport(item);
+  };
+  const handleMenuClose = () => { setMenuAnchor(null); setMenuReport(null); };
+
   return (
     <Box sx={{ px: 3, py: 3 }}>
       <PageHeader
         title="我安装的报告"
-        subtitle="已安装到本地的报告模板列表"
+        subtitle="查看和管理已安装的报告——安装者的报告可运行、可分享自己跑出的结果，不可编辑定义"
         actions={<Tooltip title="刷新"><IconButton onClick={() => refetch()}><Refresh /></IconButton></Tooltip>}
       />
 
@@ -89,13 +100,13 @@ export default function ReportInstalledPage() {
                       onClick={(e) => { e.stopPropagation(); navigate(`/reports/installed/${item.id}`); }}
                       sx={{ fontSize: 12, textTransform: 'none', minWidth: 60, height: 28 }}
                     >
-                      查看
+                      详情
                     </Button>
                   </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mb: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {item.description || '暂无描述'}
                   </Typography>
-                  {/* 版本 chip + 内测标 + NEW 角标 */}
+                  {/* 版本 chip + 内测标 */}
                   <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
                     <Chip label={`v${item.installed_version || '?'}`} size="small" variant="outlined" sx={{ fontSize: 10, height: 20, fontFamily: 'monospace' }} />
                     {item.is_beta && (
@@ -104,20 +115,21 @@ export default function ReportInstalledPage() {
                       </Tooltip>
                     )}
                     {hasUpdate(item) && (
-                      <Tooltip title={`有新版本 v${item.version}`}>
-                        <Chip label="NEW" size="small" sx={{ fontSize: 9, height: 16, bgcolor: 'info.main', color: '#fff', fontWeight: 700 }} />
-                      </Tooltip>
+                      <Chip label="有更新" size="small" sx={{ fontSize: 9, height: 16, bgcolor: 'info.main', color: '#fff', fontWeight: 700 }} />
                     )}
                   </Box>
-                  {/* 升级 + 卸载按钮 */}
+                  {/* 操作按钮 */}
                   <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                    {hasUpdate(item) && (
-                      <Tooltip title={`升级到 v${item.version}`}>
-                        <IconButton size="small" color="info" onClick={(e) => { e.stopPropagation(); upgradeMutation.mutate(item.id); }}>
-                          <SystemUpdateAlt fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                    <Tooltip title="分享结果">
+                      <IconButton size="small" color="primary" onClick={(e) => { e.stopPropagation(); setShareReport(item); }}>
+                        <Share fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={hasUpdate(item) ? `升级到 v${item.version}` : '检查更新'}>
+                      <IconButton size="small" color={hasUpdate(item) ? 'info' : 'default'} onClick={(e) => { e.stopPropagation(); if (hasUpdate(item)) upgradeMutation.mutate(item.id); else enqueueSnackbar('已是最新版本', { variant: 'info' }); }}>
+                        <SystemUpdateAlt fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="卸载">
                       <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); setConfirmUninstall(item); }}>
                         <Delete fontSize="small" />
@@ -144,6 +156,11 @@ export default function ReportInstalledPage() {
           <Button variant="contained" color="error" onClick={() => confirmUninstall && uninstallMutation.mutate(confirmUninstall.id)} disabled={uninstallMutation.isPending}>确认卸载</Button>
         </DialogActions>
       </Dialog>
+
+      {/* 分享结果弹窗 */}
+      {shareReport && (
+        <ShareResultDialog reportId={shareReport.report_id || shareReport.id} reportTitle={shareReport.name || shareReport.title} onClose={() => setShareReport(null)} />
+      )}
     </Box>
   );
 }

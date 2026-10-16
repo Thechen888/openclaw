@@ -80,6 +80,9 @@ import WorkspacePage from '../pages/workspace/WorkspacePage';
 import ChatPage from '../pages/chat/ChatPage';
 import ConversationPage from '../pages/chat/ConversationPage';
 import ToolsPage from '../pages/tools/ToolsPage';
+import ReportBrowsePage from '../pages/reports/ReportBrowsePage';
+import ReportPublishPageAdmin from '../pages/admin/ReportPublishPage';
+import ReportRegistryPage from '../pages/admin/ReportRegistryPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -169,6 +172,7 @@ export const router = createBrowserRouter([
       { path: 'reports/installed', element: <ReportInstalledPage /> },
       { path: 'reports/installed/:id', element: <ReportInstalledDetailPage /> },
       { path: 'reports/my', element: <ReportMyPage /> },
+      { path: 'reports/browse', element: <ReportBrowsePage /> },
       { path: 'reports/view/:id', element: <ReportViewPage /> },
       // RAG
       { path: 'rag/workbench', element: <KnowledgeBaseWorkbenchPage /> },
@@ -180,6 +184,9 @@ export const router = createBrowserRouter([
       { path: 'workspace', element: <WorkspacePage /> },
       // Tools
       { path: 'tools', element: <ToolsPage /> },
+      // Admin: 数据发布
+      { path: 'admin/report-publish', element: <ReportPublishPageAdmin /> },
+      { path: 'admin/report-registry', element: <ReportRegistryPage /> },
       // Chat
       { path: 'chat', element: <ChatPage /> },
       { path: 'chat/:sessionId', element: <ConversationPage /> },

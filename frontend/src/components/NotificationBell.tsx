@@ -79,7 +79,11 @@ export default function NotificationBell({ dark = false, placement = 'down' }: N
     } else if (kind === 'workflow') {
       navigate('/workflows/my');
     } else if (kind === 'tool' && tid) {
-      navigate('/tools?tab=shared');
+      navigate('/tools');
+    } else if (kind === 'report_run' && tid) {
+      navigate('/reports/my');
+    } else if (kind === 'report_share' && tid) {
+      navigate('/reports/browse');
     }
     // action_kind === 'none' → no navigation
   };

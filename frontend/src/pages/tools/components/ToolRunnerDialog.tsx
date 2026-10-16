@@ -7,12 +7,17 @@ import { toolsApi } from '../../../api/client';
 
 interface Props {
   id: string;
+  currentTab: string;
   onClose: () => void;
   onFork?: (tool: any) => void;
   onAiModify?: (tool: any) => void;
 }
 
-export default function ToolRunnerDialog({ id, onClose, onFork, onAiModify }: Props) {
+function getCurrentUserId(): string {
+  return localStorage.getItem('mock-current-user-id') || 'u-1';
+}
+
+export default function ToolRunnerDialog({ id, currentTab, onClose, onFork, onAiModify }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ['tool-detail', id],
     queryFn: () => toolsApi.detail(id),
@@ -21,6 +26,11 @@ export default function ToolRunnerDialog({ id, onClose, onFork, onAiModify }: Pr
 
   const detail = data?.data?.data;
   const isError = data?.data?.code === 403;
+  const isMine = detail?.creator_id === getCurrentUserId();
+
+  // 矩阵：发现·他人 → 复制为我的；发现·自己 / 我创建的 → 让 AI 修改
+  const showFork = currentTab === 'discover' && !isMine;
+  const showAiModify = (currentTab === 'discover' && isMine) || currentTab === 'mine';
 
   return (
     <Dialog open onClose={onClose} fullScreen sx={{ '& .MuiDialog-paper': { width: '90vw', height: '90vh', m: 'auto' } }}>
@@ -30,10 +40,10 @@ export default function ToolRunnerDialog({ id, onClose, onFork, onAiModify }: Pr
           {detail?.creator_name && <Typography variant="caption" color="text.secondary">创建人：{detail.creator_name}</Typography>}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {detail && onFork && (
+          {detail && showFork && onFork && (
             <Button size="small" startIcon={<ContentCopy />} onClick={() => onFork(detail)}>复制为我的</Button>
           )}
-          {detail && onAiModify && (
+          {detail && showAiModify && onAiModify && (
             <Button size="small" startIcon={<AutoFixHigh />} onClick={() => onAiModify(detail)}>让 AI 修改</Button>
           )}
           <IconButton onClick={onClose}><Close /></IconButton>

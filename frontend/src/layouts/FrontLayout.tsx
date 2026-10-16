@@ -11,7 +11,7 @@ import {
   ExpandMore, ExpandLess, Chat, MenuBook,
   AutoFixHigh, Extension, Storefront, Download,
   AccountTree, Share, DarkMode, LightMode, Groups, Handyman, Widgets,
-  MoreHoriz, ChecklistRounded, Edit, Delete, Close, PersonAdd,
+  MoreHoriz, ChecklistRounded, Edit, Delete, Close, PersonAdd, Visibility,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -72,6 +72,7 @@ const NAV_SECTIONS: NavSectionDef[] = [
       { icon: <Storefront sx={{ fontSize: 14 }} />, label: '报告市场', path: '/reports/market' },
       { icon: <Download sx={{ fontSize: 14 }} />, label: '我安装的', path: '/reports/installed' },
       { icon: <AutoStories sx={{ fontSize: 14 }} />, label: '我创建的', path: '/reports/my' },
+      { icon: <Visibility sx={{ fontSize: 14 }} />, label: '报告浏览', path: '/reports/browse' },
     ],
   },
   {

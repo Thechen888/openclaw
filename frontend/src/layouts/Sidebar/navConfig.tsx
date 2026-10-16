@@ -41,6 +41,7 @@ import {
   Workspaces,
   History as HistoryIcon,
   Download as DownloadIcon,
+  Publish as PublishIcon,
 } from '@mui/icons-material';
 
 export interface NavItem {
@@ -52,6 +53,8 @@ export interface NavItem {
 export interface NavSection {
   label: string;
   items: NavItem[];
+  /** 仅管理员可见 */
+  adminOnly?: boolean;
 }
 
 // ==================== 前台（面向业务用户） ====================
@@ -186,6 +189,14 @@ export const adminNavConfig: NavSection[] = [
     items: [
       { title: '使用统计', path: '/stats/usage', icon: <BarChartIcon fontSize="small" /> },
       { title: '审计日志', path: '/stats/audit', icon: <Gavel fontSize="small" /> },
+    ],
+  },
+  {
+    label: '数据发布',
+    adminOnly: true,
+    items: [
+      { title: '报告数据发布', path: '/admin/report-publish', icon: <PublishIcon fontSize="small" /> },
+      { title: '报告结果台账', path: '/admin/report-registry', icon: <StorageIcon fontSize="small" /> },
     ],
   },
 ];

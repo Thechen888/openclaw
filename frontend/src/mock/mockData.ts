@@ -494,19 +494,19 @@ const roles: any[] = [
 
 // =================== 用户 ===================
 const users: any[] = [
-  { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active',   usage_scope: 'all',  usage_scope_org_id: 'org-1' },
-  { id: 'u-2', username: 'lisi',     name: '李思', email: 'lisi@company.com',     role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'org',  usage_scope_org_id: 'org-10' },
-  { id: 'u-3', username: 'wangwu',   name: '王五', email: 'wangwu@company.com',   role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-4', username: 'zhaoliu',  name: '赵六', email: 'zhaoliu@company.com',  role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-5', username: 'chenqi',   name: '陈七', email: 'chenqi@company.com',   role: 'viewer',  org_id: 'org-4', status: 'disabled', usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-6', username: 'sunba',    name: '孙八', email: 'sunba@company.com',    role: 'member',  org_id: 'org-4', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-7', username: 'zhoujiu',  name: '周九', email: 'zhoujiu@company.com',  role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'org',  usage_scope_org_id: 'org-3' },
-  { id: 'u-8', username: 'chenzhiyuan', name: '陈志远', email: 'chenzy@company.com', role: 'gm',   org_id: 'org-1', status: 'active',   usage_scope: 'all',  usage_scope_org_id: 'org-1' },
-  { id: 'u-9', username: 'hejiu',    name: '何九', email: 'hejiu@company.com',    role: 'member',  org_id: 'org-7', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-10', username: 'xushi',   name: '许十', email: 'xushi@company.com',    role: 'member',  org_id: 'org-8', status: 'active',   usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-11', username: 'qianshiyi', name: '钱十一', email: 'qianshiyi@company.com', role: 'member', org_id: 'org-11', status: 'active', usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-12', username: 'sunshier', name: '孙十二', email: 'sunshier@company.com', role: 'member', org_id: 'org-12', status: 'active', usage_scope: 'self', usage_scope_org_id: null },
-  { id: 'u-13', username: 'zhaoshisan', name: '赵十三', email: 'zhaoshisan@company.com', role: 'member', org_id: 'org-14', status: 'active', usage_scope: 'self', usage_scope_org_id: null },
+  { id: 'u-1', username: 'admin',    name: '张伟', email: 'zhangwei@company.com', role: 'admin',   org_id: 'org-1', status: 'active',   usage_scope: 'all',  usage_scope_org_id: 'org-1', role_ids: ['role-1','role-4'] },
+  { id: 'u-2', username: 'lisi',     name: '李思', email: 'lisi@company.com',     role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'org',  usage_scope_org_id: 'org-10', role_ids: ['role-4','role-5'] },
+  { id: 'u-3', username: 'wangwu',   name: '王五', email: 'wangwu@company.com',   role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-3'] },
+  { id: 'u-4', username: 'zhaoliu',  name: '赵六', email: 'zhaoliu@company.com',  role: 'member',  org_id: 'org-2', status: 'active',   usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-3'] },
+  { id: 'u-5', username: 'chenqi',   name: '陈七', email: 'chenqi@company.com',   role: 'viewer',  org_id: 'org-4', status: 'disabled', usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-2'] },
+  { id: 'u-6', username: 'sunba',    name: '孙八', email: 'sunba@company.com',    role: 'member',  org_id: 'org-4', status: 'active',   usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-3'] },
+  { id: 'u-7', username: 'zhoujiu',  name: '周九', email: 'zhoujiu@company.com',  role: 'manager', org_id: 'org-3', status: 'active',   usage_scope: 'org',  usage_scope_org_id: 'org-3', role_ids: ['role-4','role-5'] },
+  { id: 'u-8', username: 'chenzhiyuan', name: '陈志远', email: 'chenzy@company.com', role: 'gm',   org_id: 'org-1', status: 'active',   usage_scope: 'all',  usage_scope_org_id: 'org-1', role_ids: ['role-1','role-4'] },
+  { id: 'u-9', username: 'hejiu',    name: '何九', email: 'hejiu@company.com',    role: 'member',  org_id: 'org-7', status: 'active',   usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-2'] },
+  { id: 'u-10', username: 'xushi',   name: '许十', email: 'xushi@company.com',    role: 'member',  org_id: 'org-8', status: 'active',   usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-2'] },
+  { id: 'u-11', username: 'qianshiyi', name: '钱十一', email: 'qianshiyi@company.com', role: 'member', org_id: 'org-11', status: 'active', usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-2'] },
+  { id: 'u-12', username: 'sunshier', name: '孙十二', email: 'sunshier@company.com', role: 'member', org_id: 'org-12', status: 'active', usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-2'] },
+  { id: 'u-13', username: 'zhaoshisan', name: '赵十三', email: 'zhaoshisan@company.com', role: 'member', org_id: 'org-14', status: 'active', usage_scope: 'self', usage_scope_org_id: null, role_ids: ['role-2'] },
 ];
 
 // =================== 组织 ===================
@@ -762,6 +762,7 @@ const reportConfigs: any[] = [
     ],
     schedule: { type: 'weekly', day: 5, time: '18:00', date: null },
     publish_to_portal: true, notify_users: true, enabled: true,
+    creator_id: 'u-1', creator_name: '张伟', notify_creator: true,
     last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
@@ -795,6 +796,7 @@ const reportConfigs: any[] = [
     ],
     schedule: { type: 'weekly', day: 5, time: '18:00', date: null },
     publish_to_portal: true, notify_users: true, enabled: true,
+    creator_id: 'u-3', creator_name: '王五', notify_creator: false,
     last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
@@ -816,6 +818,7 @@ const reportConfigs: any[] = [
     ],
     schedule: { type: 'daily', day: null, time: '20:00', date: null },
     publish_to_portal: true, notify_users: false, enabled: true,
+    creator_id: 'u-2', creator_name: '李思', notify_creator: false,
     last_generated_at: dayAgo(0), created_at: dayAgo(10), updated_at: dayAgo(0),
   },
   {
@@ -847,6 +850,7 @@ const reportConfigs: any[] = [
     ],
     schedule: { type: 'weekly', day: 5, time: '20:00', date: null },
     publish_to_portal: true, notify_users: true, enabled: true,
+    creator_id: 'u-6', creator_name: '孙八', notify_creator: false,
     last_generated_at: dayAgo(2), created_at: dayAgo(14), updated_at: dayAgo(2),
   },
   {
@@ -887,6 +891,7 @@ const reportConfigs: any[] = [
     ],
     schedule: { type: 'monthly', day: null, time: '18:00', date: 1 },
     publish_to_portal: true, notify_users: true, enabled: true,
+    creator_id: 'u-8', creator_name: '陈志远', notify_creator: false,
     last_generated_at: dayAgo(15), created_at: dayAgo(30), updated_at: dayAgo(15),
   },
 ];
@@ -901,6 +906,7 @@ const reports: any[] = [
     scope: 'department', department_id: 'org-2', department_name: '技术研发部',
     period: 'weekly', period_start: currentWeek2.week_start, period_end: currentWeek2.week_end,
     agent_id: 'a-7', agent_name: '技术研发部周报Agent',
+    owner_id: 'u-3', owner_name: '王五',
     status: 'published', published_at: dayAgo(1),
     blocks: [
       { block_id: 'blk-1', type: 'metrics_card', title: '核心指标', data: [
@@ -927,6 +933,7 @@ const reports: any[] = [
     scope: 'department', department_id: 'org-4', department_name: 'AI平台组',
     period: 'weekly', period_start: currentWeek2.week_start, period_end: currentWeek2.week_end,
     agent_id: 'a-8', agent_name: 'AI平台组周报Agent',
+    owner_id: 'u-6', owner_name: '孙八',
     status: 'published', published_at: dayAgo(1),
     blocks: [
       { block_id: 'blk-1', type: 'metrics_card', title: '核心指标', data: [
@@ -972,6 +979,7 @@ const reports: any[] = [
     scope: 'company', department_id: '', department_name: '',
     period: 'weekly', period_start: currentWeek2.week_start, period_end: currentWeek2.week_end,
     agent_id: 'a-11', agent_name: '运营汇总周报Agent',
+    owner_id: 'u-1', owner_name: '张伟',
     status: 'published', published_at: dayAgo(1),
     blocks: [
       { block_id: 'blk-21', type: 'metrics_card', title: '公司核心指标', data: [
@@ -992,23 +1000,30 @@ const reports: any[] = [
     created_at: dayAgo(1), updated_at: dayAgo(1),
   },
   {
-    id: 'rpt-5', config_id: 'rc-3', template_id: 'tpl-2',
-    title: '全公司日报 ' + currentWeek2.year + '-06-14',
-    scope: 'company', department_id: '', department_name: '',
-    period: 'daily', period_start: dayAgo(1), period_end: dayAgo(1),
-    agent_id: 'a-11', agent_name: '运营汇总周报Agent',
-    status: 'published', published_at: dayAgo(1),
+    id: 'rpt-5', config_id: 'rc-5', template_id: 'tpl-4',
+    title: '销售部月度跟进报告（' + currentWeek2.year + '年' + (currentWeek2.week > 4 ? currentWeek2.week - 4 : 1) + '月）',
+    scope: 'department', department_id: 'org-3', department_name: '销售部',
+    period: 'monthly', period_start: dayAgo(30), period_end: dayAgo(0),
+    agent_id: 'a-9', agent_name: '销售部周报Agent',
+    owner_id: 'u-2', owner_name: '李思',
+    status: 'published', published_at: dayAgo(2),
     blocks: [
-      { block_id: 'blk-11', type: 'metrics_card', title: '今日指标', data: [
-        { name: '总调用量', value: 21800, unit: '次', change: 2.1, trend: 'higher_better' },
-        { name: '活跃用户', value: 115, unit: '人', change: -5, trend: 'higher_better' },
-        { name: '平台可用率', value: 99.8, unit: '%', change: 0, trend: 'neutral' },
-        { name: '待处理告警', value: 3, unit: '个', change: 1, trend: 'lower_better' },
+      { block_id: 'blk-31', type: 'metrics_card', title: '公司核心指标', data: [
+        { name: '总调用量', value: 143900, unit: '次', change: 8.4, trend: 'higher_better' },
+        { name: '销售额', value: 286.5, unit: '万元', change: 15.3, trend: 'higher_better' },
+        { name: '客服解决率', value: 92.5, unit: '%', change: 1.8, trend: 'higher_better' },
+        { name: '平台可用率', value: 99.7, unit: '%', change: 0.1, trend: 'neutral' },
       ] },
-      { block_id: 'blk-12', type: 'rich_text', title: 'AI 摘要', data: { content: '昨日平台运行正常，调用量稳定在21.8K。GLM-4服务短暂中断5分钟已恢复。' } },
-      { block_id: 'blk-13', type: 'bullet_list', title: '告警事项', data: { items: ['GLM-4 服务中断 14:32-14:37，已自动恢复', 'GPU利用率达85%，建议扩容', 'Agent a-3 运行失败×1'] } },
+      { block_id: 'blk-32', type: 'chart_image', title: '各部门趋势对比', data: { url: '/reports/rpt-5/charts/dept-compare.png', alt: '部门对比', caption: '各部门本月表现对比' } },
+      { block_id: 'blk-33', type: 'data_table', title: '部门排行', data: {
+        headers: ['部门', '调用量', '错误率', '满意度', '得分'],
+        rows: [['AI平台组', '892K', '0.32%', '98%', '95'], ['技术研发部', '245K', '0.1%', '96%', '92'], ['销售部', '-', '-', '94%', '88']],
+      } },
+      { block_id: 'blk-34', type: 'rich_text', title: 'AI 综合分析', data: { content: '本月整体运营平稳。AI平台调用量创新高，销售签约表现亮眼，客服解决率持续提升。需关注下月算力高峰影响。' } },
+      { block_id: 'blk-35', type: 'bullet_list', title: '本月亮点', data: { items: ['技术部完成32卡GPU扩容', 'AI平台接口调用量创新高', '销售签约金额环比增长15.3%'] } },
+      { block_id: 'blk-36', type: 'bullet_list', title: '风险与问题', data: { items: ['下月算力需求预计激增', '高并发限流风险需提前评估'] } },
     ],
-    created_at: dayAgo(1), updated_at: dayAgo(1),
+    created_at: dayAgo(2), updated_at: dayAgo(2),
   },
 ];
 
@@ -1755,10 +1770,40 @@ const installedWorkflows: any[] = [
 ];
 
 const installedReports: any[] = [
-  { id: 'rpt-1', name: '技术研发部周报', title: '技术研发部周报', description: '技术研发部周报，由技术研发部周报Agent自动生成', owner_name: '技术研发部周报Agent', agent_type: 'report', installed_version: '1.0.0', version: '1.2.0', is_beta: false, installed_at: dayAgo(5), scope: 'department' },
-  { id: 'rpt-2', name: 'AI平台组周报', title: 'AI平台组周报', description: 'AI平台组周报，由AI平台组周报Agent自动生成', owner_name: 'AI平台组周报Agent', agent_type: 'report', installed_version: '0.1-test', version: '0.1-test', is_beta: true, installed_at: dayAgo(3), scope: 'private' },
-  { id: 'rpt-4', name: '全公司运营周报', title: '全公司运营周报', description: '全公司运营周报，由运营汇总周报Agent自动生成', owner_name: '运营汇总周报Agent', agent_type: 'report', installed_version: '2.1.0', version: '2.1.0', is_beta: false, installed_at: dayAgo(1), scope: 'company' },
+  { id: 'rpt-1', report_id: 'rpt-1', installed_by: 'u-1', name: '技术研发部周报', title: '技术研发部周报', description: '技术研发部周报，由技术研发部周报Agent自动生成', owner_name: '技术研发部周报Agent', agent_type: 'report', installed_version: '1.0.0', version: '1.2.0', is_beta: false, installed_at: dayAgo(5), scope: 'department' },
+  { id: 'rpt-2', report_id: 'rpt-2', installed_by: 'u-1', name: 'AI平台组周报', title: 'AI平台组周报', description: 'AI平台组周报，由AI平台组周报Agent自动生成', owner_name: 'AI平台组周报Agent', agent_type: 'report', installed_version: '0.1-test', version: '0.1-test', is_beta: true, installed_at: dayAgo(3), scope: 'private' },
 ];
+
+// =================== 报告运行期次 ====================
+const reportRuns: any[] = [
+  { id: 'run-rpt1-1', report_id: 'rpt-1', period_label: '2026年9月第2周', finished_at: dayAgo(21), status: '完成' },
+  { id: 'run-rpt1-2', report_id: 'rpt-1', period_label: '2026年9月第3周', finished_at: dayAgo(14), status: '完成' },
+  { id: 'run-rpt1-3', report_id: 'rpt-1', period_label: currentWeek2.year + '年' + currentWeek2.week + '周', finished_at: dayAgo(1), status: '完成' },
+  { id: 'run-rpt2-1', report_id: 'rpt-2', period_label: '2026年9月第2周', finished_at: dayAgo(21), status: '完成' },
+  { id: 'run-rpt2-2', report_id: 'rpt-2', period_label: '2026年9月第3周', finished_at: dayAgo(14), status: '完成' },
+  { id: 'run-rpt2-3', report_id: 'rpt-2', period_label: currentWeek2.year + '年' + currentWeek2.week + '周', finished_at: dayAgo(1), status: '完成' },
+  { id: 'run-rpt4-1', report_id: 'rpt-4', period_label: '2026年9月第2周', finished_at: dayAgo(21), status: '完成' },
+  { id: 'run-rpt4-2', report_id: 'rpt-4', period_label: '2026年9月第3周', finished_at: dayAgo(14), status: '完成' },
+  { id: 'run-rpt4-3', report_id: 'rpt-4', period_label: currentWeek2.year + '年' + currentWeek2.week + '周', finished_at: dayAgo(1), status: '完成' },
+  { id: 'run-rpt5-1', report_id: 'rpt-5', period_label: '2026年7月', finished_at: dayAgo(60), status: '完成' },
+  { id: 'run-rpt5-2', report_id: 'rpt-5', period_label: '2026年8月', finished_at: dayAgo(30), status: '完成' },
+  { id: 'run-rpt5-3', report_id: 'rpt-5', period_label: '2026年9月', finished_at: dayAgo(2), status: '完成' },
+];
+
+// =================== 报告结果分享 ====================
+// scope_type: all(全部结果,含以后) / once(只分享某一次,run_id) / since(此时间之后,since_date)
+// target_type: user | dept | role；source: user(前台分享) | admin(后台数据发布)
+const reportResultShares: any[] = [
+  { id: 'prs-1', report_id: 'rpt-1', report_title: '技术研发部周报', run_id: null, scope_type: 'all', since_date: null, target_type: 'user', target_id: 'u-1', target_name: '张伟', note: '周会材料', granted_by: 'u-3', granted_by_name: '王五', source: 'user', created_at: dayAgo(2) },
+  { id: 'prs-2', report_id: 'rpt-5', report_title: '销售部月度跟进报告', run_id: null, scope_type: 'all', since_date: null, target_type: 'role', target_id: 'role-1', target_name: '超级管理员', note: '', granted_by: 'u-1', granted_by_name: '张伟', source: 'admin', created_at: dayAgo(1) },
+  { id: 'prs-3', report_id: 'rpt-4', report_title: '全公司运营周报', run_id: 'run-rpt4-2', scope_type: 'once', since_date: null, target_type: 'dept', target_id: 'org-3', target_name: '销售部', note: '本月经营会材料', granted_by: 'u-1', granted_by_name: '张伟', source: 'user', created_at: dayAgo(0.5) },
+];
+
+function canSeeSharedResult(u: any, s: any): boolean {
+  if (s.target_type === 'user') return s.target_id === u.id;
+  if (s.target_type === 'dept') return getOrgDescendantIds(s.target_id).includes(u.org_id);
+  return (u.role_ids || []).includes(s.target_id);
+}
 
 // =================== 通用资源定向授权（内测分享/白名单） ===================
 // resource_type: skill / agent / workflow / report
@@ -3168,6 +3213,7 @@ const notifications: any[] = [
   { id: 'n-5', user_id: 'u-1', type: 'approval', title: '你发布的「2026年第19周运营周报」审核未通过', content: '驳回原因:数据口径说明缺失,请补充后重新提交', action_kind: 'report', target_id: 'rpt-1', read: false, created_at: ago(300) },
   { id: 'n-6', user_id: 'u-1', type: 'collab', title: '群组「旧版客服对接群」已被群主解散', content: '群内会话与消息记录已删除', action_kind: 'none', read: true, created_at: dayAgo(2) },
   { id: 'n-tool-1', user_id: 'u-2', type: 'share', title: '张伟 向你分享了一个小工具', content: 'Token 用量换算器：输入模型单价与 Token 数快速换算成本', from_name: '张伟', action_kind: 'tool', target_id: 'tool-4', read: false, created_at: dayAgo(0.2) },
+  { id: 'n-rptrun-1', user_id: 'u-1', type: 'share', title: '王五 跑出了《AI平台组周报》' + currentWeek2.year + '年10月第2周', content: '点击查看结果总览', from_name: '王五', action_kind: 'report_run', target_id: 'rc-2', read: false, created_at: dayAgo(0.3) },
 ];
 
 // =================== 小工具 ===================
@@ -5013,7 +5059,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   }
   // 报告 我创建的
   if (path === '/reports/my' && method === 'get') {
-    const myReports = reports.filter(r => r.owner_id === 'u-1' || !r.owner_id);
+    const myReports = reports.filter(r => r.owner_id === getCurrentMockUser().id);
     return paginate(myReports, p.page, p.page_size, p.search);
   }
   // 报告 我安装的 - 详情
@@ -5969,8 +6015,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const tab = p.tab || 'discover';
     let pool = tools.filter(t => canSeeTool(cu, t));
     if (tab === 'mine') pool = pool.filter(t => t.creator_id === cu.id);
-    else if (tab === 'shared') pool = pool.filter(t => t.creator_id !== cu.id && toolShares.some(s => s.tool_id === t.id && ((s.target_type === 'user' && s.target_id === cu.id) || (s.target_type === 'dept' && getOrgDescendantIds(s.target_id).includes(cu.org_id)))));
-    if (tab === 'discover') pool.sort((a: any, b: any) => b.use_count - a.use_count);
+    if (tab === 'discover') pool.sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     const list = pool.map((t: any) => { const { html_content, ...rest } = t; return rest; });
     return ok(list);
   }
@@ -6074,6 +6119,241 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     tools.splice(idx, 1);
     let si: number;
     while ((si = toolShares.findIndex(s => s.tool_id === tid)) >= 0) toolShares.splice(si, 1);
+    return ok(null);
+  }
+
+  // =================== 报告结果分享与浏览 ===================
+  // GET /reports/all-runs-summary — 全平台报告运行摘要（管理员发布用）
+  if (path === '/reports/all-runs-summary' && method === 'get') {
+    const list = reports.map((rpt: any) => {
+      const runs = reportRuns.filter(r => r.report_id === rpt.id);
+      const latestRun = runs.sort((a: any, b: any) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime())[0] || null;
+      return { id: rpt.id, title: rpt.title, owner_id: rpt.owner_id, owner_name: rpt.owner_name, department_name: rpt.department_name, latest_run: latestRun, run_count: runs.length };
+    }).filter((r: any) => r.run_count > 0);
+    list.sort((a: any, b: any) => new Date(b.latest_run?.finished_at || 0).getTime() - new Date(a.latest_run?.finished_at || 0).getTime());
+    return ok(list);
+  }
+
+  // GET /reports/browse/mine — 当前用户可见的分享结果
+  if (path === '/reports/browse/mine' && method === 'get') {
+    const cu = getCurrentMockUser();
+    const visible = reportResultShares.filter(s => canSeeSharedResult(cu, s));
+    visible.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const list = visible.map((s: any) => {
+      const rpt = reports.find(r => r.id === s.report_id);
+      const runs = reportRuns.filter(r => r.report_id === s.report_id);
+      const latestRun = runs.sort((a: any, b: any) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime())[0] || null;
+      return { ...s, department_name: rpt?.department_name || '', latest_run: latestRun };
+    });
+    return ok(list);
+  }
+
+  // GET /reports/:id/runs — 某报告的运行期次列表
+  const reportRunsMatch = path.match(/^\/reports\/([^/]+)\/runs$/);
+  if (reportRunsMatch && method === 'get') {
+    const reportId = reportRunsMatch[1];
+    const runs = reportRuns.filter(r => r.report_id === reportId);
+    runs.sort((a: any, b: any) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
+    return ok(runs);
+  }
+
+  // POST /reports/:id/result-shares — 创建结果分享
+  const reportSharesCreateMatch = path.match(/^\/reports\/([^/]+)\/result-shares$/);
+  if (reportSharesCreateMatch && method === 'post') {
+    const reportId = reportSharesCreateMatch[1];
+    const cu = getCurrentMockUser();
+    const rpt = reports.find(r => r.id === reportId);
+    if (!rpt) return { code: 404, message: '报告不存在', data: null };
+    const isOwner = rpt.owner_id === cu.id;
+    const isInstaller = installedReports.some(ir => ir.report_id === reportId && ir.installed_by === cu.id);
+    if (!isOwner && !isInstaller) return { code: 403, message: '仅报告所有者或安装者可分享结果', data: null };
+    const targets = data.targets || [];
+    const newShares: any[] = [];
+    for (const t of targets) {
+      let target_name = '';
+      if (t.target_type === 'user') target_name = users.find((u: any) => u.id === t.target_id)?.name || t.target_id;
+      else if (t.target_type === 'dept') target_name = organizations.find((o: any) => o.id === t.target_id)?.name || t.target_id;
+      else if (t.target_type === 'role') target_name = allRoles.find((r: any) => r.id === t.target_id)?.name || t.target_id;
+      const ns: any = {
+        id: 'prs-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        report_id: reportId, report_title: rpt.title, run_id: data.run_id || null,
+        scope_type: data.scope_type || 'all', since_date: data.since_date || null,
+        target_type: t.target_type, target_id: t.target_id, target_name,
+        note: data.note || '', granted_by: cu.id, granted_by_name: cu.name,
+        source: 'user', created_at: new Date().toISOString(),
+      };
+      reportResultShares.push(ns);
+      newShares.push(ns);
+      // 目标用户收通知
+      if (t.target_type === 'user') {
+        notifications.push({ id: 'n-rs-' + ns.id, user_id: t.target_id, type: 'share', title: cu.name + ' 向你分享了《' + rpt.title + '》的结果', content: '点击查看', from_name: cu.name, action_kind: 'report_share', target_id: ns.id, read: false, created_at: new Date().toISOString() });
+      }
+    }
+    return ok(newShares);
+  }
+
+  // GET /reports/:id/result-shares — 查看某报告的全部结果分享
+  const reportSharesListMatch = path.match(/^\/reports\/([^/]+)\/result-shares$/);
+  if (reportSharesListMatch && method === 'get') {
+    const reportId = reportSharesListMatch[1];
+    const shares = reportResultShares.filter(s => s.report_id === reportId);
+    return ok(shares);
+  }
+
+  // DELETE /reports/:id/result-shares/:shareId — 撤销分享
+  const reportShareDeleteMatch = path.match(/^\/reports\/([^/]+)\/result-shares\/([^/]+)$/);
+  if (reportShareDeleteMatch && method === 'delete') {
+    const shareId = reportShareDeleteMatch[2];
+    const cu = getCurrentMockUser();
+    const idx = reportResultShares.findIndex(s => s.id === shareId);
+    if (idx < 0) return ok(null);
+    if (reportResultShares[idx].granted_by !== cu.id) return { code: 403, message: '仅授予者可撤销', data: null };
+    reportResultShares.splice(idx, 1);
+    return ok(null);
+  }
+
+  // GET /reports/:id/shared-view — 查看分享结果详情
+  const sharedViewMatch = path.match(/^\/reports\/([^/]+)\/shared-view$/);
+  if (sharedViewMatch && method === 'get') {
+    const reportId = sharedViewMatch[1];
+    const shareId = p.share_id;
+    const cu = getCurrentMockUser();
+    const share = reportResultShares.find(s => s.id === shareId && s.report_id === reportId);
+    if (!share) return { code: 404, message: '分享不存在', data: null };
+    if (!canSeeSharedResult(cu, share)) return { code: 403, message: '无权查看该分享', data: null };
+    const rpt = reports.find(r => r.id === reportId);
+    return ok({ report: rpt, share: { granted_by_name: share.granted_by_name, scope_type: share.scope_type, run_id: share.run_id, since_date: share.since_date, note: share.note, source: share.source } });
+  }
+
+  // =================== 报告配置列表（我创建的） ===================
+  if (path === '/report-configs' && method === 'get') {
+    const cu = getCurrentMockUser();
+    const myConfigs = reportConfigs.filter(rc => rc.creator_id === cu.id);
+    return paginate(myConfigs, p.page, p.page_size, p.search);
+  }
+
+  // =================== 报告结果总览 & 通知设置 ===================
+  // GET /report-definitions/:id/runs-overview
+  const rdOverviewMatch = path.match(/^\/report-definitions\/([^/]+)\/runs-overview$/);
+  if (rdOverviewMatch && method === 'get') {
+    const configId = rdOverviewMatch[1];
+    const cu = getCurrentMockUser();
+    const config = reportConfigs.find(rc => rc.id === configId);
+    if (!config) return { code: 404, message: '报告定义不存在', data: null };
+    if (config.creator_id !== cu.id) return { code: 403, message: '仅报告创建者可查看结果总览', data: null };
+    const configReports = reports.filter(r => r.config_id === configId);
+    const reportIds = configReports.map(r => r.id);
+    const runs = reportRuns.filter(r => reportIds.includes(r.report_id));
+    const result = runs.map((run: any) => {
+      const rpt = configReports.find(r => r.id === run.report_id);
+      const runner = users.find((u: any) => u.id === rpt?.owner_id);
+      const shareCount = reportResultShares.filter(s => s.report_id === run.report_id).length;
+      return { run_id: run.id, report_id: run.report_id, runner_id: rpt?.owner_id, runner_name: runner?.name || rpt?.owner_name || '', period_label: run.period_label, finished_at: run.finished_at, status: run.status, share_count: shareCount };
+    });
+    result.sort((a: any, b: any) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
+    return ok(result);
+  }
+
+  // PUT /report-definitions/:id/notify
+  const rdNotifyMatch = path.match(/^\/report-definitions\/([^/]+)\/notify$/);
+  if (rdNotifyMatch && method === 'put') {
+    const configId = rdNotifyMatch[1];
+    const cu = getCurrentMockUser();
+    const config = reportConfigs.find(rc => rc.id === configId);
+    if (!config) return { code: 404, message: '报告定义不存在', data: null };
+    if (config.creator_id !== cu.id) return { code: 403, message: '仅报告创建者可修改通知设置', data: null };
+    config.notify_creator = !!data.notify_creator;
+    return ok(config);
+  }
+
+  // =================== 后台：报告结果台账 ===================
+  // GET /admin/report-registry
+  if (path === '/admin/report-registry' && method === 'get') {
+    const cu = getCurrentMockUser();
+    if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可访问结果台账', data: null };
+    const list = reportConfigs.map((rc: any) => {
+      const rcReports = reports.filter(r => r.config_id === rc.id);
+      const rcReportIds = rcReports.map(r => r.id);
+      const installCount = new Set(installedReports.filter(ir => rcReportIds.includes(ir.report_id)).map(ir => ir.installed_by)).size;
+      const runCount = reportRuns.filter(r => rcReportIds.includes(r.report_id)).length;
+      const runs = reportRuns.filter(r => rcReportIds.includes(r.report_id));
+      const lastRunAt = runs.length ? runs.sort((a: any, b: any) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime())[0].finished_at : null;
+      const activeShares = reportResultShares.filter(s => rcReportIds.includes(s.report_id)).length;
+      return { ...rc, install_count: installCount, run_count: runCount, last_run_at: lastRunAt, active_shares: activeShares };
+    });
+    const search = (p.search || '').toLowerCase();
+    const filtered = search ? list.filter((r: any) => r.name.toLowerCase().includes(search) || (r.creator_name || '').toLowerCase().includes(search)) : list;
+    return ok(filtered);
+  }
+
+  // GET /admin/report-registry/:id/runs
+  const adminRegRunsMatch = path.match(/^\/admin\/report-registry\/([^/]+)\/runs$/);
+  if (adminRegRunsMatch && method === 'get') {
+    const cu = getCurrentMockUser();
+    if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可访问结果台账', data: null };
+    const configId = adminRegRunsMatch[1];
+    const configReports = reports.filter(r => r.config_id === configId);
+    const reportIds = configReports.map(r => r.id);
+    const runs = reportRuns.filter(r => reportIds.includes(r.report_id));
+    const result = runs.map((run: any) => {
+      const rpt = configReports.find(r => r.id === run.report_id);
+      const runner = users.find((u: any) => u.id === rpt?.owner_id);
+      const shares = reportResultShares.filter(s => s.report_id === run.report_id).map(s => ({ target_name: s.target_name, scope_type: s.scope_type, granted_by_name: s.granted_by_name }));
+      return { run_id: run.id, report_id: run.report_id, runner_id: rpt?.owner_id, runner_name: runner?.name || rpt?.owner_name || '', period_label: run.period_label, finished_at: run.finished_at, status: run.status, shares };
+    });
+    result.sort((a: any, b: any) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
+    return ok(result);
+  }
+
+  // =================== 后台：报告数据发布 ===================
+  // GET /admin/report-publishes
+  if (path === '/admin/report-publishes' && method === 'get') {
+    const cu = getCurrentMockUser();
+    if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可执行数据发布', data: null };
+    const adminShares = reportResultShares.filter(s => s.source === 'admin');
+    return ok(adminShares);
+  }
+
+  // POST /admin/report-publishes
+  if (path === '/admin/report-publishes' && method === 'post') {
+    const cu = getCurrentMockUser();
+    if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可执行数据发布', data: null };
+    const reportId = data.report_id;
+    const rpt = reports.find(r => r.id === reportId);
+    if (!rpt) return { code: 404, message: '报告不存在', data: null };
+    const targets = data.targets || [];
+    const newShares: any[] = [];
+    for (const t of targets) {
+      let target_name = '';
+      if (t.target_type === 'user') target_name = users.find((u: any) => u.id === t.target_id)?.name || t.target_id;
+      else if (t.target_type === 'dept') target_name = organizations.find((o: any) => o.id === t.target_id)?.name || t.target_id;
+      else if (t.target_type === 'role') target_name = allRoles.find((r: any) => r.id === t.target_id)?.name || t.target_id;
+      const ns: any = {
+        id: 'prs-admin-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        report_id: reportId, report_title: rpt.title, run_id: data.run_id || null,
+        scope_type: data.scope_type || 'all', since_date: data.since_date || null,
+        target_type: t.target_type, target_id: t.target_id, target_name,
+        note: data.note || '', granted_by: cu.id, granted_by_name: cu.name,
+        source: 'admin', created_at: new Date().toISOString(),
+      };
+      reportResultShares.push(ns);
+      newShares.push(ns);
+      if (t.target_type === 'user') {
+        notifications.push({ id: 'n-ap-' + ns.id, user_id: t.target_id, type: 'share', title: '管理员发布了《' + rpt.title + '》的结果', content: '点击查看', from_name: cu.name, action_kind: 'report_share', target_id: ns.id, read: false, created_at: new Date().toISOString() });
+      }
+    }
+    return ok(newShares);
+  }
+
+  // DELETE /admin/report-publishes/:id
+  const adminPublishDeleteMatch = path.match(/^\/admin\/report-publishes\/([^/]+)$/);
+  if (adminPublishDeleteMatch && method === 'delete') {
+    const cu = getCurrentMockUser();
+    if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可执行数据发布', data: null };
+    const shareId = adminPublishDeleteMatch[1];
+    const idx = reportResultShares.findIndex(s => s.id === shareId);
+    if (idx < 0) return ok(null);
+    reportResultShares.splice(idx, 1);
     return ok(null);
   }
 

@@ -506,3 +506,28 @@ export const toolsApi = {
   unshare: (id: string, shareId: string) => api.delete(`/tools/${id}/shares/${shareId}`),
   fork: (id: string, name: string) => api.post(`/tools/${id}/fork`, { name }),
 };
+
+// =================== 报告结果总览 & 台账 ===================
+export const reportOverviewApi = {
+  runs: (configId: string) => api.get(`/report-definitions/${configId}/runs-overview`),
+  setNotify: (configId: string, notify: boolean) => api.put(`/report-definitions/${configId}/notify`, { notify_creator: notify }),
+};
+export const adminRegistryApi = {
+  list: (params: any) => api.get('/admin/report-registry', { params }),
+  runs: (configId: string) => api.get(`/admin/report-registry/${configId}/runs`),
+};
+
+// =================== 报告结果分享 ===================
+export const reportShareApi = {
+  list: (reportId: string) => api.get(`/reports/${reportId}/result-shares`),
+  create: (reportId: string, data: any) => api.post(`/reports/${reportId}/result-shares`, data),
+  remove: (reportId: string, shareId: string) => api.delete(`/reports/${reportId}/result-shares/${shareId}`),
+  myBrowse: () => api.get('/reports/browse/mine'),
+  sharedView: (reportId: string, shareId: string) => api.get(`/reports/${reportId}/shared-view`, { params: { share_id: shareId } }),
+  runs: (reportId: string) => api.get(`/reports/${reportId}/runs`),
+};
+export const adminPublishApi = {
+  list: () => api.get('/admin/report-publishes'),
+  create: (data: any) => api.post('/admin/report-publishes', data),
+  remove: (id: string) => api.delete(`/admin/report-publishes/${id}`),
+};

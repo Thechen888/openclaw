@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MenuOpen } from '@mui/icons-material';
 import { useSidebarStore } from '../../stores/sidebarStore';
 import { useViewModeStore } from '../../stores/viewModeStore';
+import { useAuthStore } from '../../stores/authStore';
 import { adminNavConfig, frontNavConfig } from './navConfig';
 
 const DRAWER_WIDTH = 260;
@@ -18,7 +19,10 @@ export default function Sidebar() {
   const location = useLocation();
   const { collapsed, mobileOpen, toggleCollapse, setMobileOpen } = useSidebarStore();
   const { viewMode } = useViewModeStore();
-  const currentNav = viewMode === 'front' ? frontNavConfig : adminNavConfig;
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
+  const baseNav = viewMode === 'front' ? frontNavConfig : adminNavConfig;
+  const currentNav = baseNav.filter(section => !section.adminOnly || isAdmin);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';

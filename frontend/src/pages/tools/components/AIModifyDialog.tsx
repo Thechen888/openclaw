@@ -23,7 +23,7 @@ export default function AIModifyDialog({ tool, onClose }: Props) {
 
   const handleConfirm = () => {
     if (!requirement.trim()) return;
-    const prompt = `请帮我修改一个小工具。\n工具名称：${tool.name}\n我的修改需求：${requirement}\n以下是当前工具完整 HTML 代码，请输出修改后的完整 HTML：\n\`\`\`html\n${htmlContent}\n\`\`\``;
+    const prompt = `请帮我修改一个小工具。\n工具名称：${tool.name}\n我的修改需求：${requirement}\n要求：保持原有样式与功能不变，仅做以下修改，不要重写无关部分。\n以下是当前工具完整 HTML 代码，请输出修改后的完整 HTML：\n\`\`\`html\n${htmlContent}\n\`\`\``;
     navigate(`/chat?prompt=${encodeURIComponent(prompt)}`);
     onClose();
   };
