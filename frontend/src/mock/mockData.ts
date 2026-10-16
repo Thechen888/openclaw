@@ -1805,6 +1805,17 @@ function canSeeSharedResult(u: any, s: any): boolean {
   return (u.role_ids || []).includes(s.target_id);
 }
 
+// =================== 报告模板分享 ====================
+const reportTemplateShares: any[] = [
+  { id: 'pts-1', config_id: 'rc-1', config_name: '公司经营周报', target_type: 'user', target_id: 'u-1', target_name: '张伟', granted_by: 'u-3', granted_by_name: '王五', created_at: dayAgo(1) },
+];
+
+function canSeeTemplate(u: any, s: any): boolean {
+  if (s.target_type === 'user') return s.target_id === u.id;
+  if (s.target_type === 'dept') return getOrgDescendantIds(s.target_id).includes(u.org_id);
+  return (u.role_ids || []).includes(s.target_id);
+}
+
 // =================== 通用资源定向授权（内测分享/白名单） ===================
 // resource_type: skill / agent / workflow / report
 // share_type: test（测试分享，作者发起，免审）/ release（发布白名单，管理员配置）
@@ -6353,6 +6364,124 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const shareId = adminPublishDeleteMatch[1];
     const idx = reportResultShares.findIndex(s => s.id === shareId);
     if (idx < 0) return ok(null);
+    reportResultShares.splice(idx, 1);
+    return ok(null);
+  }
+
+  // =================== 报告查漏补缺：运行/复制/模板分享/管理 ===================
+  // POST /reports/:id/run — 立即生成新期次
+  const reportRunMatch = path.match(/^\/reports\/([^/]+)\/run$/);
+  if (reportRunMatch && method === 'post') {
+    const reportId = reportRunMatch[1];
+    const cu = getCurrentMockUser();
+    const rpt = reports.find(r => r.id === reportId);
+    if (!rpt) return { code: 404, message: '报告不存在', data: null };
+    const isOwner = rpt.owner_id === cu.id;
+    const isInstalled = installedReports.some(ir => ir.report_id === reportId && ir.installed_by === cu.id);
+    if (!isOwner && !isInstalled) return { code: 403, message: '仅报告所有者或安装者可运行', data: null };
+    const periodLabel = rpt.period === 'monthly' ? new Date().getFullYear() + '年' + (new Date().getMonth() + 1) + '月' : currentWeek2.year + '年' + currentWeek2.week + '周';
+    const newRun = { id: 'run-' + reportId + '-' + Date.now(), report_id: reportId, period_label: periodLabel, finished_at: new Date().toISOString(), status: '完成' };
+    reportRuns.push(newRun);
+    rpt.updated_at = new Date().toISOString();
+    const config = reportConfigs.find(rc => rc.id === rpt.config_id);
+    if (config && config.notify_creator && config.creator_id) {
+      notifications.push({ id: 'n-run-' + Date.now(), user_id: config.creator_id, type: 'report', title: '你的报告有新结果', content: '《' + rpt.title + '》产生了新期次', from_name: cu.name, action_kind: 'report_run', target_id: config.id, read: false, created_at: new Date().toISOString() });
+    }
+    return ok(newRun);
+  }
+
+  // GET /reports/result-shares/mine — 我分享的
+  if (path === '/reports/result-shares/mine' && method === 'get') {
+    const cu = getCurrentMockUser();
+    const myShares = reportResultShares.filter(s => s.granted_by === cu.id);
+    myShares.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const list = myShares.map((s: any) => {
+      const rpt = reports.find(r => r.id === s.report_id);
+      let relation = 'installed';
+      if (rpt && rpt.owner_id === cu.id) relation = 'created';
+      return { ...s, relation };
+    });
+    return ok(list);
+  }
+
+  // POST /reports/:id/clone — 复制到我创建的
+  const reportCloneMatch = path.match(/^\/reports\/([^/]+)\/clone$/);
+  if (reportCloneMatch && method === 'post') {
+    const reportId = reportCloneMatch[1];
+    const cu = getCurrentMockUser();
+    const isInstalled = installedReports.some(ir => ir.report_id === reportId && ir.installed_by === cu.id);
+    if (!isInstalled) return { code: 403, message: '仅安装者可复制', data: null };
+    const rpt = reports.find(r => r.id === reportId);
+    if (!rpt) return { code: 404, message: '报告不存在', data: null };
+    const newRcId = 'rc-' + Date.now();
+    const newRptId = 'rpt-' + Date.now();
+    const newName = (rpt.title || rpt.name || '报告') + '（副本）';
+    const newRc = { id: newRcId, name: newName, scope: rpt.scope || 'department', department_id: rpt.department_id || '', department_name: rpt.department_name || '', period: rpt.period || 'weekly', template_id: rpt.template_id || '', template_name: '', agent_id: rpt.agent_id || '', agent_name: rpt.agent_name || '', block_configs: [], schedule: {}, publish_to_portal: false, notify_users: false, enabled: true, creator_id: cu.id, creator_name: cu.name, notify_creator: false, last_generated_at: new Date().toISOString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    reportConfigs.push(newRc);
+    const newRpt = { id: newRptId, config_id: newRcId, template_id: rpt.template_id || '', title: newName, scope: rpt.scope || 'department', department_id: rpt.department_id || '', department_name: rpt.department_name || '', period: rpt.period || 'weekly', period_start: rpt.period_start, period_end: rpt.period_end, agent_id: rpt.agent_id || '', agent_name: rpt.agent_name || '', owner_id: cu.id, owner_name: cu.name, status: 'published', published_at: new Date().toISOString(), blocks: JSON.parse(JSON.stringify(rpt.blocks || [])), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    reports.push(newRpt);
+    return ok({ message: '已复制到你创建的报告', config: newRc });
+  }
+
+  // POST /report-configs/:id/template-shares — 分享报告模板
+  const tplShareMatch = path.match(/^\/report-configs\/([^/]+)\/template-shares$/);
+  if (tplShareMatch && method === 'post') {
+    const configId = tplShareMatch[1];
+    const cu = getCurrentMockUser();
+    const config = reportConfigs.find(rc => rc.id === configId);
+    if (!config) return { code: 404, message: '报告定义不存在', data: null };
+    if (config.creator_id !== cu.id) return { code: 403, message: '仅报告创建者可分享模板', data: null };
+    const targets = data.targets || [];
+    const newShares: any[] = [];
+    for (const t of targets) {
+      const ns = { id: 'pts-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), config_id: configId, config_name: config.name, target_type: t.target_type, target_id: t.target_id, target_name: t.target_name || '', granted_by: cu.id, granted_by_name: cu.name, created_at: new Date().toISOString() };
+      reportTemplateShares.push(ns);
+      newShares.push(ns);
+      if (t.target_type === 'user') {
+        notifications.push({ id: 'n-tpl-' + ns.id, user_id: t.target_id, type: 'share', title: cu.name + ' 向你分享了报告模板', content: '《' + config.name + '》，可在我创建的报告顶部接收', from_name: cu.name, action_kind: 'report_template', target_id: configId, read: false, created_at: new Date().toISOString() });
+      }
+    }
+    return ok(newShares);
+  }
+
+  // GET /report-templates/incoming — 我收到的模板
+  if (path === '/report-templates/incoming' && method === 'get') {
+    const cu = getCurrentMockUser();
+    const incoming = reportTemplateShares.filter(s => canSeeTemplate(cu, s));
+    return ok(incoming);
+  }
+
+  // POST /report-templates/:shareId/accept — 接收模板
+  const tplAcceptMatch = path.match(/^\/report-templates\/([^/]+)\/accept$/);
+  if (tplAcceptMatch && method === 'post') {
+    const shareId = tplAcceptMatch[1];
+    const cu = getCurrentMockUser();
+    const share = reportTemplateShares.find(s => s.id === shareId);
+    if (!share) return { code: 404, message: '模板分享不存在', data: null };
+    if (!canSeeTemplate(cu, share)) return { code: 403, message: '无权接收该模板', data: null };
+    const config = reportConfigs.find(rc => rc.id === share.config_id);
+    if (!config) return { code: 404, message: '报告定义不存在', data: null };
+    const configReports = reports.filter(r => r.config_id === share.config_id);
+    const srcBlocks = configReports.length > 0 ? JSON.parse(JSON.stringify(configReports[0].blocks || [])) : [];
+    const newRcId = 'rc-' + Date.now();
+    const newRptId = 'rpt-' + Date.now();
+    const newName = config.name + '（来自模板）';
+    const newRc = { id: newRcId, name: newName, scope: config.scope, department_id: config.department_id || '', department_name: config.department_name || '', period: config.period || 'weekly', template_id: config.template_id || '', template_name: '', agent_id: config.agent_id || '', agent_name: config.agent_name || '', block_configs: JSON.parse(JSON.stringify(config.block_configs || [])), schedule: {}, publish_to_portal: false, notify_users: false, enabled: true, creator_id: cu.id, creator_name: cu.name, notify_creator: false, last_generated_at: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    reportConfigs.push(newRc);
+    const newRpt = { id: newRptId, config_id: newRcId, template_id: config.template_id || '', title: newName, scope: config.scope, department_id: config.department_id || '', department_name: config.department_name || '', period: config.period || 'weekly', period_start: null, period_end: null, agent_id: config.agent_id || '', agent_name: config.agent_name || '', owner_id: cu.id, owner_name: cu.name, status: 'published', published_at: new Date().toISOString(), blocks: srcBlocks, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    reports.push(newRpt);
+    reportTemplateShares.splice(reportTemplateShares.indexOf(share), 1);
+    return ok({ message: '已接收模板', config: newRc });
+  }
+
+  // DELETE /admin/report-shares/:shareId — 管理员撤销任何人的结果分享
+  const adminRevokeShareMatch = path.match(/^\/admin\/report-shares\/([^/]+)$/);
+  if (adminRevokeShareMatch && method === 'delete') {
+    const cu = getCurrentMockUser();
+    if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可撤销分享', data: null };
+    const shareId = adminRevokeShareMatch[1];
+    const idx = reportResultShares.findIndex(s => s.id === shareId);
+    if (idx < 0) return { code: 404, message: '分享不存在', data: null };
     reportResultShares.splice(idx, 1);
     return ok(null);
   }

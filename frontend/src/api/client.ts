@@ -515,6 +515,7 @@ export const reportOverviewApi = {
 export const adminRegistryApi = {
   list: (params: any) => api.get('/admin/report-registry', { params }),
   runs: (configId: string) => api.get(`/admin/report-registry/${configId}/runs`),
+  revokeShare: (shareId: string) => api.delete(`/admin/report-shares/${shareId}`),
 };
 
 // =================== 报告结果分享 ===================
@@ -525,7 +526,22 @@ export const reportShareApi = {
   myBrowse: () => api.get('/reports/browse/mine'),
   sharedView: (reportId: string, shareId: string) => api.get(`/reports/${reportId}/shared-view`, { params: { share_id: shareId } }),
   runs: (reportId: string) => api.get(`/reports/${reportId}/runs`),
+  mine: () => api.get('/reports/result-shares/mine'),
 };
+
+// =================== 报告运行 & 复制 ===================
+export const reportRunApi = {
+  run: (id: string) => api.post(`/reports/${id}/run`),
+  clone: (id: string) => api.post(`/reports/${id}/clone`),
+};
+
+// =================== 报告模板分享 ===================
+export const reportTemplateApi = {
+  share: (configId: string, targets: any[]) => api.post(`/report-configs/${configId}/template-shares`, { targets }),
+  incoming: () => api.get('/report-templates/incoming'),
+  accept: (shareId: string) => api.post(`/report-templates/${shareId}/accept`),
+};
+
 export const adminPublishApi = {
   list: () => api.get('/admin/report-publishes'),
   create: (data: any) => api.post('/admin/report-publishes', data),

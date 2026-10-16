@@ -84,6 +84,8 @@ export default function NotificationBell({ dark = false, placement = 'down' }: N
       navigate('/reports/my');
     } else if (kind === 'report_share' && tid) {
       navigate('/reports/browse');
+    } else if (kind === 'report_template' && tid) {
+      navigate('/reports/my');
     }
     // action_kind === 'none' → no navigation
   };
