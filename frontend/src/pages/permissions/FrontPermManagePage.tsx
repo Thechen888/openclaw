@@ -10,12 +10,13 @@ import {
 import {
   Search, Refresh, Security, PowerSettingsNew, SwapHoriz, Close, Add, Delete,
   CheckCircle, Cancel, Visibility, Warning, Article, Info, SmartToy, Schedule,
-  AccountBalance, Edit, ExpandMore, ExpandLess, History, Preview,
+  AccountBalance, Edit, ExpandMore, ExpandLess, History, Preview, Assessment,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader, FilterBar, DataTable, useTableState, EmptyState, LoadingState } from '../../components/shared';
-import { frontPermApi, reviewApi, skillsApi, agentsApi, ragApi, reportConfigsApi, reportsApi, tokenAccountsApi, publicQuotaApi } from '../../api/client';
+import { frontPermApi, reviewApi, skillsApi, agentsApi, ragApi, reportConfigsApi, reportsApi, tokenAccountsApi, publicQuotaApi, adminResultsApi, adminRegistryApi } from '../../api/client';
 import api from '../../api/client';
 
 const TYPE_TABS = [
@@ -97,6 +98,8 @@ export default function FrontPermManagePage() {
   const [reportDetailTarget, setReportDetailTarget] = useState<any>(null);
   const [kbDetailTarget, setKbDetailTarget] = useState<any>(null);
   const [skillDetailTarget, setSkillDetailTarget] = useState<any>(null);
+  const [resultsTarget, setResultsTarget] = useState<any>(null);
+  const navigate = useNavigate();
 
   // 审核相关状态
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; recordId: string; recordName: string }>({ open: false, recordId: '', recordName: '' });
@@ -489,6 +492,11 @@ export default function FrontPermManagePage() {
                   <TableCell><Typography variant="caption" sx={{ fontSize: 11 }}>{fmtDate(item.created_at)}</Typography></TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      {item.resource_type === 'report' && (
+                        <Tooltip title="数据结果管理">
+                          <IconButton size="small" sx={{ color: '#00D4FF' }} onClick={() => setResultsTarget(item)}><Assessment fontSize="small" /></IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip title="详情">
                         <IconButton size="small" color="info" onClick={() => {
                           if (item.resource_type === 'agent') setAgentDetailTarget(item);
@@ -884,6 +892,11 @@ export default function FrontPermManagePage() {
 
       {/* 报告只读渲染预览弹窗 */}
       <ReportPreviewDialog report={detailReport} open={reportPreviewOpen && !!detailReport} onClose={() => setReportPreviewOpen(false)} />
+
+      {/* 报告数据结果管理 Drawer */}
+      <Drawer anchor="right" open={!!resultsTarget} onClose={() => setResultsTarget(null)} sx={{ '& .MuiDrawer-paper': { width: 560, p: 0 } }}>
+        {resultsTarget && <ResultsDrawerContent target={resultsTarget} onClose={() => setResultsTarget(null)} onNavigatePublish={() => { setResultsTarget(null); navigate('/admin/report-publish'); }} />}
+      </Drawer>
 
     </Box>
   );
@@ -2437,5 +2450,116 @@ function SkillDetailDialog({ target, onClose }: { target: any; onClose: () => vo
         </DialogActions>
       </Dialog>
     </>
+  );
+}
+
+/* ========== 报告数据结果管理 Drawer 内容 ========== */
+function ResultsDrawerContent({ target, onClose, onNavigatePublish }: { target: any; onClose: () => void; onNavigatePublish: () => void }) {
+  const qc = useQueryClient();
+  const { enqueueSnackbar } = useSnackbar();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-results', target.resource_id],
+    queryFn: () => adminResultsApi.byReport(target.resource_id),
+    enabled: !!target?.resource_id,
+  });
+  const resultData = data?.data?.data;
+  const runs: any[] = resultData?.runs || [];
+  const shares: any[] = resultData?.shares || [];
+
+  const revokeMutation = useMutation({
+    mutationFn: (shareId: string) => adminRegistryApi.revokeShare(shareId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-results', target.resource_id] });
+      enqueueSnackbar('已撤销该分享', { variant: 'success' });
+    },
+    onError: (err: any) => enqueueSnackbar(err?.response?.data?.message || '撤销失败', { variant: 'error' }),
+  });
+
+  return (
+    <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>{resultData?.config_name || target.name || '—'}</Typography>
+          <Typography variant="caption" color="text.secondary">创建者：{resultData?.creator_name || '—'}</Typography>
+        </Box>
+        <IconButton size="small" onClick={onClose}><Close fontSize="small" /></IconButton>
+      </Box>
+
+      {/* 上半区：运行期次 */}
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>运行期次</Typography>
+      {isLoading ? (
+        <Typography variant="body2" color="text.secondary">加载中...</Typography>
+      ) : runs.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>暂无运行期次</Typography>
+      ) : (
+        <Table size="small" sx={{ mb: 3 }}>
+          <TableHead><TableRow>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>运行者</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>期次</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>完成时间</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>状态</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>分享对象</TableCell>
+          </TableRow></TableHead>
+          <TableBody>
+            {runs.map(run => (
+              <TableRow key={run.run_id} hover>
+                <TableCell sx={{ fontSize: 12 }}>{run.runner_name}</TableCell>
+                <TableCell sx={{ fontSize: 12 }}>{run.period_label}</TableCell>
+                <TableCell sx={{ fontSize: 12 }}>{new Date(run.finished_at).toLocaleDateString()}</TableCell>
+                <TableCell><Chip label={run.status} size="small" sx={{ fontSize: 10, height: 20 }} /></TableCell>
+                <TableCell sx={{ fontSize: 11 }}>
+                  {(run.shares || []).length === 0 ? '—' : (run.shares || []).map((s: any, i: number) => (
+                    <Chip key={i} label={`${s.target_name}(${s.scope_type})`} size="small" sx={{ fontSize: 9, height: 18, mr: 0.5 }} />
+                  ))}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* 下半区：分享链 */}
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>分享链路</Typography>
+      {shares.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">暂无分享记录</Typography>
+      ) : (
+        <Table size="small">
+          <TableHead><TableRow>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>授予人</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>目标</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>范围</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>备注</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>时间</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600, width: 50 }}>操作</TableCell>
+          </TableRow></TableHead>
+          <TableBody>
+            {shares.map(s => (
+              <TableRow key={s.id} hover>
+                <TableCell sx={{ fontSize: 12 }}>{s.granted_by_name}</TableCell>
+                <TableCell sx={{ fontSize: 12 }}>
+                  {s.target_name}
+                  <Chip label={s.target_type === 'user' ? '人员' : s.target_type === 'dept' ? '部门' : '角色'} size="small" sx={{ fontSize: 9, height: 16, ml: 0.5 }} />
+                </TableCell>
+                <TableCell><Chip label={s.scope_type === 'all' ? '全部结果' : s.scope_type === 'once' ? '指定某一次' : '时间后'} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} /></TableCell>
+                <TableCell sx={{ fontSize: 11, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.note || '—'}</TableCell>
+                <TableCell sx={{ fontSize: 12 }}>{new Date(s.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <Tooltip title="撤销">
+                    <IconButton size="small" color="error" onClick={() => revokeMutation.mutate(s.id)}><Delete fontSize="small" /></IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <Box sx={{ mt: 3 }}>
+        <Button variant="outlined" onClick={onNavigatePublish} sx={{ textTransform: 'none' }}>去发布数据</Button>
+      </Box>
+    </Box>
   );
 }

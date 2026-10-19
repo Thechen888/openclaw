@@ -522,11 +522,17 @@ export const adminRegistryApi = {
 export const reportShareApi = {
   list: (reportId: string) => api.get(`/reports/${reportId}/result-shares`),
   create: (reportId: string, data: any) => api.post(`/reports/${reportId}/result-shares`, data),
+  update: (reportId: string, shareId: string, data: any) => api.put(`/reports/${reportId}/result-shares/${shareId}`, data),
   remove: (reportId: string, shareId: string) => api.delete(`/reports/${reportId}/result-shares/${shareId}`),
   myBrowse: () => api.get('/reports/browse/mine'),
   sharedView: (reportId: string, shareId: string) => api.get(`/reports/${reportId}/shared-view`, { params: { share_id: shareId } }),
   runs: (reportId: string) => api.get(`/reports/${reportId}/runs`),
   mine: () => api.get('/reports/result-shares/mine'),
+};
+
+// =================== 管理员按报告穿透数据结果 ===================
+export const adminResultsApi = {
+  byReport: (reportId: string) => api.get(`/admin/report-results/by-report/${reportId}`),
 };
 
 // =================== 报告运行 & 复制 ===================

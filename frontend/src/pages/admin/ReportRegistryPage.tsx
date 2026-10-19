@@ -104,19 +104,6 @@ function RegistryDrawerContent({ item, onClose, onNavigatePublish }: { item: any
   });
   const runs: any[] = runsData?.data?.data || [];
 
-  // 获取该定义下所有分享
-  const { data: allSharesData } = useQuery({
-    queryKey: ['admin-registry-shares', item.id],
-    queryFn: async () => {
-      const res = await api.get('/admin/report-registry', { params: {} });
-      const all = res?.data?.data || [];
-      const target = all.find((r: any) => r.id === item.id);
-      // 获取该定义下的报告实例的分享
-      const configReports = await api.get('/reports/all-runs-summary', { params: { page_size: 200 } });
-      return configReports?.data?.data || [];
-    },
-  });
-
   const revokeMutation = useMutation({
     mutationFn: (shareId: string) => adminRegistryApi.revokeShare(shareId),
     onSuccess: () => {

@@ -6231,7 +6231,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const cu = getCurrentMockUser();
     const share = reportResultShares.find(s => s.id === shareId && s.report_id === reportId);
     if (!share) return { code: 404, message: '分享不存在', data: null };
-    if (!canSeeSharedResult(cu, share)) return { code: 403, message: '无权查看该分享', data: null };
+    if (!(canSeeSharedResult(cu, share) || share.granted_by === cu.id || cu.role === 'admin')) return { code: 403, message: '无权查看该分享', data: null };
     const rpt = reports.find(r => r.id === reportId);
     return ok({ report: rpt, share: { granted_by_name: share.granted_by_name, scope_type: share.scope_type, run_id: share.run_id, since_date: share.since_date, note: share.note, source: share.source } });
   }
@@ -6484,6 +6484,44 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     if (idx < 0) return { code: 404, message: '分享不存在', data: null };
     reportResultShares.splice(idx, 1);
     return ok(null);
+  }
+
+  // PUT /reports/:id/result-shares/:shareId — 编辑分享
+  const reportShareUpdateMatch = path.match(/^\/reports\/([^/]+)\/result-shares\/([^/]+)$/);
+  if (reportShareUpdateMatch && method === 'put') {
+    const [, reportId, shareId] = reportShareUpdateMatch;
+    const cu = getCurrentMockUser();
+    const share = reportResultShares.find(s => s.id === shareId && s.report_id === reportId);
+    if (!share) return { code: 404, message: '分享不存在', data: null };
+    if (share.granted_by !== cu.id && cu.role !== 'admin') return { code: 403, message: '仅授予者可编辑', data: null };
+    if (data.scope_type !== undefined) share.scope_type = data.scope_type;
+    if (data.run_id !== undefined) share.run_id = data.run_id;
+    if (data.since_date !== undefined) share.since_date = data.since_date;
+    if (data.note !== undefined) share.note = data.note;
+    return ok(share);
+  }
+
+  // GET /admin/report-results/by-report/:reportId — 按报告实例穿透取数据结果
+  const adminResultsByReportMatch = path.match(/^\/admin\/report-results\/by-report\/([^/]+)$/);
+  if (adminResultsByReportMatch && method === 'get') {
+    const reportId = adminResultsByReportMatch[1];
+    const cu = getCurrentMockUser();
+    if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可访问', data: null };
+    const rpt = reports.find(r => r.id === reportId);
+    if (!rpt) return { code: 404, message: '报告实例不存在', data: null };
+    const configId = rpt.config_id;
+    const configReports = reports.filter(r => r.config_id === configId);
+    const configReportIds = configReports.map(r => r.id);
+    const runs = reportRuns.filter(r => configReportIds.includes(r.report_id)).map(run => {
+      const inst = configReports.find(r => r.id === run.report_id);
+      const runner = users.find(u => u.id === inst?.owner_id);
+      const shares = reportResultShares.filter(s => s.report_id === run.report_id)
+        .map(s => ({ share_id: s.id, target_name: s.target_name, target_type: s.target_type, scope_type: s.scope_type, granted_by_name: s.granted_by_name, note: s.note, created_at: s.created_at }));
+      return { run_id: run.id, report_id: run.report_id, runner_name: runner?.name || inst?.owner_name || '', period_label: run.period_label, finished_at: run.finished_at, status: run.status, shares };
+    }).sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
+    const sharesAll = reportResultShares.filter(s => configReportIds.includes(s.report_id));
+    const config = reportConfigs.find(c => c.id === configId);
+    return ok({ config_id: configId, config_name: config?.name || rpt.title || '', creator_name: config?.creator_name || '', runs, shares: sharesAll });
   }
 
   // Default

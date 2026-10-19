@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD：WorkBuddy 任务处理流程与状态设计</title>
+<style>
+  :root{
+    --ink:#1f2329; --sub:#646a73; --line:#e5e6eb; --bg:#ffffff; --panel:#f7f8fa;
+    --blue:#3370ff; --green:#2ea44f; --red:#d93026; --orange:#de7802; --purple:#7b61ff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+       font-size:14px;line-height:1.75;}
+  .page{max-width:960px;margin:0 auto;padding:48px 40px 80px;}
+  h1{font-size:26px;margin:0 0 4px;}
+  h2{font-size:19px;margin:40px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  h3{font-size:15.5px;margin:24px 0 8px;}
+  p{margin:8px 0;}
+  .meta{color:var(--sub);font-size:13px;margin-bottom:24px;}
+  .meta span{margin-right:20px;}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--panel);font-weight:600;white-space:nowrap;}
+  code{background:var(--panel);border:1px solid var(--line);border-radius:4px;
+       padding:1px 6px;font-family:Consolas,monospace;font-size:12.5px;}
+  .tag{display:inline-block;border-radius:4px;padding:1px 8px;font-size:12px;font-weight:600;margin-right:6px;}
+  .t-blue{background:#eaf1ff;color:var(--blue);}
+  .t-green{background:#e8f7ee;color:var(--green);}
+  .t-orange{background:#fff3e5;color:var(--orange);}
+  .t-red{background:#fdeceb;color:var(--red);}
+  .t-purple{background:#f1edff;color:var(--purple);}
+  .t-gray{background:var(--panel);color:var(--sub);}
+  .note{background:#f7f8fa;border-left:3px solid var(--blue);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:13px;}
+  .shot{color:var(--sub);font-size:12.5px;}
+  ul{margin:6px 0;padding-left:22px;}
+  li{margin:3px 0;}
+  .flow{width:100%;height:auto;display:block;margin:16px 0;}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>PRD：WorkBuddy 任务处理流程与状态设计</h1>
+<div class="meta">
+  <span>版本：v1.0</span><span>日期：2026-09-24</span><span>状态：评审稿</span><span>依据：7 张实际界面截图归纳</span>
+</div>
+
+<h2>1. 背景与目标</h2>
+<p>用户向 WorkBuddy 下发一个任务后（例如"帮我制作一个个人工作台"），界面会经历一系列可见的状态变化：从深度思考、任务拆解、文件读写、命令执行，到最终交付产物。本文档定义这套<b>任务处理逻辑与状态机</b>，明确每种状态的界面展示、用户可用操作与流转规则，作为设计与验收依据。</p>
+
+<h2>2. 整体处理逻辑（端到端）</h2>
+<p>一次任务的处理遵循"<b>理解 → 规划 → 执行循环 → 交付</b>"四段式：</p>
+<ol>
+  <li><b>接收与理解</b>：解析用户消息（文本 / 附件 / @文件），判断任务类型与复杂度；</li>
+  <li><b>深度思考与规划</b>：复杂任务先输出思路摘要，再生成任务计划（Task List），拆成可追踪的条目；</li>
+  <li><b>工具执行循环</b>：按计划逐条执行，期间反复调用工具——读文件、写/编辑文件、运行命令、联网检索等，每一步都实时流式展示；</li>
+  <li><b>交付</b>：汇总结果生成最终回复，附上产物卡片（文件）、变更记录，任务状态更新为已完成。</li>
+</ol>
+
+<svg class="flow" viewBox="0 0 880 150" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#646a73"/>
+    </marker>
+  </defs>
+  <g font-size="13" font-family="PingFang SC, Microsoft YaHei, sans-serif">
+    <rect x="10" y="45" width="120" height="46" rx="8" fill="#eaf1ff" stroke="#3370ff"/>
+    <text x="70" y="64" text-anchor="middle" fill="#1f2329">接收任务</text>
+    <text x="70" y="82" text-anchor="middle" fill="#646a73" font-size="11">S0 就绪</text>
+    <line x1="130" y1="68" x2="168" y2="68" stroke="#646a73" marker-end="url(#arr)"/>
+    <rect x="170" y="45" width="130" height="46" rx="8" fill="#f1edff" stroke="#7b61ff"/>
+    <text x="235" y="64" text-anchor="middle" fill="#1f2329">深度思考</text>
+    <text x="235" y="82" text-anchor="middle" fill="#646a73" font-size="11">S1 流式生成</text>
+    <line x1="300" y1="68" x2="338" y2="68" stroke="#646a73" marker-end="url(#arr)"/>
+    <rect x="340" y="45" width="120" height="46" rx="8" fill="#fff3e5" stroke="#de7802"/>
+    <text x="400" y="64" text-anchor="middle" fill="#1f2329">任务计划</text>
+    <text x="400" y="82" text-anchor="middle" fill="#646a73" font-size="11">S2 拆解/确认</text>
+    <line x1="460" y1="68" x2="498" y2="68" stroke="#646a73" marker-end="url(#arr)"/>
+    <rect x="500" y="45" width="130" height="46" rx="8" fill="#e8f7ee" stroke="#2ea44f"/>
+    <text x="565" y="64" text-anchor="middle" fill="#1f2329">工具执行循环</text>
+    <text x="565" y="82" text-anchor="middle" fill="#646a73" font-size="11">S3 读/写/编辑/命令</text>
+    <line x1="630" y1="68" x2="668" y2="68" stroke="#646a73" marker-end="url(#arr)"/>
+    <rect x="670" y="45" width="120" height="46" rx="8" fill="#e8f7ee" stroke="#2ea44f"/>
+    <text x="730" y="64" text-anchor="middle" fill="#1f2329">完成交付</text>
+    <text x="730" y="82" text-anchor="middle" fill="#646a73" font-size="11">S5 产物+变更</text>
+    <path d="M 565 91 C 565 130, 400 130, 400 91" fill="none" stroke="#646a73" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+    <text x="482" y="138" text-anchor="middle" fill="#646a73" font-size="11">循环直到计划完成</text>
+    <path d="M 730 45 C 730 18, 560 18, 470 42" fill="none" stroke="#d93026" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+    <text x="640" y="14" text-anchor="middle" fill="#d93026" font-size="11">异常/停止 → S6</text>
+  </g>
+</svg>
+
+<h2>3. 状态总览（共 6 种）</h2>
+<table>
+  <tr><th>编号</th><th>状态</th><th>界面显示</th><th>用户可用操作</th><th>流转去向</th></tr>
+  <tr>
+    <td><span class="tag t-gray">S0</span></td>
+    <td><b>就绪 / 已发送</b></td>
+    <td>消息气泡已上屏，助手卡片占位等待响应</td>
+    <td>撤回消息、继续补充输入</td>
+    <td>→ S1</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-purple">S1</span></td>
+    <td><b>思考中 / 生成回复中</b></td>
+    <td>「深度思考」标签；正文流式逐字输出；底部显示「生成回复…」及停止按钮</td>
+    <td>停止生成；折叠/展开思考过程</td>
+    <td>→ S2 / S3 / S5；停止 → S6</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-orange">S2</span></td>
+    <td><b>任务计划（Plan）</b></td>
+    <td>「任务列表 ▾」折叠区：待执行条目为空心圆，执行中为旋转图标，完成为对勾；计划类工具调用单独成卡片</td>
+    <td>展开/折叠；Plan 模式下确认或修改计划</td>
+    <td>→ S3；全部完成 → S5</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-green">S3</span></td>
+    <td><b>工具执行中</b></td>
+    <td>按工具类型展示明细卡（见 §4）；进行中项灰色/加载态</td>
+    <td>停止任务；点开文件/路径跳转查看</td>
+    <td>循环回 S3 或 → S5；失败 → S6</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-blue">S4</span></td>
+    <td><b>等待用户确认</b></td>
+    <td>计划审批、敏感操作授权、选择题（AskUserQuestion）等中断卡片</td>
+    <td>批准 / 拒绝 / 选项作答 / 自由输入</td>
+    <td>→ S3 继续；拒绝 → S6</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-blue">S5</span></td>
+    <td><b>已完成</b></td>
+    <td>最终回复（标题、要点、加粗结论）+ 产物卡片 + 「查看所有产物 / 查看所有变更」入口 + 操作栏 + 时间戳</td>
+    <td>下载/预览产物、查看 diff、复制、点赞点踩、引用追问、重试</td>
+    <td>追问 → 新一轮 S1</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-red">S6</span></td>
+    <td><b>失败 / 已停止 / 需处理</b></td>
+    <td>红色感叹号标记（任务列表中的失败条目、命令报错输出、语法校验失败提示）</td>
+    <td>重试、根据错误提示补充信息后重新下发</td>
+    <td>重试 → S1</td>
+  </tr>
+</table>
+<div class="note">左侧任务面板中每条历史任务同样沿用这套状态：绿色对勾 = 成功，红色感叹号 = 失败/异常，时钟图标 = 进行中。</div>
+
+<h2>4. 执行态（S3）工具卡片的子状态明细</h2>
+<p>执行期间所有动作都以"图标 + 摘要行 + 可展开详情"的卡片形式流式展示，共 4 类：</p>
+<table>
+  <tr><th>子状态</th><th>图标前缀</th><th>摘要行内容</th><th>展开详情</th><th>示例（对应截图）</th></tr>
+  <tr>
+    <td>读取文件</td>
+    <td>👁 读取</td>
+    <td>操作名 + 文件绝对路径 + 行范围</td>
+    <td>路径可点击定位到具体行</td>
+    <td>「读取 …personal-workbench/index.html L300-末尾」（图4）</td>
+  </tr>
+  <tr>
+    <td>编辑文件</td>
+    <td>✏️ 编辑</td>
+    <td>操作名 + 文件路径 + <code>+N -M</code> 增删行统计</td>
+    <td>代码 diff，新增行绿底、删除行红底，可点开整文件</td>
+    <td>「编辑 index.html +44 -0」并展示绿色 diff 块（图5）</td>
+  </tr>
+  <tr>
+    <td>写入文件</td>
+    <td>📝 正在写入文件</td>
+    <td>当前写入的目标文件名</td>
+    <td>写入完成后转为产物卡片</td>
+    <td>「构建个人工作台应用 → 正在写入文件」（图3）</td>
+  </tr>
+  <tr>
+    <td>运行命令</td>
+    <td>⌨️ 运行命令</td>
+    <td>shell 类型 + 命令摘要</td>
+    <td>完整命令 + 标准输出/报错，成功打 ✓，失败展示报错文本</td>
+    <td>bash 运行 node 语法校验，输出 OK 后打 ✓（图6）</td>
+  </tr>
+</table>
+<p>此外还有<b>记忆写入</b>卡（如「写入 …/memory/2026-09-24.md」），属于低感知后台动作，同样流式展示但不打断主线。</p>
+
+<h2>5. 完成态（S5）交付规范</h2>
+<ul>
+  <li><b>正文</b>：结构化总结——先给结论，再分模块列要点，关键功能加粗；避免大段流水账。</li>
+  <li><b>产物卡片</b>：生成的文件以卡片呈现（如图7 的 index.html），支持预览与下载。</li>
+  <li><b>回放入口</b>：「查看所有产物 (N)」「查看所有变更 (N)」，可回看本次任务产生的全部文件与每一处 diff。</li>
+  <li><b>操作栏</b>：复制、点赞/点踩、引用、更多、重试/切换模型等，均固定在回复末尾，附时间戳。</li>
+  <li><b>后续建议</b>：可附"下一步可以做什么"的引导项，降低用户二次发起成本。</li>
+</ul>
+
+<h2>6. 异常与边界</h2>
+<table>
+  <tr><th>场景</th><th>表现</th><th>处理</th></tr>
+  <tr><td>用户点击「停止生成」</td><td>流式中断，保留已生成部分，标记已停止</td><td>可继续追问或重试</td></tr>
+  <tr><td>命令/校验失败</td><td>运行命令卡展示报错输出；智能体会自行读取报错、修改后重跑</td><td>多次失败才上抛为 S6</td></tr>
+  <tr><td>任务整体失败</td><td>任务面板条目标红（如图1 侧栏「生成 AI 表格报价页面 ⚠」）</td><td>支持重试；失败原因写入回复</td></tr>
+  <tr><td>需授权的高危操作</td><td>中断并弹出确认卡（S4）</td><td>用户批准后才继续执行</td></tr>
+  <tr><td>历史任务回看</td><td>侧栏任务列表按时间排列，状态图标即最终状态</td><td>点开可还原完整过程记录</td></tr>
+</table>
+
+<h2>7. 验收标准（节选）</h2>
+<ul>
+  <li>任意时刻用户都能明确看出"当前处于哪种状态"：标签、图标、加载动效三者至少其一存在；</li>
+  <li>生成中（S1）必须提供停止按钮，且停止后内容不丢失；</li>
+  <li>每次文件编辑必须展示 <code>+N -M</code> 统计与 diff；每次命令执行必须展示命令与输出及成败标记；</li>
+  <li>完成态必须提供产物入口与变更入口，缺一视为不达标；</li>
+  <li>失败必须有可视标记与重试路径，不允许静默失败。</li>
+</ul>
+
+<h2>附录：截图 ↔ 状态对照</h2>
+<table>
+  <tr><th>截图</th><th>画面要点</th><th>对应状态</th></tr>
+  <tr><td>图1</td><td>深度思考标签 + 流式正文 + 「生成回复…」</td><td>S1 思考/生成中</td></tr>
+  <tr><td>图2</td><td>「任务列表」+ 计划条目「设计并构建个人工作台单文件应用」</td><td>S2 任务计划</td></tr>
+  <tr><td>图3</td><td>「构建个人工作台应用 → 正在写入文件」</td><td>S3 执行中·写入</td></tr>
+  <tr><td>图4</td><td>多条「读取 index.html L300-末尾」等</td><td>S3 执行中·读取</td></tr>
+  <tr><td>图5</td><td>「编辑 index.html +44 -0」+ 绿色 diff</td><td>S3 执行中·编辑</td></tr>
+  <tr><td>图6</td><td>bash 命令 + 输出 + ✓；写入工作记录</td><td>S3 执行中·运行命令 / 记忆</td></tr>
+  <tr><td>图7</td><td>最终回复 + 产物卡 + 查看所有产物/变更 + 操作栏</td><td>S5 已完成</td></tr>
+</table>
+
+</div>
+</body>
+</html>
