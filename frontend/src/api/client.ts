@@ -522,7 +522,6 @@ export const adminRegistryApi = {
 export const reportShareApi = {
   list: (reportId: string) => api.get(`/reports/${reportId}/result-shares`),
   create: (reportId: string, data: any) => api.post(`/reports/${reportId}/result-shares`, data),
-  update: (reportId: string, shareId: string, data: any) => api.put(`/reports/${reportId}/result-shares/${shareId}`, data),
   remove: (reportId: string, shareId: string) => api.delete(`/reports/${reportId}/result-shares/${shareId}`),
   myBrowse: () => api.get('/reports/browse/mine'),
   sharedView: (reportId: string, shareId: string) => api.get(`/reports/${reportId}/shared-view`, { params: { share_id: shareId } }),

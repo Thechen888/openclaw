@@ -6486,21 +6486,6 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok(null);
   }
 
-  // PUT /reports/:id/result-shares/:shareId — 编辑分享
-  const reportShareUpdateMatch = path.match(/^\/reports\/([^/]+)\/result-shares\/([^/]+)$/);
-  if (reportShareUpdateMatch && method === 'put') {
-    const [, reportId, shareId] = reportShareUpdateMatch;
-    const cu = getCurrentMockUser();
-    const share = reportResultShares.find(s => s.id === shareId && s.report_id === reportId);
-    if (!share) return { code: 404, message: '分享不存在', data: null };
-    if (share.granted_by !== cu.id && cu.role !== 'admin') return { code: 403, message: '仅授予者可编辑', data: null };
-    if (data.scope_type !== undefined) share.scope_type = data.scope_type;
-    if (data.run_id !== undefined) share.run_id = data.run_id;
-    if (data.since_date !== undefined) share.since_date = data.since_date;
-    if (data.note !== undefined) share.note = data.note;
-    return ok(share);
-  }
-
   // GET /admin/report-results/by-report/:reportId — 按报告实例穿透取数据结果
   const adminResultsByReportMatch = path.match(/^\/admin\/report-results\/by-report\/([^/]+)$/);
   if (adminResultsByReportMatch && method === 'get') {

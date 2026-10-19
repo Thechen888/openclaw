@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import {
   Box, Card, CardContent, Typography, Chip, Avatar, Tooltip, Skeleton, Tab, Tabs,
-  TextField, InputAdornment, IconButton, Table, TableHead, TableBody, TableRow, TableCell, Button,
-  Dialog, DialogTitle, DialogContent, DialogActions, RadioGroup, FormControlLabel, Radio,
+  TextField, InputAdornment, IconButton, Table, TableHead, TableBody, TableRow, TableCell,
 } from '@mui/material';
-import { Search, Delete, Visibility, Edit, IosShare } from '@mui/icons-material';
+import { Search, Delete, Visibility, IosShare } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import { reportShareApi } from '../../api/client';
@@ -21,8 +20,6 @@ export default function ReportBrowsePage() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [search, setSearch] = useState('');
 
-  // 编辑分享对话框
-  const [editShare, setEditShare] = useState<any>(null);
   // 再次分享对话框
   const [reshareItem, setReshareItem] = useState<any>(null);
   // 查看分享预览（我分享的 Tab 内）
@@ -165,10 +162,7 @@ export default function ReportBrowsePage() {
                             <Tooltip title="查看">
                               <IconButton size="small" sx={{ color: '#00D4FF' }} onClick={() => setViewShare(s)}><Visibility fontSize="small" /></IconButton>
                             </Tooltip>
-                            <Tooltip title="编辑">
-                              <IconButton size="small" sx={{ color: '#f59e0b' }} onClick={() => setEditShare(s)}><Edit fontSize="small" /></IconButton>
-                            </Tooltip>
-                            <Tooltip title="再次分享">
+                            <Tooltip title="管理分享">
                               <IconButton size="small" sx={{ color: '#6366f1' }} onClick={() => setReshareItem(s)}><IosShare fontSize="small" /></IconButton>
                             </Tooltip>
                             <Tooltip title="撤销">
@@ -201,10 +195,7 @@ export default function ReportBrowsePage() {
         </Box>
       )}
 
-      {/* 编辑分享对话框 */}
-      {editShare && <EditShareDialog share={editShare} onClose={() => setEditShare(null)} />}
-
-      {/* 再次分享对话框 */}
+      {/* 管理分享对话框 */}
       {reshareItem && (
         <ShareResultDialog
           reportId={reshareItem.report_id}
@@ -216,72 +207,3 @@ export default function ReportBrowsePage() {
   );
 }
 
-/* ========== 编辑分享对话框 ========== */
-function EditShareDialog({ share, onClose }: { share: any; onClose: () => void }) {
-  const qc = useQueryClient();
-  const { enqueueSnackbar } = useSnackbar();
-  const [scopeType, setScopeType] = useState(share.scope_type || 'all');
-  const [runId, setRunId] = useState(share.run_id || '');
-  const [sinceDate, setSinceDate] = useState(share.since_date || '');
-  const [note, setNote] = useState(share.note || '');
-
-  // 获取期次列表（scope_type === 'once' 时需要）
-  const { data: runsData } = useQuery({
-    queryKey: ['edit-share-runs', share.report_id],
-    queryFn: () => reportShareApi.runs(share.report_id),
-    enabled: scopeType === 'once',
-  });
-  const runs: any[] = runsData?.data?.data || [];
-
-  const updateMutation = useMutation({
-    mutationFn: (data: any) => reportShareApi.update(share.report_id, share.id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['my-shares'] });
-      enqueueSnackbar('已更新分享', { variant: 'success' });
-      onClose();
-    },
-    onError: (err: any) => enqueueSnackbar(err?.response?.data?.message || '更新失败', { variant: 'error' }),
-  });
-
-  const handleSave = () => {
-    const payload: any = { scope_type: scopeType, note };
-    if (scopeType === 'once') payload.run_id = runId;
-    if (scopeType === 'since') payload.since_date = sinceDate;
-    updateMutation.mutate(payload);
-  };
-
-  return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 700 }}>编辑分享 — {share.report_title}</DialogTitle>
-      <DialogContent sx={{ px: 3, py: 2 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>分享范围</Typography>
-        <RadioGroup value={scopeType} onChange={e => setScopeType(e.target.value)}>
-          <FormControlLabel value="all" control={<Radio size="small" />} label="全部结果" />
-          <FormControlLabel value="once" control={<Radio size="small" />} label="指定某一次" />
-          {scopeType === 'once' && (
-            <TextField select size="small" value={runId} onChange={e => setRunId(e.target.value)} sx={{ ml: 4, mb: 1, minWidth: 200 }} label="选择期次">
-              {runs.map(r => (
-                <option key={r.id} value={r.id}>{r.period_label} ({new Date(r.finished_at).toLocaleDateString()})</option>
-              ))}
-            </TextField>
-          )}
-          <FormControlLabel value="since" control={<Radio size="small" />} label="此时间之后" />
-          {scopeType === 'since' && (
-            <TextField type="date" size="small" value={sinceDate} onChange={e => setSinceDate(e.target.value)} sx={{ ml: 4, mb: 1 }} slotProps={{ inputLabel: { shrink: true } }} />
-          )}
-        </RadioGroup>
-
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 2 }}>备注</Typography>
-        <TextField fullWidth multiline rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="可选备注..." size="small" />
-
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', fontSize: 11 }}>
-          目标对象的增删请用「再次分享」追加、用「撤销」移除单个目标
-        </Typography>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose}>取消</Button>
-        <Button variant="contained" onClick={handleSave}>保存</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
