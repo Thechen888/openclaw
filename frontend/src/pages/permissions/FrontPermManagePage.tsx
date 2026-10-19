@@ -284,6 +284,7 @@ export default function FrontPermManagePage() {
 
   const [delistDialog, setDelistDialog] = useState<{ open: boolean; item: any }>({ open: false, item: null });
   const [delistReason, setDelistReason] = useState('');
+  const [delistRevokeShares, setDelistRevokeShares] = useState(true);
 
   const toggleMutation = useMutation({
     mutationFn: (id: string) => frontPermApi.toggle(id),
@@ -291,12 +292,14 @@ export default function FrontPermManagePage() {
   });
 
   const delistMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) => frontPermApi.delist(id, { reason }),
-    onSuccess: () => {
+    mutationFn: ({ id, reason, revoke_shares }: { id: string; reason: string; revoke_shares?: boolean }) => frontPermApi.delist(id, { reason, revoke_shares }),
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['front-perm-resources'] });
-      enqueueSnackbar('已强制下架，已通知作者', { variant: 'success' });
+      const msg = '已强制下架，已通知作者' + (variables.revoke_shares !== false ? '，相关分享已一并撤销' : '');
+      enqueueSnackbar(msg, { variant: 'success' });
       setDelistDialog({ open: false, item: null });
       setDelistReason('');
+      setDelistRevokeShares(true);
     },
   });
 
@@ -623,12 +626,19 @@ export default function FrontPermManagePage() {
                 : `已安装数：${delistDialog.item.install_count || 0}`}
             </Alert>
           )}
+          {delistDialog.item?.resource_type === 'report' && (
+            <FormControlLabel
+              control={<Checkbox checked={delistRevokeShares} onChange={e => setDelistRevokeShares(e.target.checked)} size="small" />}
+              label={<Typography variant="body2">同时撤销该资源全部结果分享（推荐）</Typography>}
+              sx={{ mb: 2 }}
+            />
+          )}
           <TextField fullWidth label="下架原因" required multiline rows={3} value={delistReason}
             onChange={e => setDelistReason(e.target.value)} placeholder="请填写下架原因，将通知作者..." />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDelistDialog({ open: false, item: null })}>取消</Button>
-          <Button variant="contained" color="error" disabled={!delistReason.trim()} onClick={() => delistDialog.item && delistMutation.mutate({ id: delistDialog.item.id, reason: delistReason })}>
+          <Button variant="contained" color="error" disabled={!delistReason.trim()} onClick={() => delistDialog.item && delistMutation.mutate({ id: delistDialog.item.id, reason: delistReason, revoke_shares: delistRevokeShares })}>
             确认下架
           </Button>
         </DialogActions>
@@ -894,8 +904,8 @@ export default function FrontPermManagePage() {
       <ReportPreviewDialog report={detailReport} open={reportPreviewOpen && !!detailReport} onClose={() => setReportPreviewOpen(false)} />
 
       {/* 报告数据结果管理 Drawer */}
-      <Drawer anchor="right" open={!!resultsTarget} onClose={() => setResultsTarget(null)} sx={{ '& .MuiDrawer-paper': { width: 560, p: 0 } }}>
-        {resultsTarget && <ResultsDrawerContent target={resultsTarget} onClose={() => setResultsTarget(null)} onNavigatePublish={() => { setResultsTarget(null); navigate('/admin/report-publish'); }} />}
+      <Drawer anchor="right" open={!!resultsTarget} onClose={() => setResultsTarget(null)} sx={{ '& .MuiDrawer-paper': { width: 760, p: 0 } }}>
+        {resultsTarget && <ResultsDrawerContent target={resultsTarget} onClose={() => setResultsTarget(null)} />}
       </Drawer>
 
     </Box>
@@ -2454,7 +2464,7 @@ function SkillDetailDialog({ target, onClose }: { target: any; onClose: () => vo
 }
 
 /* ========== 报告数据结果管理 Drawer 内容 ========== */
-function ResultsDrawerContent({ target, onClose, onNavigatePublish }: { target: any; onClose: () => void; onNavigatePublish: () => void }) {
+function ResultsDrawerContent({ target, onClose }: { target: any; onClose: () => void }) {
   const qc = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -2464,8 +2474,14 @@ function ResultsDrawerContent({ target, onClose, onNavigatePublish }: { target: 
     enabled: !!target?.resource_id,
   });
   const resultData = data?.data?.data;
-  const runs: any[] = resultData?.runs || [];
   const shares: any[] = resultData?.shares || [];
+  const stats = resultData?.stats || { total: 0, creator: 0, installer: 0, invalid: 0 };
+
+  const [filter, setFilter] = useState<'all' | 'creator' | 'installer' | 'invalid'>('all');
+  const [targetTypeFilter, setTargetTypeFilter] = useState('all');
+  const [searchText, setSearchText] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [revokeConfirm, setRevokeConfirm] = useState<{ open: boolean; shareIds: string[]; batch: boolean }>({ open: false, shareIds: [], batch: false });
 
   const revokeMutation = useMutation({
     mutationFn: (shareId: string) => adminRegistryApi.revokeShare(shareId),
@@ -2476,90 +2492,198 @@ function ResultsDrawerContent({ target, onClose, onNavigatePublish }: { target: 
     onError: (err: any) => enqueueSnackbar(err?.response?.data?.message || '撤销失败', { variant: 'error' }),
   });
 
+  const batchRevokeMutation = useMutation({
+    mutationFn: (shareIds: string[]) => Promise.all(shareIds.map(id => adminRegistryApi.revokeShare(id))),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-results', target.resource_id] });
+      enqueueSnackbar(`已批量撤销 ${selectedIds.length} 条分享`, { variant: 'success' });
+      setSelectedIds([]);
+    },
+  });
+
+  const filteredShares = shares.filter(s => {
+    if (filter === 'creator' && s.sharer_role !== 'creator') return false;
+    if (filter === 'installer' && s.sharer_role !== 'installer') return false;
+    if (filter === 'invalid' && (s.target_alive || s.status === 'revoked')) return false;
+    if (targetTypeFilter !== 'all' && s.target_type !== targetTypeFilter) return false;
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      const match = (s.granted_by_name || '').toLowerCase().includes(q) ||
+        (s.target_name || '').toLowerCase().includes(q) ||
+        (s.note || '').toLowerCase().includes(q) ||
+        (s.sharer_dept || '').toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  const selectableShares = filteredShares.filter(s => s.status === 'active' && s.target_alive);
+  const allSelectableSelected = selectableShares.length > 0 && selectableShares.every(s => selectedIds.includes(s.id));
+
+  const handleToggleAll = () => {
+    if (allSelectableSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(selectableShares.map(s => s.id));
+    }
+  };
+
+  const handleToggleOne = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleRevoke = (shareIds: string[], batch: boolean) => {
+    if (batch) {
+      batchRevokeMutation.mutate(shareIds);
+    } else {
+      revokeMutation.mutate(shareIds[0]);
+    }
+    setRevokeConfirm({ open: false, shareIds: [], batch: false });
+  };
+
+  const scopeLabel = (s: string) => s === 'all' ? '全部结果' : s === 'once' ? '指定某一次' : '此时间之后';
+  const resultSourceLabel = (s: any) => {
+    const rn = s.result_source?.runner_name || '';
+    if (s.scope_type === 'all') return rn ? `${rn} · 全部结果` : '全部结果';
+    if (s.scope_type === 'since') return rn ? `${rn} · 某时起` : '某时起';
+    const pl = s.result_source?.period_label;
+    return pl ? `${rn} · ${pl}` : rn || '—';
+  };
+
+  const statusChip = (s: any) => {
+    if (s.status === 'revoked') return <Chip label="已撤销" size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'grey.300', color: 'grey.700' }} />;
+    if (!s.target_alive) return <Chip label="已失效" size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'grey.300', color: 'grey.700' }} />;
+    return <Chip label="生效中" size="small" sx={{ fontSize: 10, height: 20, bgcolor: 'success.main', color: '#fff' }} />;
+  };
+
   return (
-    <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Box sx={{ p: 3, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+      {/* 头部 */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>{resultData?.config_name || target.name || '—'}</Typography>
-          <Typography variant="caption" color="text.secondary">创建者：{resultData?.creator_name || '—'}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            创建者：{resultData?.creator_name || '—'} · 安装实例 {resultData?.install_count || 0}
+          </Typography>
         </Box>
         <IconButton size="small" onClick={onClose}><Close fontSize="small" /></IconButton>
       </Box>
 
-      {/* 上半区：运行期次 */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>运行期次</Typography>
-      {isLoading ? (
-        <Typography variant="body2" color="text.secondary">加载中...</Typography>
-      ) : runs.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>暂无运行期次</Typography>
-      ) : (
-        <Table size="small" sx={{ mb: 3 }}>
-          <TableHead><TableRow>
-            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>运行者</TableCell>
-            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>期次</TableCell>
-            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>完成时间</TableCell>
-            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>状态</TableCell>
-            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>分享对象</TableCell>
-          </TableRow></TableHead>
-          <TableBody>
-            {runs.map(run => (
-              <TableRow key={run.run_id} hover>
-                <TableCell sx={{ fontSize: 12 }}>{run.runner_name}</TableCell>
-                <TableCell sx={{ fontSize: 12 }}>{run.period_label}</TableCell>
-                <TableCell sx={{ fontSize: 12 }}>{new Date(run.finished_at).toLocaleDateString()}</TableCell>
-                <TableCell><Chip label={run.status} size="small" sx={{ fontSize: 10, height: 20 }} /></TableCell>
-                <TableCell sx={{ fontSize: 11 }}>
-                  {(run.shares || []).length === 0 ? '—' : (run.shares || []).map((s: any, i: number) => (
-                    <Chip key={i} label={`${s.target_name}(${s.scope_type})`} size="small" sx={{ fontSize: 9, height: 18, mr: 0.5 }} />
-                  ))}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      {/* 统计 chips */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+        {[
+          { key: 'all' as const, label: `全部(${stats.total})` },
+          { key: 'creator' as const, label: `创建者分享(${stats.creator})` },
+          { key: 'installer' as const, label: `安装者分享(${stats.installer})` },
+          { key: 'invalid' as const, label: `已失效(${stats.invalid})` },
+        ].map(c => (
+          <Chip key={c.key} label={c.label} clickable onClick={() => setFilter(c.key)}
+            sx={{ fontSize: 12, height: 28, bgcolor: filter === c.key ? 'primary.main' : 'action.selected', color: filter === c.key ? '#fff' : 'text.primary' }} />
+        ))}
+      </Box>
+
+      {/* 筛选行 */}
+      <Box sx={{ display: 'flex', gap: 1.5, mb: 2, alignItems: 'center' }}>
+        <TextField select size="small" value={targetTypeFilter} onChange={e => setTargetTypeFilter(e.target.value)} sx={{ minWidth: 120 }} label="目标类型">
+          <MenuItem value="all">全部</MenuItem>
+          <MenuItem value="user">人员</MenuItem>
+          <MenuItem value="role">角色</MenuItem>
+          <MenuItem value="dept">部门</MenuItem>
+        </TextField>
+        <TextField size="small" placeholder="搜索分享人/目标/备注..." value={searchText} onChange={e => setSearchText(e.target.value)} sx={{ flex: 1 }} />
+      </Box>
+
+      {/* 批量操作 */}
+      {selectedIds.length > 0 && (
+        <Box sx={{ mb: 1.5 }}>
+          <Button variant="outlined" color="error" size="small" onClick={() => setRevokeConfirm({ open: true, shareIds: selectedIds, batch: true })}>
+            批量撤销({selectedIds.length})
+          </Button>
+        </Box>
       )}
 
-      <Divider sx={{ my: 2 }} />
-
-      {/* 下半区：分享链 */}
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>分享链路</Typography>
-      {shares.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">暂无分享记录</Typography>
+      {/* 表格 */}
+      {isLoading ? (
+        <Typography variant="body2" color="text.secondary">加载中...</Typography>
+      ) : filteredShares.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>暂无分享记录</Typography>
       ) : (
         <Table size="small">
           <TableHead><TableRow>
-            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>授予人</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600, width: 36 }}>
+              <Checkbox size="small" checked={allSelectableSelected} onChange={handleToggleAll} />
+            </TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>分享人</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>结果来源</TableCell>
             <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>目标</TableCell>
             <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>范围</TableCell>
             <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>备注</TableCell>
             <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>时间</TableCell>
+            <TableCell sx={{ fontSize: 11, fontWeight: 600 }}>状态</TableCell>
             <TableCell sx={{ fontSize: 11, fontWeight: 600, width: 50 }}>操作</TableCell>
           </TableRow></TableHead>
           <TableBody>
-            {shares.map(s => (
-              <TableRow key={s.id} hover>
-                <TableCell sx={{ fontSize: 12 }}>{s.granted_by_name}</TableCell>
-                <TableCell sx={{ fontSize: 12 }}>
-                  {s.target_name}
-                  <Chip label={s.target_type === 'user' ? '人员' : s.target_type === 'dept' ? '部门' : '角色'} size="small" sx={{ fontSize: 9, height: 16, ml: 0.5 }} />
-                </TableCell>
-                <TableCell><Chip label={s.scope_type === 'all' ? '全部结果' : s.scope_type === 'once' ? '指定某一次' : '时间后'} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} /></TableCell>
-                <TableCell sx={{ fontSize: 11, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.note || '—'}</TableCell>
-                <TableCell sx={{ fontSize: 12 }}>{new Date(s.created_at).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Tooltip title="撤销">
-                    <IconButton size="small" color="error" onClick={() => revokeMutation.mutate(s.id)}><Delete fontSize="small" /></IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredShares.map(s => {
+              const canSelect = s.status === 'active' && s.target_alive;
+              return (
+                <TableRow key={s.id} hover sx={{ opacity: s.status === 'revoked' || !s.target_alive ? 0.6 : 1 }}>
+                  <TableCell>
+                    {canSelect && <Checkbox size="small" checked={selectedIds.includes(s.id)} onChange={() => handleToggleOne(s.id)} />}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: 12 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {s.granted_by_name}
+                      <Chip label={s.sharer_role === 'creator' ? '创建者' : '安装者'} size="small"
+                        sx={{ fontSize: 9, height: 16, bgcolor: s.sharer_role === 'creator' ? 'primary.main' : undefined, color: s.sharer_role === 'creator' ? '#fff' : undefined }} />
+                      {s.sharer_dept && <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>({s.sharer_dept})</Typography>}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontSize: 11 }}>{resultSourceLabel(s)}</TableCell>
+                  <TableCell sx={{ fontSize: 12 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {s.target_name}
+                      <Chip label={s.target_type === 'user' ? '人员' : s.target_type === 'dept' ? '部门' : '角色'} size="small" sx={{ fontSize: 9, height: 16 }} />
+                      {!s.target_alive && s.status !== 'revoked' && <Chip label="已失效" size="small" sx={{ fontSize: 8, height: 14, bgcolor: 'warning.main', color: '#fff' }} />}
+                    </Box>
+                  </TableCell>
+                  <TableCell><Chip label={scopeLabel(s.scope_type)} size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} /></TableCell>
+                  <TableCell sx={{ fontSize: 11, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.note || '—'}</TableCell>
+                  <TableCell sx={{ fontSize: 11 }}>{new Date(s.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Tooltip title={s.status === 'revoked' ? `由 ${s.revoked_by_name} 撤销 · ${s.revoked_reason} · ${new Date(s.revoked_at).toLocaleDateString()}` : ''}>
+                      {statusChip(s)}
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    {s.status === 'active' && s.target_alive && (
+                      <Tooltip title="撤销">
+                        <IconButton size="small" color="error" onClick={() => setRevokeConfirm({ open: true, shareIds: [s.id], batch: false })}><Delete fontSize="small" /></IconButton>
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
 
-      <Box sx={{ mt: 3 }}>
-        <Button variant="outlined" onClick={onNavigatePublish} sx={{ textTransform: 'none' }}>去发布数据</Button>
-      </Box>
+      {/* 撤销确认 Dialog */}
+      <Dialog open={revokeConfirm.open} onClose={() => setRevokeConfirm({ open: false, shareIds: [], batch: false })} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>{revokeConfirm.batch ? '批量撤销确认' : '撤销分享确认'}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {revokeConfirm.batch ? `确定要撤销选中的 ${revokeConfirm.shareIds.length} 条分享吗？` : '确定要撤销这条分享吗？'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
+            撤销后目标用户立即失去查看权限，不影响其他分享；恢复需重新分享。
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRevokeConfirm({ open: false, shareIds: [], batch: false })}>取消</Button>
+          <Button variant="contained" color="error" onClick={() => handleRevoke(revokeConfirm.shareIds, revokeConfirm.batch)}>确认撤销</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

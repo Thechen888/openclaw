@@ -1794,12 +1794,29 @@ const reportRuns: any[] = [
 // scope_type: all(全部结果,含以后) / once(只分享某一次,run_id) / since(此时间之后,since_date)
 // target_type: user | dept | role；source: user(前台分享) | admin(后台数据发布)
 const reportResultShares: any[] = [
-  { id: 'prs-1', report_id: 'rpt-1', report_title: '技术研发部周报', run_id: null, scope_type: 'all', since_date: null, target_type: 'user', target_id: 'u-1', target_name: '张伟', note: '周会材料', granted_by: 'u-3', granted_by_name: '王五', source: 'user', created_at: dayAgo(2) },
-  { id: 'prs-2', report_id: 'rpt-5', report_title: '销售部月度跟进报告', run_id: null, scope_type: 'all', since_date: null, target_type: 'role', target_id: 'role-1', target_name: '超级管理员', note: '', granted_by: 'u-1', granted_by_name: '张伟', source: 'admin', created_at: dayAgo(1) },
-  { id: 'prs-3', report_id: 'rpt-4', report_title: '全公司运营周报', run_id: 'run-rpt4-2', scope_type: 'once', since_date: null, target_type: 'dept', target_id: 'org-3', target_name: '销售部', note: '本月经营会材料', granted_by: 'u-1', granted_by_name: '张伟', source: 'user', created_at: dayAgo(0.5) },
+  { id: 'prs-1', report_id: 'rpt-1', report_title: '技术研发部周报', run_id: null, scope_type: 'all', since_date: null, target_type: 'user', target_id: 'u-1', target_name: '张伟', note: '周会材料', granted_by: 'u-3', granted_by_name: '王五', source: 'user', created_at: dayAgo(2), status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null },
+  { id: 'prs-2', report_id: 'rpt-5', report_title: '销售部月度跟进报告', run_id: null, scope_type: 'all', since_date: null, target_type: 'role', target_id: 'role-1', target_name: '超级管理员', note: '', granted_by: 'u-1', granted_by_name: '张伟', source: 'admin', created_at: dayAgo(1), status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null },
+  { id: 'prs-3', report_id: 'rpt-4', report_title: '全公司运营周报', run_id: 'run-rpt4-2', scope_type: 'once', since_date: null, target_type: 'dept', target_id: 'org-3', target_name: '销售部', note: '本月经营会材料', granted_by: 'u-1', granted_by_name: '张伟', source: 'user', created_at: dayAgo(0.5), status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null },
+  // 演示数据：归属 rc-1 的 rpt-1
+  { id: 'prs-4', report_id: 'rpt-1', report_title: '技术研发部周报', run_id: null, scope_type: 'all', since_date: null, target_type: 'user', target_id: 'u-8', target_name: '陈志远', note: '管理层汇报', granted_by: 'u-1', granted_by_name: '张伟', source: 'user', created_at: dayAgo(3), status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null },
+  { id: 'prs-5', report_id: 'rpt-1', report_title: '技术研发部周报', run_id: null, scope_type: 'since', since_date: dayAgo(10), target_type: 'dept', target_id: 'org-3', target_name: '销售部', note: '本月经营会材料', granted_by: 'u-3', granted_by_name: '王五', source: 'user', created_at: dayAgo(4), status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null },
+  { id: 'prs-6', report_id: 'rpt-1', report_title: '技术研发部周报', run_id: null, scope_type: 'all', since_date: null, target_type: 'user', target_id: 'u-4', target_name: '赵六', note: '', granted_by: 'u-1', granted_by_name: '张伟', source: 'user', created_at: dayAgo(5), status: 'revoked', revoked_at: dayAgo(1), revoked_by: 'u-1', revoked_by_name: '张伟', revoked_reason: '目标已不需要' },
+  { id: 'prs-7', report_id: 'rpt-1', report_title: '技术研发部周报', run_id: null, scope_type: 'all', since_date: null, target_type: 'user', target_id: 'u-5', target_name: '陈七', note: '历史协作', granted_by: 'u-3', granted_by_name: '王五', source: 'user', created_at: dayAgo(7), status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null },
 ];
 
+function shareTargetAlive(s: any): boolean {
+  if (s.target_type === 'user') {
+    const u = users.find((u: any) => u.id === s.target_id);
+    return !!u && u.status === 'active';
+  }
+  if (s.target_type === 'dept') return !!organizations.find((o: any) => o.id === s.target_id);
+  if (s.target_type === 'role') return !!allRoles.find((r: any) => r.id === s.target_id);
+  return false;
+}
+
 function canSeeSharedResult(u: any, s: any): boolean {
+  if (s.status && s.status !== 'active') return false;
+  if (!shareTargetAlive(s)) return false;
   if (s.target_type === 'user') return s.target_id === u.id;
   if (s.target_type === 'dept') return getOrgDescendantIds(s.target_id).includes(u.org_id);
   return (u.role_ids || []).includes(s.target_id);
@@ -4508,6 +4525,23 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const resId = parts[3];
     const idx = frontPermResources.findIndex(r => r.id === resId);
     if (idx >= 0) frontPermResources[idx].status = 'delisted';
+    // 级联撤销报告分享
+    const res = frontPermResources[idx];
+    if (res && res.resource_type === 'report' && data?.revoke_shares !== false) {
+      const cu = getCurrentMockUser();
+      const rpt = reports.find(r => r.id === res.resource_id);
+      if (rpt) {
+        const configId = rpt.config_id;
+        const configReportIds = reports.filter(r => r.config_id === configId).map(r => r.id);
+        reportResultShares.filter(s => configReportIds.includes(s.report_id) && s.status === 'active').forEach(s => {
+          s.status = 'revoked';
+          s.revoked_at = new Date().toISOString();
+          s.revoked_by = cu.id;
+          s.revoked_by_name = cu.name;
+          s.revoked_reason = '资源强制下架';
+        });
+      }
+    }
     return ok(frontPermResources[idx]);
   }
   if (/^\/front-perm\/resources\/[^/]+\/transfer$/.test(path) && method === 'post') {
@@ -6192,6 +6226,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         target_type: t.target_type, target_id: t.target_id, target_name,
         note: data.note || '', granted_by: cu.id, granted_by_name: cu.name,
         source: 'user', created_at: new Date().toISOString(),
+        status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null,
       };
       reportResultShares.push(ns);
       newShares.push(ns);
@@ -6211,15 +6246,21 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok(shares);
   }
 
-  // DELETE /reports/:id/result-shares/:shareId — 撤销分享
+  // DELETE /reports/:id/result-shares/:shareId — 撤销分享（软撤销）
   const reportShareDeleteMatch = path.match(/^\/reports\/([^/]+)\/result-shares\/([^/]+)$/);
   if (reportShareDeleteMatch && method === 'delete') {
     const shareId = reportShareDeleteMatch[2];
     const cu = getCurrentMockUser();
     const idx = reportResultShares.findIndex(s => s.id === shareId);
     if (idx < 0) return ok(null);
-    if (reportResultShares[idx].granted_by !== cu.id) return { code: 403, message: '仅授予者可撤销', data: null };
-    reportResultShares.splice(idx, 1);
+    const share = reportResultShares[idx];
+    if (share.granted_by !== cu.id) return { code: 403, message: '仅授予者可撤销', data: null };
+    if (share.status === 'revoked') return { code: 400, message: '该分享已撤销', data: null };
+    share.status = 'revoked';
+    share.revoked_at = new Date().toISOString();
+    share.revoked_by = cu.id;
+    share.revoked_by_name = cu.name;
+    share.revoked_reason = '授予者撤销';
     return ok(null);
   }
 
@@ -6231,6 +6272,8 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const cu = getCurrentMockUser();
     const share = reportResultShares.find(s => s.id === shareId && s.report_id === reportId);
     if (!share) return { code: 404, message: '分享不存在', data: null };
+    if (share.status === 'revoked') return { code: 403, message: '该分享已被撤销', data: null };
+    if (!shareTargetAlive(share)) return { code: 403, message: '分享目标已失效', data: null };
     if (!(canSeeSharedResult(cu, share) || share.granted_by === cu.id || cu.role === 'admin')) return { code: 403, message: '无权查看该分享', data: null };
     const rpt = reports.find(r => r.id === reportId);
     return ok({ report: rpt, share: { granted_by_name: share.granted_by_name, scope_type: share.scope_type, run_id: share.run_id, since_date: share.since_date, note: share.note, source: share.source } });
@@ -6346,6 +6389,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
         target_type: t.target_type, target_id: t.target_id, target_name,
         note: data.note || '', granted_by: cu.id, granted_by_name: cu.name,
         source: 'admin', created_at: new Date().toISOString(),
+        status: 'active', revoked_at: null, revoked_by: null, revoked_by_name: null, revoked_reason: null,
       };
       reportResultShares.push(ns);
       newShares.push(ns);
@@ -6393,7 +6437,7 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
   // GET /reports/result-shares/mine — 我分享的
   if (path === '/reports/result-shares/mine' && method === 'get') {
     const cu = getCurrentMockUser();
-    const myShares = reportResultShares.filter(s => s.granted_by === cu.id);
+    const myShares = reportResultShares.filter(s => s.granted_by === cu.id && s.status === 'active' && shareTargetAlive(s));
     myShares.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     const list = myShares.map((s: any) => {
       const rpt = reports.find(r => r.id === s.report_id);
@@ -6474,19 +6518,24 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     return ok({ message: '已接收模板', config: newRc });
   }
 
-  // DELETE /admin/report-shares/:shareId — 管理员撤销任何人的结果分享
+  // DELETE /admin/report-shares/:shareId — 管理员撤销任何人的结果分享（软撤销）
   const adminRevokeShareMatch = path.match(/^\/admin\/report-shares\/([^/]+)$/);
   if (adminRevokeShareMatch && method === 'delete') {
     const cu = getCurrentMockUser();
     if (cu.role !== 'admin') return { code: 403, message: '仅超级管理员可撤销分享', data: null };
     const shareId = adminRevokeShareMatch[1];
-    const idx = reportResultShares.findIndex(s => s.id === shareId);
-    if (idx < 0) return { code: 404, message: '分享不存在', data: null };
-    reportResultShares.splice(idx, 1);
+    const share = reportResultShares.find(s => s.id === shareId);
+    if (!share) return { code: 404, message: '分享不存在', data: null };
+    if (share.status === 'revoked') return { code: 400, message: '该分享已撤销', data: null };
+    share.status = 'revoked';
+    share.revoked_at = new Date().toISOString();
+    share.revoked_by = cu.id;
+    share.revoked_by_name = cu.name;
+    share.revoked_reason = (data?.reason) || '管理员撤销';
     return ok(null);
   }
 
-  // GET /admin/report-results/by-report/:reportId — 按报告实例穿透取数据结果
+  // GET /admin/report-results/by-report/:reportId — 按报告定义聚合分享链路
   const adminResultsByReportMatch = path.match(/^\/admin\/report-results\/by-report\/([^/]+)$/);
   if (adminResultsByReportMatch && method === 'get') {
     const reportId = adminResultsByReportMatch[1];
@@ -6495,18 +6544,43 @@ export function handleMockRequest(method: string, url: string, params?: any, dat
     const rpt = reports.find(r => r.id === reportId);
     if (!rpt) return { code: 404, message: '报告实例不存在', data: null };
     const configId = rpt.config_id;
+    const config = reportConfigs.find(c => c.id === configId);
     const configReports = reports.filter(r => r.config_id === configId);
     const configReportIds = configReports.map(r => r.id);
-    const runs = reportRuns.filter(r => configReportIds.includes(r.report_id)).map(run => {
-      const inst = configReports.find(r => r.id === run.report_id);
-      const runner = users.find(u => u.id === inst?.owner_id);
-      const shares = reportResultShares.filter(s => s.report_id === run.report_id)
-        .map(s => ({ share_id: s.id, target_name: s.target_name, target_type: s.target_type, scope_type: s.scope_type, granted_by_name: s.granted_by_name, note: s.note, created_at: s.created_at }));
-      return { run_id: run.id, report_id: run.report_id, runner_name: runner?.name || inst?.owner_name || '', period_label: run.period_label, finished_at: run.finished_at, status: run.status, shares };
-    }).sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
+    const installCount = new Set(installedReports.filter(ir => configReportIds.includes(ir.report_id)).map(ir => ir.installed_by)).size;
     const sharesAll = reportResultShares.filter(s => configReportIds.includes(s.report_id));
-    const config = reportConfigs.find(c => c.id === configId);
-    return ok({ config_id: configId, config_name: config?.name || rpt.title || '', creator_name: config?.creator_name || '', runs, shares: sharesAll });
+    const enriched = sharesAll.map((s: any) => {
+      const sharerRole = s.granted_by === config?.creator_id ? 'creator' : 'installer';
+      const sharerUser = users.find((u: any) => u.id === s.granted_by);
+      const sharerDept = sharerUser ? (organizations.find((o: any) => o.id === sharerUser.org_id)?.name || '') : '';
+      const runner = users.find((u: any) => u.id === rpt?.owner_id);
+      let resultSource: any = { runner_name: runner?.name || rpt?.owner_name || '', period_label: null };
+      if (s.scope_type === 'once' && s.run_id) {
+        const run = reportRuns.find((r: any) => r.id === s.run_id);
+        resultSource.period_label = run?.period_label || null;
+      }
+      const alive = shareTargetAlive(s);
+      return {
+        ...s,
+        sharer_role: sharerRole,
+        sharer_dept: sharerDept,
+        result_source: resultSource,
+        target_alive: alive,
+      };
+    });
+    const total = enriched.length;
+    const creatorCount = enriched.filter(s => s.sharer_role === 'creator').length;
+    const installerCount = enriched.filter(s => s.sharer_role === 'installer').length;
+    const invalidCount = enriched.filter(s => !s.target_alive && s.status !== 'revoked').length;
+    return ok({
+      config_id: configId,
+      config_name: config?.name || rpt.title || '',
+      creator_id: config?.creator_id || '',
+      creator_name: config?.creator_name || '',
+      install_count: installCount,
+      stats: { total, creator: creatorCount, installer: installerCount, invalid: invalidCount },
+      shares: enriched,
+    });
   }
 
   // Default
